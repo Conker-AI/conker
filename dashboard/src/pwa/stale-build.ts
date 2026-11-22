@@ -12,7 +12,9 @@ export function reloadOnStaleBuild(view: Window = window) {
       const last = Number(view.sessionStorage.getItem(KEY) ?? 0)
       if (Date.now() - last < AGAIN_AFTER_MS) return
       view.sessionStorage.setItem(KEY, String(Date.now()))
-    } catch { return }
+    } catch {
+      return
+    }
     event.preventDefault()
     view.location.reload()
   })

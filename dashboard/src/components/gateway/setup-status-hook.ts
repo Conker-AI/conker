@@ -7,8 +7,10 @@ const inactive = () => () => undefined
 
 export function useGatewaySetupStatus(client: GatewayControlClient, active = true, refreshOnMount = false) {
   const store = setupStatusStore(client)
-  const subscribe = useCallback((listener: () => void) => active ? store.subscribe(listener) : inactive(), [active, store])
+  const subscribe = useCallback((listener: () => void) => (active ? store.subscribe(listener) : inactive()), [active, store])
   const state = useSyncExternalStore(subscribe, active ? store.getSnapshot : empty, empty)
-  useEffect(() => { if (active && refreshOnMount) store.enter() }, [active, refreshOnMount, store])
+  useEffect(() => {
+    if (active && refreshOnMount) store.enter()
+  }, [active, refreshOnMount, store])
   return { ...state, refresh: store.refresh }
 }

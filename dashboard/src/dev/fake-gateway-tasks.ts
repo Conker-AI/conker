@@ -16,11 +16,29 @@ const SEED: [string, string, string, number, boolean][] = [
 
 export function createFakeTasks(now: () => number, fail: (status: number) => never) {
   const tasks: Json[] = SEED.map(([outcome, status, sessionId, age, archived], index) => {
-    const id = `task_preview_${index + 1}`, at = now() - age
-    return { id, outcome, criteria: [{ id: `crit_${index + 1}`, text: 'The owner says it is done.' }], session_id: sessionId, agent_id: 'companion',
-      parent_task_id: null, run_ids: [], status, status_source: 'owner', provenance: 'recorded', revision: 1, created_at: at - 600, updated_at: at,
-      archived_at: archived ? at : null, status_note: '', completed_criterion_ids: status === 'completed' ? [`crit_${index + 1}`] : [],
-      content_status: 'available', changes: [], changes_truncated: false }
+    const id = `task_preview_${index + 1}`,
+      at = now() - age
+    return {
+      id,
+      outcome,
+      criteria: [{ id: `crit_${index + 1}`, text: 'The owner says it is done.' }],
+      session_id: sessionId,
+      agent_id: 'companion',
+      parent_task_id: null,
+      run_ids: [],
+      status,
+      status_source: 'owner',
+      provenance: 'recorded',
+      revision: 1,
+      created_at: at - 600,
+      updated_at: at,
+      archived_at: archived ? at : null,
+      status_note: '',
+      completed_criterion_ids: status === 'completed' ? [`crit_${index + 1}`] : [],
+      content_status: 'available',
+      changes: [],
+      changes_truncated: false,
+    }
   })
   return function handle(path: string, method: 'GET' | 'POST' | 'PUT', options: Request): Json | undefined {
     let match: RegExpMatchArray | null

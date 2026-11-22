@@ -13,22 +13,31 @@ export function readOpenedTeamRuns(): OpenedTeamRun[] {
   try {
     const value: unknown = JSON.parse(globalThis.localStorage?.getItem(KEY) ?? '[]')
     if (!Array.isArray(value)) return []
-    return value.filter((item): item is OpenedTeamRun => !!item && typeof item === 'object' && typeof item.id === 'string' && TEAM_RUN_ID.test(item.id)
-      && typeof item.at === 'number' && Number.isFinite(item.at) && item.at > 0).slice(0, TEAM_RUNS_LIMIT)
-  } catch { return [] }
+    return value
+      .filter((item): item is OpenedTeamRun => !!item && typeof item === 'object' && typeof item.id === 'string' && TEAM_RUN_ID.test(item.id) && typeof item.at === 'number' && Number.isFinite(item.at) && item.at > 0)
+      .slice(0, TEAM_RUNS_LIMIT)
+  } catch {
+    return []
+  }
 }
 
 export function rememberTeamRun(id: string, at = Date.now()): OpenedTeamRun[] {
   if (!TEAM_RUN_ID.test(id)) return readOpenedTeamRuns()
   const next = [{ id, at }, ...readOpenedTeamRuns().filter(item => item.id !== id)].slice(0, TEAM_RUNS_LIMIT)
-  try { globalThis.localStorage?.setItem(KEY, JSON.stringify(next)) }
-  catch { /* Private windows and blocked storage: the list lasts until the page closes. */ }
+  try {
+    globalThis.localStorage?.setItem(KEY, JSON.stringify(next))
+  } catch {
+    /* Private windows and blocked storage: the list lasts until the page closes. */
+  }
   return next
 }
 
 export function forgetTeamRun(id: string): OpenedTeamRun[] {
   const next = readOpenedTeamRuns().filter(item => item.id !== id)
-  try { globalThis.localStorage?.setItem(KEY, JSON.stringify(next)) }
-  catch { /* Nothing to keep. */ }
+  try {
+    globalThis.localStorage?.setItem(KEY, JSON.stringify(next))
+  } catch {
+    /* Nothing to keep. */
+  }
   return next
 }

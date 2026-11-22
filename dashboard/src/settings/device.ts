@@ -12,12 +12,14 @@ export function storedDeviceValue(id: string): unknown {
   try {
     const raw = window.localStorage.getItem(PREFIX + id)
     return raw === null ? undefined : JSON.parse(raw)
-  } catch { return undefined }
+  } catch {
+    return undefined
+  }
 }
 
 export function readDeviceValue(id: string, fallback: SettingValue): SettingValue {
   const value = storedDeviceValue(id)
-  return value === undefined ? fallback : value as SettingValue
+  return value === undefined ? fallback : (value as SettingValue)
 }
 
 export function readDeviceSetting(setting: Setting): SettingValue {
@@ -28,7 +30,9 @@ export function writeDeviceSetting(setting: Setting, value: SettingValue) {
   try {
     if (JSON.stringify(value) === JSON.stringify(setting.default)) window.localStorage.removeItem(PREFIX + setting.id)
     else window.localStorage.setItem(PREFIX + setting.id, JSON.stringify(value))
-  } catch { /* storage unavailable: the choice lasts for this page only */ }
+  } catch {
+    /* storage unavailable: the choice lasts for this page only */
+  }
   window.dispatchEvent(new CustomEvent(DEVICE_EVENT, { detail: { id: setting.id, value } }))
 }
 
@@ -37,9 +41,16 @@ export function cacheServerSetting(id: string, value: unknown) {
   try {
     if (value === undefined) window.localStorage.removeItem(PREFIX + 'cache.' + id)
     else window.localStorage.setItem(PREFIX + 'cache.' + id, JSON.stringify(value))
-  } catch { /* optional */ }
+  } catch {
+    /* optional */
+  }
 }
 
 export function cachedServerSetting(id: string): unknown {
-  try { const raw = window.localStorage.getItem(PREFIX + 'cache.' + id); return raw === null ? undefined : JSON.parse(raw) } catch { return undefined }
+  try {
+    const raw = window.localStorage.getItem(PREFIX + 'cache.' + id)
+    return raw === null ? undefined : JSON.parse(raw)
+  } catch {
+    return undefined
+  }
 }

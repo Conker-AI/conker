@@ -2,11 +2,20 @@ import type { GatewayTeamRun, TeamRunState, TeamStepState } from './gateway/team
 
 /** Plain words for a run and its steps: what the owner reads, never Pi's state names. */
 export const RUN_STATE_WORDS: Record<TeamRunState, string> = {
-  ready: 'Between roles', running: 'A role is working', held: 'Waiting for your approval', blocked: 'Stopped',
-  interrupted: 'Cut off', completed: 'Finished', cancelled: 'Cancelled',
+  ready: 'Between roles',
+  running: 'A role is working',
+  held: 'Waiting for your approval',
+  blocked: 'Stopped',
+  interrupted: 'Cut off',
+  completed: 'Finished',
+  cancelled: 'Cancelled',
 }
 export const STEP_STATE_WORDS: Record<TeamStepState, string> = {
-  running: 'Working', complete: 'Answered', held: 'Waiting for your approval', blocked: 'Stopped', interrupted: 'Cut off',
+  running: 'Working',
+  complete: 'Answered',
+  held: 'Waiting for your approval',
+  blocked: 'Stopped',
+  interrupted: 'Cut off',
 }
 type Definition = GatewayTeamRun['snapshot']['definition']
 export type NextRole = { roleId: string; roleName: string; handoffId: string | null; condition: string | null }
@@ -23,28 +32,42 @@ export function firstRole(definition: Definition) {
 /** What the owner may start now: the first role, or each handoff leading on from the last role that ran. Only between roles. */
 export function nextRoles(run: GatewayTeamRun): NextRole[] {
   if (run.state !== 'ready') return []
-  const definition = run.snapshot.definition, last = run.steps.at(-1)
-  if (!last) { const role = firstRole(definition); return [{ roleId: role.id, roleName: role.name, handoffId: null, condition: null }] }
-  return definition.handoffs.filter(edge => edge.fromRoleId === last.role_id)
-    .map(edge => ({ roleId: edge.toRoleId, roleName: roleName(definition, edge.toRoleId), handoffId: edge.id, condition: edge.condition }))
+  const definition = run.snapshot.definition,
+    last = run.steps.at(-1)
+  if (!last) {
+    const role = firstRole(definition)
+    return [{ roleId: role.id, roleName: role.name, handoffId: null, condition: null }]
+  }
+  return definition.handoffs.filter(edge => edge.fromRoleId === last.role_id).map(edge => ({ roleId: edge.toRoleId, roleName: roleName(definition, edge.toRoleId), handoffId: edge.id, condition: edge.condition }))
 }
 
 export type RunUsage = { tokens: number; costUsd: number | null; unknownAnswers: number }
 /** Counts only what Pi measured: an answer whose use is unknown is named, never guessed. */
 export function usageOf(run: GatewayTeamRun): RunUsage {
-  let tokens = 0, cost = 0, priced = false, unknown = 0
+  let tokens = 0,
+    cost = 0,
+    priced = false,
+    unknown = 0
   for (const call of run.modelCalls) {
     if (call.state === 'running') continue
-    if (call.state === 'unknown' || call.input_tokens === null || call.output_tokens === null) { unknown += 1; continue }
+    if (call.state === 'unknown' || call.input_tokens === null || call.output_tokens === null) {
+      unknown += 1
+      continue
+    }
     tokens += call.input_tokens + call.output_tokens
-    if (call.cost_usd !== null) { cost += call.cost_usd; priced = true }
+    if (call.cost_usd !== null) {
+      cost += call.cost_usd
+      priced = true
+    }
   }
   return { tokens, costUsd: priced ? cost : null, unknownAnswers: unknown }
 }
 
 /** One or two sentences: where the run stands and what can be done. */
 export function runSummary(run: GatewayTeamRun): string {
-  const definition = run.snapshot.definition, last = run.steps.at(-1), who = last ? roleName(definition, last.role_id) : null
+  const definition = run.snapshot.definition,
+    last = run.steps.at(-1),
+    who = last ? roleName(definition, last.role_id) : null
   if (run.state === 'completed') return 'You marked this run finished. Its answers stay in the role chats below.'
   if (run.state === 'cancelled') return 'This run was cancelled. What the roles already answered stays in their chats.'
   if (run.state === 'running') return `${who ?? 'A role'} is working. This page looks again every few seconds.`

@@ -18,7 +18,14 @@ const refuse = (status: number, code?: ConstructorParameters<typeof GatewayError
 /** Pi counts characters as sent after stripping; control characters are refused. */
 function validTitle(text: string) {
   const characters = [...text]
-  return characters.length >= 1 && characters.length <= 60 && !characters.some(character => { const code = character.charCodeAt(0); return code < 32 || code === 127 })
+  return (
+    characters.length >= 1 &&
+    characters.length <= 60 &&
+    !characters.some(character => {
+      const code = character.charCodeAt(0)
+      return code < 32 || code === 127
+    })
+  )
 }
 
 export function createFakeChatNames(_now: () => number, fail: (status: number) => never, store: FakeChatStore) {
@@ -27,8 +34,14 @@ export function createFakeChatNames(_now: () => number, fail: (status: number) =
   const titleOf = (id: string) => titles.get(id) ?? titles.set(id, { revision: 0, source: null, modelId: null }).get(id)!
   const outputOf = (id: string) => outputs.get(id) ?? outputs.set(id, { revision: 0, format: 'auto', length: 'auto', language: 'auto', level: 'auto', effort: 'auto' }).get(id)!
   const titleBody = (title: string, record: TitleRecord) => ({ revision: record.revision, title, source: record.source, modelId: record.modelId })
-  const outputBody = (record: OutputRecord) => ({ revision: record.revision, output: { format: record.format, length: record.length, language: record.language, level: record.level, effort: record.effort },
-    effortSupport: [{ modelId: 'qwen2.5:3b', providerId: 'ollama', applies: false }, { modelId: 'claude-sonnet-5-5', providerId: 'claude-code', applies: null }] })
+  const outputBody = (record: OutputRecord) => ({
+    revision: record.revision,
+    output: { format: record.format, length: record.length, language: record.language, level: record.level, effort: record.effort },
+    effortSupport: [
+      { modelId: 'qwen2.5:3b', providerId: 'ollama', applies: false },
+      { modelId: 'claude-sonnet-5-5', providerId: 'claude-code', applies: null },
+    ],
+  })
 
   return function handle(path: string, method: 'GET' | 'POST' | 'PUT', options: Request): Json | undefined {
     const match = path.match(/^\/api\/control\/pi\/sessions\/(ses_[0-9a-f]{16})\/(title\/auto|title|output)$/)
@@ -69,12 +82,29 @@ export function createFakeChatNames(_now: () => number, fail: (status: number) =
     if (resource === 'output' && method === 'POST') {
       const record = outputOf(id)
       const output = body.output as { format?: unknown; length?: unknown; language?: unknown; level?: unknown; effort?: unknown } | undefined
-      const format = output?.format ?? 'auto', length = output?.length ?? 'auto', language = output?.language ?? 'auto', level = output?.level ?? 'auto', effort = output?.effort ?? 'auto'
+      const format = output?.format ?? 'auto',
+        length = output?.length ?? 'auto',
+        language = output?.language ?? 'auto',
+        level = output?.level ?? 'auto',
+        effort = output?.effort ?? 'auto'
       // Pi's request model is strict: a bad value is its generic 422, which carries no code.
-      if (!output || typeof output !== 'object' || typeof body.expected_revision !== 'number'
-        || typeof format !== 'string' || !FORMATS.includes(format) || typeof length !== 'string' || !LENGTHS.includes(length)
-        || typeof level !== 'string' || !LEVELS.includes(level) || typeof effort !== 'string' || !EFFORTS.includes(effort)
-        || typeof language !== 'string' || language.length > 35 || !LANGUAGE.test(language)) throw refuse(422)
+      if (
+        !output ||
+        typeof output !== 'object' ||
+        typeof body.expected_revision !== 'number' ||
+        typeof format !== 'string' ||
+        !FORMATS.includes(format) ||
+        typeof length !== 'string' ||
+        !LENGTHS.includes(length) ||
+        typeof level !== 'string' ||
+        !LEVELS.includes(level) ||
+        typeof effort !== 'string' ||
+        !EFFORTS.includes(effort) ||
+        typeof language !== 'string' ||
+        language.length > 35 ||
+        !LANGUAGE.test(language)
+      )
+        throw refuse(422)
       if (body.expected_revision !== record.revision) throw refuse(409, 'revision_conflict')
       const next: OutputRecord = { revision: record.revision + 1, format, length, language, level, effort }
       outputs.set(id, next)

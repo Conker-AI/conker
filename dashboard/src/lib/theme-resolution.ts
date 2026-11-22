@@ -1,14 +1,17 @@
 type ThemeVariables = Record<string, string>
 type ThemeModes = { light: ThemeVariables; dark: ThemeVariables }
 
-const colorToken = /^(background|foreground|card|popover|primary|secondary|muted|accent|destructive|border|input|ring|sidebar|sidebar-background|sidebar-primary|sidebar-accent|sidebar-border|sidebar-ring|warning|success|info|chart-[1-5]|shadow-color)(-foreground)?$/
+const colorToken =
+  /^(background|foreground|card|popover|primary|secondary|muted|accent|destructive|border|input|ring|sidebar|sidebar-background|sidebar-primary|sidebar-accent|sidebar-border|sidebar-ring|warning|success|info|chart-[1-5]|shadow-color)(-foreground)?$/
 const bareHsl = /^[-+]?\d*\.?\d+(?:deg)?\s+[-+]?\d*\.?\d+%\s+[-+]?\d*\.?\d+%(?:\s*\/\s*[-+]?\d*\.?\d+%?)?$/
 
 export function normalizeThemeVariables(variables: ThemeVariables): ThemeVariables {
-  return Object.fromEntries(Object.entries(variables).map(([key, raw]) => {
-    const value = raw.trim()
-    return [key, colorToken.test(key) && bareHsl.test(value) ? `hsl(${value})` : value]
-  }))
+  return Object.fromEntries(
+    Object.entries(variables).map(([key, raw]) => {
+      const value = raw.trim()
+      return [key, colorToken.test(key) && bareHsl.test(value) ? `hsl(${value})` : value]
+    }),
+  )
 }
 
 /** Same scale as tweakcn/utils/shadows.ts; explicit exported shadows always win. */
@@ -29,9 +32,13 @@ export function resolveThemeVariables(theme: ThemeModes, dark: boolean): ThemeVa
   const first = (factor = 1) => `${x} ${y} ${blur} ${spread} ${color(factor)}`
   const second = (offset: number, size: number) => `${x} ${offset}px ${size}px calc(${spread} - 1px) ${color(1)}`
   const shadows: ThemeVariables = {
-    'shadow-2xs': first(0.5), 'shadow-xs': first(0.5), 'shadow-2xl': first(2.5),
-    'shadow-sm': `${first()}, ${second(1, 2)}`, shadow: `${first()}, ${second(1, 2)}`,
-    'shadow-md': `${first()}, ${second(2, 4)}`, 'shadow-lg': `${first()}, ${second(4, 6)}`,
+    'shadow-2xs': first(0.5),
+    'shadow-xs': first(0.5),
+    'shadow-2xl': first(2.5),
+    'shadow-sm': `${first()}, ${second(1, 2)}`,
+    shadow: `${first()}, ${second(1, 2)}`,
+    'shadow-md': `${first()}, ${second(2, 4)}`,
+    'shadow-lg': `${first()}, ${second(4, 6)}`,
     'shadow-xl': `${first()}, ${second(8, 10)}`,
   }
   return { ...shadows, ...styles }

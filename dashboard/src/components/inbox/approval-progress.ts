@@ -12,12 +12,17 @@ export const APPROVAL_CHECK_MS = 2000
 export const APPROVAL_UNKNOWN_AFTER_MS = 60_000
 
 const doing: Record<CardTemplate, string> = {
-  do: 'Conker is doing it now…', send: 'Sending now…', publish: 'Publishing now…', ship: 'Shipping now…',
-  run: 'Running it now…', delete: 'Deleting now…', pay: 'Paying now…', save: 'Saving now…',
+  do: 'Conker is doing it now…',
+  send: 'Sending now…',
+  publish: 'Publishing now…',
+  ship: 'Shipping now…',
+  run: 'Running it now…',
+  delete: 'Deleting now…',
+  pay: 'Paying now…',
+  save: 'Saving now…',
 }
 
-const ranOut = (request: OwnerRequest, now: number) =>
-  request.unavailableReason === 'expired' || request.approval.expiresAt !== null && Date.parse(request.approval.expiresAt) <= now
+const ranOut = (request: OwnerRequest, now: number) => request.unavailableReason === 'expired' || (request.approval.expiresAt !== null && Date.parse(request.approval.expiresAt) <= now)
 
 export function approvalProgress(request: OwnerRequest, now: number, since: number): ApprovalProgress {
   if (request.approval.consumedAt) return 'ran'
@@ -33,9 +38,7 @@ export function approvalProgressText(progress: ApprovalProgress, request: OwnerR
     return `${title} ran at ${at}. The chat shows how it went.`
   }
   if (progress === 'failed') {
-    const why = request.status === 'cancelled' ? 'the request was cancelled'
-      : request.status === 'approved' && ranOut(request, now) ? 'the approval ran out before Conker used it'
-        : 'this request can no longer run'
+    const why = request.status === 'cancelled' ? 'the request was cancelled' : request.status === 'approved' && ranOut(request, now) ? 'the approval ran out before Conker used it' : 'this request can no longer run'
     return `${title} didn’t run: ${why}. Nothing was done; ask Conker again in the chat.`
   }
   return `Approved ${title}, but it isn’t confirmed yet that it ran. The chat shows how it went.`

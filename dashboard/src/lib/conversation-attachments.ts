@@ -5,14 +5,31 @@ export const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024
 export const MAX_ATTACHMENT_TOTAL = 25 * 1024 * 1024
 
 export function validateAttachments(value: ConversationAttachment[]): ConversationAttachment[] {
-  if (!Array.isArray(value) || value.length > MAX_ATTACHMENTS) throw new Error("Attach up to 5 files per message.")
+  if (!Array.isArray(value) || value.length > MAX_ATTACHMENTS) throw new Error('Attach up to 5 files per message.')
   const ids = new Set<string>()
   let total = 0
   return value.map(item => {
-    if (!item || typeof item.id !== "string" || !item.id || item.id.length > 100 || ids.has(item.id) || typeof item.name !== "string" || !item.name.trim() || item.name.length > 255 || typeof item.type !== "string" || item.type.length > 255 || !Number.isSafeInteger(item.size) || item.size < 0 || item.size > MAX_ATTACHMENT_BYTES || !Number.isFinite(item.lastModified) || item.lastModified < 0) throw new Error("Each attachment needs a valid name and must be 10 MB or smaller.")
+    if (
+      !item ||
+      typeof item.id !== 'string' ||
+      !item.id ||
+      item.id.length > 100 ||
+      ids.has(item.id) ||
+      typeof item.name !== 'string' ||
+      !item.name.trim() ||
+      item.name.length > 255 ||
+      typeof item.type !== 'string' ||
+      item.type.length > 255 ||
+      !Number.isSafeInteger(item.size) ||
+      item.size < 0 ||
+      item.size > MAX_ATTACHMENT_BYTES ||
+      !Number.isFinite(item.lastModified) ||
+      item.lastModified < 0
+    )
+      throw new Error('Each attachment needs a valid name and must be 10 MB or smaller.')
     ids.add(item.id)
     total += item.size
-    if (total > MAX_ATTACHMENT_TOTAL) throw new Error("Keep the total attachment size at 25 MB or less.")
+    if (total > MAX_ATTACHMENT_TOTAL) throw new Error('Keep the total attachment size at 25 MB or less.')
     return { id: item.id, name: item.name, size: item.size, type: item.type, lastModified: item.lastModified }
   })
 }
@@ -32,7 +49,7 @@ export function prepareAttachments(files: File[], existing: ConversationAttachme
 export function attachmentPreview(attachment: ConversationAttachment): string | undefined {
   const local = localFiles.get(attachment.id)
   if (!local || !/^(image\/(png|jpeg|gif|webp|avif))$/.test(local.file.type)) return undefined
-  return local.url ??= URL.createObjectURL(local.file)
+  return (local.url ??= URL.createObjectURL(local.file))
 }
 export function discardLocalAttachment(id: string) {
   const local = localFiles.get(id)

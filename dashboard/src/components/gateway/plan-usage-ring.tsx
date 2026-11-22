@@ -102,55 +102,36 @@ export function PlanUsageRing({ client, provider }: { client: GatewayControlClie
   const circumference = 2 * Math.PI * radius
   const strokeDasharray = `${(shortestWindow.usedPercent / 100) * circumference} ${circumference}`
 
-  return <Popover>
-    <PopoverTrigger render={<Button type="button" size="icon" variant="ghost" className="size-8 shrink-0 rounded-full" aria-label={`Plan usage: ${shortestWindow.usedPercent}% of ${shortestWindow.label} used`}>
-      <svg width="18" height="18" viewBox="0 0 18 18" className="transform -rotate-90">
-        <circle
-          cx="9"
-          cy="9"
-          r={radius}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          className="text-border"
-        />
-        <circle
-          cx="9"
-          cy="9"
-          r={radius}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeDasharray={strokeDasharray}
-          strokeLinecap="round"
-          className={getRingColor(shortestWindow.usedPercent)}
-        />
-      </svg>
-    </Button>} />
-    <PopoverContent align="end" sideOffset={8} className="w-[min(18rem,calc(100vw-1rem))] space-y-3 p-3">
-      <div>
-        <p className="text-sm font-medium">Plan usage · {provider === 'claude' ? 'Claude' : 'ChatGPT'}</p>
-      </div>
-      {windows.map(window => (
-        <div key={window.window} className="space-y-1">
-          <div className="flex justify-between text-sm">
-            <span>{window.label}</span>
-            <span className="font-medium">{window.usedPercent}%</span>
-          </div>
-          <div className="h-1 bg-muted rounded-full overflow-hidden">
-            <div
-              className={`h-full bg-current ${getRingColor(window.usedPercent)}`}
-              style={{ width: `${window.usedPercent}%` }}
-            />
-          </div>
-          <p className="text-xs text-muted-foreground">
-            {formatResetTime(window.resetsAt)}
-          </p>
+  return (
+    <Popover>
+      <PopoverTrigger
+        render={
+          <Button type="button" size="icon" variant="ghost" className="size-8 shrink-0 rounded-full" aria-label={`Plan usage: ${shortestWindow.usedPercent}% of ${shortestWindow.label} used`}>
+            <svg width="18" height="18" viewBox="0 0 18 18" className="transform -rotate-90">
+              <circle cx="9" cy="9" r={radius} fill="none" stroke="currentColor" strokeWidth="2" className="text-border" />
+              <circle cx="9" cy="9" r={radius} fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray={strokeDasharray} strokeLinecap="round" className={getRingColor(shortestWindow.usedPercent)} />
+            </svg>
+          </Button>
+        }
+      />
+      <PopoverContent align="end" sideOffset={8} className="w-[min(18rem,calc(100vw-1rem))] space-y-3 p-3">
+        <div>
+          <p className="text-sm font-medium">Plan usage · {provider === 'claude' ? 'Claude' : 'ChatGPT'}</p>
         </div>
-      ))}
-      <p className="text-xs text-muted-foreground pt-1">
-        {formatCheckedAgo(newestCheckedAt, currentTime)}
-      </p>
-    </PopoverContent>
-  </Popover>
+        {windows.map(window => (
+          <div key={window.window} className="space-y-1">
+            <div className="flex justify-between text-sm">
+              <span>{window.label}</span>
+              <span className="font-medium">{window.usedPercent}%</span>
+            </div>
+            <div className="h-1 bg-muted rounded-full overflow-hidden">
+              <div className={`h-full bg-current ${getRingColor(window.usedPercent)}`} style={{ width: `${window.usedPercent}%` }} />
+            </div>
+            <p className="text-xs text-muted-foreground">{formatResetTime(window.resetsAt)}</p>
+          </div>
+        ))}
+        <p className="text-xs text-muted-foreground pt-1">{formatCheckedAgo(newestCheckedAt, currentTime)}</p>
+      </PopoverContent>
+    </Popover>
+  )
 }

@@ -7,7 +7,7 @@ export function nextReveal(shown: number, target: string, elapsedMs: number): nu
   if (shown >= target.length) return target.length
   if (elapsedMs <= 0) return shown
   const rate = MIN_RATE + (target.length - shown) / CATCH_UP_S
-  const budget = Math.min(target.length, shown + Math.floor(rate * elapsedMs / 1000))
+  const budget = Math.min(target.length, shown + Math.floor((rate * elapsedMs) / 1000))
   let next = shown
   for (let end = shown + 1; end <= budget; end++) {
     if (end === target.length || /\s/.test(target[end])) next = end

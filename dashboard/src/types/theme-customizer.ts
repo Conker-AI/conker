@@ -14,19 +14,19 @@ export interface ColorTheme {
 
 export interface SidebarVariant {
   name: string
-  value: "sidebar" | "floating" | "inset"
+  value: 'sidebar' | 'floating' | 'inset'
   description: string
 }
 
 export interface SidebarCollapsibleOption {
   name: string
-  value: "offcanvas" | "icon" | "none"
+  value: 'offcanvas' | 'icon' | 'none'
   description: string
 }
 
 export interface SidebarSideOption {
   name: string
-  value: "left" | "right"
+  value: 'left' | 'right'
 }
 
 export interface RadiusOption {

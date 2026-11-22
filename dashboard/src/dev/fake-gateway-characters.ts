@@ -10,9 +10,15 @@ type Request = { method?: 'GET' | 'POST' | 'PUT'; body?: Json; query?: Record<st
 export function createFakeCharacters(now: () => number, fail: (status: number) => never) {
   let characterRevision = 1
   let character: Json = {
-    name: 'Conker', mood: 'Thoughtful · ready to listen', personality: 'Curious and steady. Help me think clearly and stay in control.',
-    speakingStyle: 'Warm, direct, and concise. A little dry humour when it fits.', speakingPreset: 'custom',
-    portrait: '/conker.png', renderer: 'static', face: 'sprout', tone: 'green',
+    name: 'Conker',
+    mood: 'Thoughtful · ready to listen',
+    personality: 'Curious and steady. Help me think clearly and stay in control.',
+    speakingStyle: 'Warm, direct, and concise. A little dry humour when it fits.',
+    speakingPreset: 'custom',
+    portrait: '/conker.png',
+    renderer: 'static',
+    face: 'sprout',
+    tone: 'green',
     emotions: { neutral: 'default', happy: 'portrait', thinking: 'portrait', concerned: 'default', celebrating: 'portrait' },
     studio: createCharacterStudio(),
   }
@@ -30,20 +36,29 @@ export function createFakeCharacters(now: () => number, fail: (status: number) =
     }
     if (path === '/api/control/pi/characters/companion/import' && method === 'POST') {
       let raw: Json
-      try { raw = JSON.parse(String(options.body?.text ?? '')) as Json } catch { return fail(422) }
+      try {
+        raw = JSON.parse(String(options.body?.text ?? '')) as Json
+      } catch {
+        return fail(422)
+      }
       if (raw.format !== 'conker-character' || raw.version !== 1 || !raw.character || typeof raw.character !== 'object') fail(422)
       return { profile: raw.character, note: 'Imported into a draft. Review, then save with the current revision.' }
     }
     if (path === '/api/control/pi/characters/companion/save' && method === 'POST') {
       if (Number(options.body?.expected_revision) !== characterRevision) fail(409)
-      character = structuredClone(options.body?.profile as Json); characterRevision += 1
-      characterVersions.set(characterRevision, structuredClone(character)); characterHistory.push({ revision: characterRevision, created_at: now(), restored_from: null })
+      character = structuredClone(options.body?.profile as Json)
+      characterRevision += 1
+      characterVersions.set(characterRevision, structuredClone(character))
+      characterHistory.push({ revision: characterRevision, created_at: now(), restored_from: null })
       return { agentId: 'companion', revision: characterRevision, profile: character }
     }
     if (path === '/api/control/pi/characters/companion/restore' && method === 'POST') {
       if (Number(options.body?.expected_revision) !== characterRevision) fail(409)
-      const selected = Number(options.body?.revision), prior = characterVersions.get(selected) ?? fail(404)
-      character = structuredClone(prior); characterRevision += 1; characterVersions.set(characterRevision, structuredClone(character))
+      const selected = Number(options.body?.revision),
+        prior = characterVersions.get(selected) ?? fail(404)
+      character = structuredClone(prior)
+      characterRevision += 1
+      characterVersions.set(characterRevision, structuredClone(character))
       characterHistory.push({ revision: characterRevision, created_at: now(), restored_from: selected })
       return { agentId: 'companion', revision: characterRevision, profile: character }
     }

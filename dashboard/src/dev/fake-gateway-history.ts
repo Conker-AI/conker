@@ -16,11 +16,24 @@ const SESSION = /^ses_[0-9a-f]{16}$/
 export function createFakeHistory(now: () => number, fail: (status: number) => never, store: FakeChatStore, sessionRow: (item: Session) => Json) {
   const archived = new Map<string, number>()
   const trashed = new Map<string, number>()
-  const order = { newest: (a: Session, b: Session) => b.created_at - a.created_at || b.id.localeCompare(a.id), oldest: (a: Session, b: Session) => a.created_at - b.created_at || a.id.localeCompare(b.id), name: (a: Session, b: Session) => a.title.toLowerCase().localeCompare(b.title.toLowerCase()) || a.id.localeCompare(b.id) }
+  const order = {
+    newest: (a: Session, b: Session) => b.created_at - a.created_at || b.id.localeCompare(a.id),
+    oldest: (a: Session, b: Session) => a.created_at - b.created_at || a.id.localeCompare(b.id),
+    name: (a: Session, b: Session) => a.title.toLowerCase().localeCompare(b.title.toLowerCase()) || a.id.localeCompare(b.id),
+  }
 
-  const pending: string[] = [], results: Json[] = []
+  const pending: string[] = [],
+    results: Json[] = []
   const hash = async (text: string) => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)))].map(value => value.toString(16).padStart(2, '0')).join('')
-  const plan = async (session: Session) => ({ sessionId: session.id, sessionIds: [session.id], messages: session.messages.length, turns: session.turns.length, approvalRequests: 0, confirmation: await hash(`${session.id}|${session.messages.length}|${session.turns.length}`), alreadyForgotten: false })
+  const plan = async (session: Session) => ({
+    sessionId: session.id,
+    sessionIds: [session.id],
+    messages: session.messages.length,
+    turns: session.turns.length,
+    approvalRequests: 0,
+    confirmation: await hash(`${session.id}|${session.messages.length}|${session.turns.length}`),
+    alreadyForgotten: false,
+  })
 
   async function forgetting(method: string, options: Request): Promise<Json> {
     if (method === 'POST') {
@@ -44,7 +57,8 @@ export function createFakeHistory(now: () => number, fail: (status: number) => n
       trashed.delete(id)
       results.unshift({ sessionId: id, state: 'done', receiptId: `fgt_${id.slice(4)}`, finishedAt: now(), detail: null })
     }
-    const raw = options.query?.session, ids = raw === undefined ? [] : Array.isArray(raw) ? raw : [String(raw)]
+    const raw = options.query?.session,
+      ids = raw === undefined ? [] : Array.isArray(raw) ? raw : [String(raw)]
     const chats = []
     for (const id of ids) {
       const session = store.sessions.find(row => row.id === id)
@@ -57,34 +71,53 @@ export function createFakeHistory(now: () => number, fail: (status: number) => n
   return async function handle(path: string, method: string, options: Request): Promise<Json | undefined> {
     if (path === '/api/control/pi/forgetting/chats') return forgetting(method, options)
     if (method === 'POST' && path === '/api/control/pi/sessions/archive') {
-      const ids = options.body?.sessions, on = options.body?.archived
+      const ids = options.body?.sessions,
+        on = options.body?.archived
       if (!Array.isArray(ids) || !ids.length || ids.length > 100 || typeof on !== 'boolean' || ids.some(id => typeof id !== 'string' || !SESSION.test(id))) fail(422)
       const unique = [...new Set(ids as string[])]
       if (unique.some(id => !store.sessions.some(session => session.id === id))) throw new GatewayError('http', 404, undefined, 'not_found')
-      unique.forEach(id => on ? archived.set(id, archived.get(id) ?? now()) : archived.delete(id))
+      unique.forEach(id => (on ? archived.set(id, archived.get(id) ?? now()) : archived.delete(id)))
       return { sessions: unique, archived: on }
     }
     if (method === 'POST' && path === '/api/control/pi/sessions/trash') {
-      const ids = options.body?.sessions, on = options.body?.trashed
+      const ids = options.body?.sessions,
+        on = options.body?.trashed
       if (!Array.isArray(ids) || !ids.length || ids.length > 100 || typeof on !== 'boolean' || ids.some(id => typeof id !== 'string' || !SESSION.test(id))) fail(422)
       const unique = [...new Set(ids as string[])]
       if (unique.some(id => !store.sessions.some(session => session.id === id))) throw new GatewayError('http', 404, undefined, 'not_found')
-      unique.forEach(id => on ? trashed.set(id, trashed.get(id) ?? now()) : trashed.delete(id))
+      unique.forEach(id => (on ? trashed.set(id, trashed.get(id) ?? now()) : trashed.delete(id)))
       return { sessions: unique, trashed: on }
     }
     if (method !== 'GET' || path !== '/api/pi/sessions/history') return undefined
     if (globalThis.sessionStorage?.getItem('conker-fake-fail') === 'history') fail(503)
-    const q = String(options.query?.q ?? '').trim().toLowerCase(), limit = Number(options.query?.limit ?? 50)
-    const view = String(options.query?.archived ?? 'exclude'), sort = String(options.query?.sort ?? 'newest') as keyof typeof order
+    const q = String(options.query?.q ?? '')
+        .trim()
+        .toLowerCase(),
+      limit = Number(options.query?.limit ?? 50)
+    const view = String(options.query?.archived ?? 'exclude'),
+      sort = String(options.query?.sort ?? 'newest') as keyof typeof order
     // 'trash' is a dashboard-only view name; Pi gets `trashed=only`, which ignores `archived`.
     const onlyTrashed = String(options.query?.trashed ?? '') === 'only'
     const digest = [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`${q}|${view}|${sort}|${onlyTrashed}`)))].map(value => value.toString(16).padStart(2, '0')).join('')
-    const sorted = store.sessions.filter(row => onlyTrashed ? trashed.has(row.id) : !trashed.has(row.id) && (view === 'include' || (view === 'only') === archived.has(row.id))).sort(order[sort])
+    const sorted = store.sessions.filter(row => (onlyTrashed ? trashed.has(row.id) : !trashed.has(row.id) && (view === 'include' || (view === 'only') === archived.has(row.id)))).sort(order[sort])
     const cursor = options.query?.cursor
     const at = cursor === undefined ? -1 : sorted.findIndex(row => `h1.${digest}.${row.id}` === cursor)
     if (cursor !== undefined && at < 0) throw new GatewayError('http', 422, undefined, 'invalid_history_cursor')
     const matches = sorted.slice(at + 1).filter(row => !q || row.title.toLowerCase().includes(q) || row.summary?.toLowerCase().includes(q))
     const page = matches.slice(0, limit)
-    return { schemaVersion: 1, results: page.map(row => ({ ...sessionRow(row), title: [...row.title].slice(0, 300).join(''), summary_preview: row.summary ? [...row.summary].slice(0, 400).join('') : null, content_status: 'available', title_truncated: [...row.title].length > 300, summary_truncated: [...row.summary ?? ''].length > 400, archived_at: archived.get(row.id) ?? null, trashed_at: trashed.get(row.id) ?? null })), next_cursor: matches.length > limit ? `h1.${digest}.${page.at(-1)!.id}` : null }
+    return {
+      schemaVersion: 1,
+      results: page.map(row => ({
+        ...sessionRow(row),
+        title: [...row.title].slice(0, 300).join(''),
+        summary_preview: row.summary ? [...row.summary].slice(0, 400).join('') : null,
+        content_status: 'available',
+        title_truncated: [...row.title].length > 300,
+        summary_truncated: [...(row.summary ?? '')].length > 400,
+        archived_at: archived.get(row.id) ?? null,
+        trashed_at: trashed.get(row.id) ?? null,
+      })),
+      next_cursor: matches.length > limit ? `h1.${digest}.${page.at(-1)!.id}` : null,
+    }
   }
 }

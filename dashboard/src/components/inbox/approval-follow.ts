@@ -12,10 +12,12 @@ const open = (item: FollowedApproval) => item.progress === 'working' || item.pro
  */
 export function useApprovalFollow(client: Pick<GatewayOwnerClient, 'getRequest'>, active: boolean) {
   const [followed, setFollowed] = useState<FollowedApproval[]>([])
-  const latest = useRef(followed), reading = useRef(new Set<string>())
-  useEffect(() => { latest.current = followed }, [followed])
-  const update = useCallback((id: string, next: (item: FollowedApproval) => FollowedApproval) =>
-    setFollowed(current => current.map(item => item.request.id === id ? next(item) : item)), [])
+  const latest = useRef(followed),
+    reading = useRef(new Set<string>())
+  useEffect(() => {
+    latest.current = followed
+  }, [followed])
+  const update = useCallback((id: string, next: (item: FollowedApproval) => FollowedApproval) => setFollowed(current => current.map(item => (item.request.id === id ? next(item) : item))), [])
   /** A new approval: its line replaces the settled ones; ones still open stay. */
   const follow = useCallback((request: OwnerRequest) => {
     const since = Date.now()
@@ -35,14 +37,22 @@ export function useApprovalFollow(client: Pick<GatewayOwnerClient, 'getRequest'>
         const id = item.request.id
         if (item.progress !== 'working' || reading.current.has(id)) continue
         reading.current.add(id)
-        client.getRequest(id, { signal: controller.signal })
-          .then(request => { if (!controller.signal.aborted) update(id, value => value.progress === 'working' ? { ...value, request, progress: approvalProgress(request, Date.now(), value.since) } : value) })
-          .catch(() => { if (!controller.signal.aborted) update(id, value => value.progress === 'working' ? { ...value, progress: approvalProgress(value.request, Date.now(), value.since) } : value) })
+        client
+          .getRequest(id, { signal: controller.signal })
+          .then(request => {
+            if (!controller.signal.aborted) update(id, value => (value.progress === 'working' ? { ...value, request, progress: approvalProgress(request, Date.now(), value.since) } : value))
+          })
+          .catch(() => {
+            if (!controller.signal.aborted) update(id, value => (value.progress === 'working' ? { ...value, progress: approvalProgress(value.request, Date.now(), value.since) } : value))
+          })
           .finally(() => reading.current.delete(id))
       }
     }
     const timer = window.setInterval(tick, APPROVAL_CHECK_MS)
-    return () => { window.clearInterval(timer); controller.abort() }
+    return () => {
+      window.clearInterval(timer)
+      controller.abort()
+    }
   }, [client, update, waiting])
   return { followed, follow, clearSettled, check }
 }

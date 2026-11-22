@@ -2,11 +2,11 @@ export type Agent = {
   id: string
   name: string
   role: string
-  kind: "companion" | "agent"
+  kind: 'companion' | 'agent'
   model: string
   grants: number
   cost: string
-  status: "active" | "idle"
+  status: 'active' | 'idle'
   /** Authored configuration only. Tool selection never grants execution authority. */
   configuration?: AgentInput
   version?: number
@@ -21,9 +21,8 @@ export type AgentInput = {
   instructions: string
   modelId: string | null
   toolIds: string[]
-  memory: { scope: "none" | "conversation" | "selected"; memoryIds: string[] }
+  memory: { scope: 'none' | 'conversation' | 'selected'; memoryIds: string[] }
 }
-
 
 export type Session = {
   id: string
@@ -37,21 +36,14 @@ export type Session = {
   minutesAgo: number
   pinned: boolean
   archived?: boolean
-  mode: "companion" | "plan" | "receipt" | "quiet" | "reading" | "project"
+  mode: 'companion' | 'plan' | 'receipt' | 'quiet' | 'reading' | 'project'
 }
 
-export type TicketStatus =
-  | "Needs you"
-  | "Approved once"
-  | "Denied"
-  | "Consumed"
-  | "Expired"
-  | "Accepted"
-  | "Dismissed"
+export type TicketStatus = 'Needs you' | 'Approved once' | 'Denied' | 'Consumed' | 'Expired' | 'Accepted' | 'Dismissed'
 
 export type Ticket = {
   id: string
-  effect: "External" | "Deletion" | "Proposal"
+  effect: 'External' | 'Deletion' | 'Proposal'
   request: string
   agent: string
   service: string
@@ -69,19 +61,18 @@ export type Ticket = {
   record: string
 }
 
-
-export type JobTiming = { kind: "daily" | "weekly" | "interval"; time: string; day: number; hours: number }
+export type JobTiming = { kind: 'daily' | 'weekly' | 'interval'; time: string; day: number; hours: number }
 export type JobInput = { name: string; instructions: string; agentId: string; timing: JobTiming; timeZone: string; enabled: boolean }
-export type JobRun = { id: string; startedAt: string; status: "Completed" | "Failed"; source: "sample" | "preview"; summary: string }
+export type JobRun = { id: string; startedAt: string; status: 'Completed' | 'Failed'; source: 'sample' | 'preview'; summary: string }
 
-export type Job = Omit<JobInput, "enabled"> & {
+export type Job = Omit<JobInput, 'enabled'> & {
   id: string
   name: string
   purpose: string
   schedule: string
   lastRun: string
   nextRun: string
-  status: "Scheduled" | "Paused"
+  status: 'Scheduled' | 'Paused'
   runs: number
   history: JobRun[]
 }
@@ -99,7 +90,7 @@ export type Memory = {
   id: string
   title?: string
   tags?: string[]
-  origin?: "manual"
+  origin?: 'manual'
   originalText?: string
   updatedAt?: string
   text: string
@@ -117,7 +108,7 @@ export type Service = {
   name: string
   purpose: string
   version: string
-  status: "Live" | "Degraded"
+  status: 'Live' | 'Degraded'
   evidence: string
 }
 
@@ -127,7 +118,7 @@ export type Tool = {
   publishedVersion?: number
   name: string
   purpose: string
-  sensitivity: "Observe" | "Prepare" | "Write" | "Act locally" | "Act outward"
+  sensitivity: 'Observe' | 'Prepare' | 'Write' | 'Act locally' | 'Act outward'
   scope: string
   recentUse: string
 }
@@ -135,14 +126,11 @@ export type Tool = {
 export type DirectoryEntry = {
   name: string
   path: string
-} & (
-  | { kind: "directory"; children: DirectoryEntry[] }
-  | { kind: "file" }
-)
+} & ({ kind: 'directory'; children: DirectoryEntry[] } | { kind: 'file' })
 
 export type TerminalSnapshot = {
   prompt: string
   context: [string, string][]
 }
 
-export type FilesSnapshot = { source: "sample" | "live"; root: DirectoryEntry }
+export type FilesSnapshot = { source: 'sample' | 'live'; root: DirectoryEntry }

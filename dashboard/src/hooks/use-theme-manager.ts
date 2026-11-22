@@ -1,4 +1,4 @@
-"use client"
+'use client'
 
 import React from 'react'
 import { useTheme } from '@/hooks/use-theme'
@@ -22,7 +22,7 @@ export function useThemeManager() {
   const { theme, setTheme } = useTheme()
   const [brandColorsValues, setBrandColorsValues] = React.useState<Record<string, string>>({})
   const systemDark = React.useSyncExternalStore(
-    React.useCallback((notify) => {
+    React.useCallback(notify => {
       const media = window.matchMedia('(prefers-color-scheme: dark)')
       media.addEventListener('change', notify)
       return () => media.removeEventListener('change', notify)
@@ -39,27 +39,40 @@ export function useThemeManager() {
   }, [])
 
   const updateBrandColorsFromTheme = React.useCallback((styles: Record<string, string>) => {
-    setBrandColorsValues(Object.fromEntries(baseColors.flatMap(color => {
-      const value = styles[color.cssVar.slice(2)]
-      return value ? [[color.cssVar, value]] : []
-    })))
+    setBrandColorsValues(
+      Object.fromEntries(
+        baseColors.flatMap(color => {
+          const value = styles[color.cssVar.slice(2)]
+          return value ? [[color.cssVar, value]] : []
+        }),
+      ),
+    )
   }, [])
 
-  const applyImportedTheme = React.useCallback((themeData: ImportedTheme, darkMode: boolean) => {
-    resetTheme()
-    const styles = resolveThemeVariables(themeData, darkMode)
-    applyVariables(styles)
-    updateBrandColorsFromTheme(styles)
-  }, [resetTheme, updateBrandColorsFromTheme])
+  const applyImportedTheme = React.useCallback(
+    (themeData: ImportedTheme, darkMode: boolean) => {
+      resetTheme()
+      const styles = resolveThemeVariables(themeData, darkMode)
+      applyVariables(styles)
+      updateBrandColorsFromTheme(styles)
+    },
+    [resetTheme, updateBrandColorsFromTheme],
+  )
 
-  const applyTweakcnTheme = React.useCallback((preset: ThemePreset, darkMode: boolean) => {
-    applyImportedTheme(preset.styles, darkMode)
-  }, [applyImportedTheme])
+  const applyTweakcnTheme = React.useCallback(
+    (preset: ThemePreset, darkMode: boolean) => {
+      applyImportedTheme(preset.styles, darkMode)
+    },
+    [applyImportedTheme],
+  )
 
-  const applyTheme = React.useCallback((value: string, darkMode: boolean) => {
-    const preset = colorThemes.find(item => item.value === value)?.preset
-    if (preset) applyImportedTheme(preset.styles, darkMode)
-  }, [applyImportedTheme])
+  const applyTheme = React.useCallback(
+    (value: string, darkMode: boolean) => {
+      const preset = colorThemes.find(item => item.value === value)?.preset
+      if (preset) applyImportedTheme(preset.styles, darkMode)
+    },
+    [applyImportedTheme],
+  )
 
   const applyRadius = React.useCallback((radius: string) => {
     applyVariables({ radius })
@@ -69,6 +82,5 @@ export function useThemeManager() {
     applyVariables({ [cssVar.replace(/^--/, '')]: value })
   }, [])
 
-  return { theme, setTheme, isDarkMode, brandColorsValues, setBrandColorsValues, resetTheme,
-    applyTheme, applyTweakcnTheme, applyImportedTheme, applyRadius, handleColorChange, updateBrandColorsFromTheme }
+  return { theme, setTheme, isDarkMode, brandColorsValues, setBrandColorsValues, resetTheme, applyTheme, applyTweakcnTheme, applyImportedTheme, applyRadius, handleColorChange, updateBrandColorsFromTheme }
 }

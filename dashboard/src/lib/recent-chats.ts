@@ -15,14 +15,20 @@ export function readOpenedChats(): OpenedChat[] {
   try {
     const value: unknown = JSON.parse(globalThis.localStorage?.getItem(KEY) ?? '[]')
     if (!Array.isArray(value)) return []
-    return value.filter((item): item is OpenedChat => !!item && typeof item === 'object' && typeof item.id === 'string' && ID.test(item.id)
-      && typeof item.at === 'number' && Number.isFinite(item.at) && item.at > 0).slice(0, RECENT_CHATS_LIMIT)
-  } catch { return [] }
+    return value
+      .filter((item): item is OpenedChat => !!item && typeof item === 'object' && typeof item.id === 'string' && ID.test(item.id) && typeof item.at === 'number' && Number.isFinite(item.at) && item.at > 0)
+      .slice(0, RECENT_CHATS_LIMIT)
+  } catch {
+    return []
+  }
 }
 
 export function rememberOpenedChat(id: string, at = Date.now()) {
   if (!ID.test(id)) return
   const next = [{ id, at }, ...readOpenedChats().filter(item => item.id !== id)].slice(0, RECENT_CHATS_LIMIT)
-  try { globalThis.localStorage?.setItem(KEY, JSON.stringify(next)) }
-  catch { /* Private windows and blocked storage: Home falls back to the newest chats. */ }
+  try {
+    globalThis.localStorage?.setItem(KEY, JSON.stringify(next))
+  } catch {
+    /* Private windows and blocked storage: Home falls back to the newest chats. */
+  }
 }

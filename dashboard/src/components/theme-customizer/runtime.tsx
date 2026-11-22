@@ -1,7 +1,7 @@
-import { useEffect } from "react"
-import { useThemeManager } from "@/hooks/use-theme-manager"
-import { tweakcnThemes } from "@/config/theme-data"
-import { useCustomizerPreferences } from "./preferences"
+import { useEffect } from 'react'
+import { useThemeManager } from '@/hooks/use-theme-manager'
+import { tweakcnThemes } from '@/config/theme-data'
+import { useCustomizerPreferences } from './preferences'
 
 /** Theme application stays mounted when the owner leaves Settings. */
 export function ThemeRuntime() {

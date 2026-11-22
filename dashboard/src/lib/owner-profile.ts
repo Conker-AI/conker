@@ -10,7 +10,9 @@ function readOwnerProfile(): OwnerProfile {
   try {
     const value = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null') as Partial<OwnerProfile> | null
     return { name: typeof value?.name === 'string' && value.name.trim() ? value.name.trim().slice(0, 60) : fallback.name, avatar: typeof value?.avatar === 'string' ? value.avatar : '' }
-  } catch { return fallback }
+  } catch {
+    return fallback
+  }
 }
 
 export function saveOwnerProfile(profile: OwnerProfile) {
@@ -24,7 +26,10 @@ export function useOwnerProfile() {
     const update = () => setProfile(readOwnerProfile())
     window.addEventListener(CHANGE_EVENT, update)
     window.addEventListener('storage', update)
-    return () => { window.removeEventListener(CHANGE_EVENT, update); window.removeEventListener('storage', update) }
+    return () => {
+      window.removeEventListener(CHANGE_EVENT, update)
+      window.removeEventListener('storage', update)
+    }
   }, [])
   return profile
 }

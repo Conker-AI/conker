@@ -17,16 +17,66 @@ export function NewChatPrivacyControl({ value, disabled, onChange, revisionKey }
   const active = value.memoryDisabled || value.harnessDisabled
   useComposerValue('incognito', active ? 'Private chat' : null)
   const label = active ? 'Private chat: on' : 'Private chat'
-  return <Popover open={open} onOpenChange={next => { setOpen(next); if (next) { setDraft(value); setOpenedWith({ value, revisionKey }) } }}>
-    <PopoverTrigger render={<Button type="button" variant={active ? 'secondary' : 'ghost'} size="sm" className={cn('shrink-0 rounded-full font-normal', !active && 'text-muted-foreground')} aria-pressed={active} aria-label={label} disabled={disabled} />}><HatGlasses className="size-4" /><span data-label className="sr-only">{label}</span></PopoverTrigger>
-    <PopoverContent align="start" sideOffset={8} className="w-[min(20rem,calc(100vw-1rem))] space-y-3 p-3">
-      <div><p className="text-sm font-medium">Private chat</p><p className="mt-0.5 text-xs text-muted-foreground">Choose what Conker can use in this chat.</p></div>
-      <div className="flex items-center justify-between gap-4"><Label htmlFor="new-use-memory" className="min-w-0 flex-col items-start gap-0"><span className="block text-sm">Remember this chat</span><span className="mt-0.5 block text-xs font-normal leading-4 text-muted-foreground">Recall what you told Conker and learn from this chat.</span></Label><Switch id="new-use-memory" checked={!draft.memoryDisabled} onCheckedChange={checked => setDraft(current => ({ ...current, memoryDisabled: !checked }))} /></div>
-      <div className="flex items-center justify-between gap-4"><Label htmlFor="new-use-assistant" className="min-w-0 flex-col items-start gap-0"><span className="block text-sm">Let Conker use tools</span><span className="mt-0.5 block text-xs font-normal leading-4 text-muted-foreground">Pick the best model and prepare actions for you to approve.</span></Label><Switch id="new-use-assistant" checked={!draft.harnessDisabled} onCheckedChange={checked => setDraft(current => ({ ...current, harnessDisabled: !checked }))} /></div>
-      <p className="text-xs text-muted-foreground">Setup defaults still apply when no restriction is selected. Messages and drafts stay on this server.</p>
-      {changed && <p role="alert" className="text-xs text-destructive-foreground">Privacy changed while this menu was open. Close and reopen it to review the saved settings.</p>}
-      <Button className="w-full" size="sm" disabled={disabled || changed} onClick={() => { if (changed || disabled) return; onChange(draft, openedWith.revisionKey); setOpen(false) }}>Done</Button>
-    </PopoverContent>
-  </Popover>
+  return (
+    <Popover
+      open={open}
+      onOpenChange={next => {
+        setOpen(next)
+        if (next) {
+          setDraft(value)
+          setOpenedWith({ value, revisionKey })
+        }
+      }}
+    >
+      <PopoverTrigger
+        render={
+          <Button type="button" variant={active ? 'secondary' : 'ghost'} size="sm" className={cn('shrink-0 rounded-full font-normal', !active && 'text-muted-foreground')} aria-pressed={active} aria-label={label} disabled={disabled} />
+        }
+      >
+        <HatGlasses className="size-4" />
+        <span data-label className="sr-only">
+          {label}
+        </span>
+      </PopoverTrigger>
+      <PopoverContent align="start" sideOffset={8} className="w-[min(20rem,calc(100vw-1rem))] space-y-3 p-3">
+        <div>
+          <p className="text-sm font-medium">Private chat</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">Choose what Conker can use in this chat.</p>
+        </div>
+        <div className="flex items-center justify-between gap-4">
+          <Label htmlFor="new-use-memory" className="min-w-0 flex-col items-start gap-0">
+            <span className="block text-sm">Remember this chat</span>
+            <span className="mt-0.5 block text-xs font-normal leading-4 text-muted-foreground">Recall what you told Conker and learn from this chat.</span>
+          </Label>
+          <Switch id="new-use-memory" checked={!draft.memoryDisabled} onCheckedChange={checked => setDraft(current => ({ ...current, memoryDisabled: !checked }))} />
+        </div>
+        <div className="flex items-center justify-between gap-4">
+          <Label htmlFor="new-use-assistant" className="min-w-0 flex-col items-start gap-0">
+            <span className="block text-sm">Let Conker use tools</span>
+            <span className="mt-0.5 block text-xs font-normal leading-4 text-muted-foreground">Pick the best model and prepare actions for you to approve.</span>
+          </Label>
+          <Switch id="new-use-assistant" checked={!draft.harnessDisabled} onCheckedChange={checked => setDraft(current => ({ ...current, harnessDisabled: !checked }))} />
+        </div>
+        <p className="text-xs text-muted-foreground">Setup defaults still apply when no restriction is selected. Messages and drafts stay on this server.</p>
+        {changed && (
+          <p role="alert" className="text-xs text-destructive-foreground">
+            Privacy changed while this menu was open. Close and reopen it to review the saved settings.
+          </p>
+        )}
+        <Button
+          className="w-full"
+          size="sm"
+          disabled={disabled || changed}
+          onClick={() => {
+            if (changed || disabled) return
+            onChange(draft, openedWith.revisionKey)
+            setOpen(false)
+          }}
+        >
+          Done
+        </Button>
+      </PopoverContent>
+    </Popover>
+  )
 }
 composerItem(NewChatPrivacyControl, 'incognito')

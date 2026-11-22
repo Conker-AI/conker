@@ -1,20 +1,36 @@
-import "./no-devtools"
-import { createLibrary } from "@openuidev/react-lang"
-import { ChartPart, SeriesPart } from "./chart"
-import { ButtonPart, ChoicesPart, DateFieldPart, FormPart, SelectFieldPart, SliderFieldPart, TextFieldPart } from "./controls"
-import { CalloutPart, CardPart, ProgressPart, StackPart, StatPart, StatsPart, StepPart, StepsPart, TablePart, TextPart } from "./parts"
+import './no-devtools'
+import { createLibrary } from '@openuidev/react-lang'
+import { ChartPart, SeriesPart } from './chart'
+import { ButtonPart, ChoicesPart, DateFieldPart, FormPart, SelectFieldPart, SliderFieldPart, TextFieldPart } from './controls'
+import { CalloutPart, CardPart, ProgressPart, StackPart, StatPart, StatsPart, StepPart, StepsPart, TablePart, TextPart } from './parts'
 
 /**
  * Conker's catalog: the only components a model may use in an answer. Built from the dashboard's own
  * parts, so generated UI looks like the rest of Conker. No images, maps, HTML or tool calls.
  */
 export const answerLibrary = createLibrary({
-  id: "conker-answers",
-  root: "Stack",
+  id: 'conker-answers',
+  root: 'Stack',
   components: [
-    StackPart, CardPart, TextPart, StatsPart, StatPart, TablePart, ChartPart, SeriesPart,
-    ChoicesPart, ButtonPart, FormPart, TextFieldPart, SelectFieldPart, SliderFieldPart, DateFieldPart,
-    StepsPart, StepPart, ProgressPart, CalloutPart,
+    StackPart,
+    CardPart,
+    TextPart,
+    StatsPart,
+    StatPart,
+    TablePart,
+    ChartPart,
+    SeriesPart,
+    ChoicesPart,
+    ButtonPart,
+    FormPart,
+    TextFieldPart,
+    SelectFieldPart,
+    SliderFieldPart,
+    DateFieldPart,
+    StepsPart,
+    StepPart,
+    ProgressPart,
+    CalloutPart,
   ],
 })
 
@@ -25,8 +41,8 @@ Answer in Markdown as usual. When a table, chart, a few replies to tap or a shor
 const RULES = [
   "A Button tap or a Form submit only sends text to you as the owner's next message. Nothing else runs, so never say something was done because a button exists.",
   "Offer Choices only when the owner is likely to pick one next; write each label as the owner's own reply.",
-  "Use @OpenUrl only with https links you were given or cited.",
-  "Numbers in Stat and Table carry their units. Charts take numbers only.",
+  'Use @OpenUrl only with https links you were given or cited.',
+  'Numbers in Stat and Table carry their units. Charts take numbers only.',
 ]
 
 const EXAMPLE = `Here is your week:

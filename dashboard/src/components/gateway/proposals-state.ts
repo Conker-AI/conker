@@ -20,26 +20,50 @@ export function useProposals(client: GatewayProposalClient | undefined, active: 
   const mounted = useRef(true)
   const load = useCallback(async () => {
     if (!client) return
-    try { const rows = await client.list(); if (mounted.current) { setItems(rows); setError(null) } }
-    catch (failure) { if (mounted.current) setError(failure) }
+    try {
+      const rows = await client.list()
+      if (mounted.current) {
+        setItems(rows)
+        setError(null)
+      }
+    } catch (failure) {
+      if (mounted.current) setError(failure)
+    }
   }, [client])
-  useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
+  useEffect(() => {
+    mounted.current = true
+    return () => {
+      mounted.current = false
+    }
+  }, [])
   useEffect(() => {
     let cancelled = false
-    if (active && client) queueMicrotask(() => { if (!cancelled) void load() })
-    return () => { cancelled = true }
+    if (active && client)
+      queueMicrotask(() => {
+        if (!cancelled) void load()
+      })
+    return () => {
+      cancelled = true
+    }
   }, [active, client, load])
-  const decide = useCallback(async (item: Proposal, decision: ProposalDecision) => {
-    if (!client) return
-    setPending(item.id); setFailure(null); setNotice(null)
-    try {
-      await client.decide(item.id, decision)
-      if (!mounted.current) return
-      setItems(rows => rows?.filter(row => row.id !== item.id) ?? rows)
-      setNotice(proposalOutcome[decision])
-    } catch (problem) {
-      if (mounted.current) setFailure({ id: item.id, message: `${gatewayError(problem).message} Refresh to see the saved decision.` })
-    } finally { if (mounted.current) setPending(null) }
-  }, [client])
+  const decide = useCallback(
+    async (item: Proposal, decision: ProposalDecision) => {
+      if (!client) return
+      setPending(item.id)
+      setFailure(null)
+      setNotice(null)
+      try {
+        await client.decide(item.id, decision)
+        if (!mounted.current) return
+        setItems(rows => rows?.filter(row => row.id !== item.id) ?? rows)
+        setNotice(proposalOutcome[decision])
+      } catch (problem) {
+        if (mounted.current) setFailure({ id: item.id, message: `${gatewayError(problem).message} Refresh to see the saved decision.` })
+      } finally {
+        if (mounted.current) setPending(null)
+      }
+    },
+    [client],
+  )
   return { items, pending, error, failure, notice, load, decide }
 }

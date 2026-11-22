@@ -8,27 +8,27 @@ export function hexColor(color: string, context: CanvasRenderingContext2D | null
   if (!context || !color) return null
   context.clearRect(0, 0, 1, 1)
   // An invalid color leaves fillStyle unchanged, so start transparent: it then paints nothing.
-  context.fillStyle = "transparent"
+  context.fillStyle = 'transparent'
   context.fillStyle = color
   context.fillRect(0, 0, 1, 1)
   const [red, green, blue, alpha] = context.getImageData(0, 0, 1, 1).data
   if (alpha === 0) return null
-  return `#${[red, green, blue].map(value => value.toString(16).padStart(2, "0")).join("")}`
+  return `#${[red, green, blue].map(value => value.toString(16).padStart(2, '0')).join('')}`
 }
 
 export function syncThemeColor(root: HTMLElement = document.documentElement) {
   const meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')
   if (!meta) return () => {}
-  const canvas = document.createElement("canvas")
+  const canvas = document.createElement('canvas')
   canvas.width = canvas.height = 1
-  const context = canvas.getContext("2d", { willReadFrequently: true })
+  const context = canvas.getContext('2d', { willReadFrequently: true })
   const apply = () => {
     const color = hexColor(getComputedStyle(document.body).backgroundColor, context)
     if (color && meta.content !== color) meta.content = color
   }
   // Theme, accent and custom-theme changes all land on the root element.
   const observer = new MutationObserver(apply)
-  observer.observe(root, { attributes: true, attributeFilter: ["class", "style", "data-accent", "data-theme"] })
+  observer.observe(root, { attributes: true, attributeFilter: ['class', 'style', 'data-accent', 'data-theme'] })
   apply()
   return () => observer.disconnect()
 }

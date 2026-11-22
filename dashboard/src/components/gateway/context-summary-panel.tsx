@@ -31,25 +31,30 @@ function SummaryPanel({ client, sessionId, lastMessageId, disabled, onChanged }:
   const [errors, setErrors] = useState<Partial<Record<Slot, string>>>({})
   const [forkOpen, setForkOpen] = useState(false)
 
-  const load = useCallback(async (signal?: AbortSignal) => {
-    const [nextSummary, nextCompaction, nextPolicy] = await Promise.all([
-      client.summary(sessionId, signal), client.compaction(sessionId, signal), client.policyRevision(sessionId, signal),
-    ])
-    if (signal?.aborted) return
-    setSummary(nextSummary)
-    setCompaction(nextCompaction)
-    setPolicyRevision(nextPolicy)
-    setText(nextSummary.summary ?? '')
-    setDraft(null)
-  }, [client, sessionId])
+  const load = useCallback(
+    async (signal?: AbortSignal) => {
+      const [nextSummary, nextCompaction, nextPolicy] = await Promise.all([client.summary(sessionId, signal), client.compaction(sessionId, signal), client.policyRevision(sessionId, signal)])
+      if (signal?.aborted) return
+      setSummary(nextSummary)
+      setCompaction(nextCompaction)
+      setPolicyRevision(nextPolicy)
+      setText(nextSummary.summary ?? '')
+      setDraft(null)
+    },
+    [client, sessionId],
+  )
 
   useEffect(() => {
     const controller = new AbortController()
     queueMicrotask(() => {
       if (controller.signal.aborted) return
       load(controller.signal)
-        .catch(error => { if (!controller.signal.aborted) setErrors({ edit: chatFeatureMessage(error) }) })
-        .finally(() => { if (!controller.signal.aborted) setBusy(false) })
+        .catch(error => {
+          if (!controller.signal.aborted) setErrors({ edit: chatFeatureMessage(error) })
+        })
+        .finally(() => {
+          if (!controller.signal.aborted) setBusy(false)
+        })
     })
     return () => controller.abort()
   }, [load])
@@ -69,95 +74,140 @@ function SummaryPanel({ client, sessionId, lastMessageId, disabled, onChanged }:
     }
   }
 
-  const save = () => act('edit', async () => {
-    if (!summary) return
-    await client.save(sessionId, text, summary.revision)
-    await load()
-    onChanged()
-  })
-  const makeDraft = () => act('edit', async () => {
-    const next = await client.draft(sessionId)
-    setDraft(next)
-    setText(next.summary)
-  })
-  const fold = () => act('fold', async () => {
-    if (!draft) return
-    await client.compact(sessionId, { policyRevision, summaryRevision: draft.summaryRevision, summary: text, covers: draft.messageIds })
-    await load()
-    onChanged()
-  })
-  const restore = (revision: number) => act('restore', async () => {
-    if (!summary) return
-    await client.restore(sessionId, revision, summary.revision)
-    await load()
-    onChanged()
-  })
-  const fork = () => act('fork', async () => {
-    const result = await client.fork(sessionId, { policyRevision, lastMessageId, summary: summary?.summary ?? '' })
-    setForkOpen(false)
-    onChanged()
-    navigate(`/chat/${result.sessionId}`)
-  })
+  const save = () =>
+    act('edit', async () => {
+      if (!summary) return
+      await client.save(sessionId, text, summary.revision)
+      await load()
+      onChanged()
+    })
+  const makeDraft = () =>
+    act('edit', async () => {
+      const next = await client.draft(sessionId)
+      setDraft(next)
+      setText(next.summary)
+    })
+  const fold = () =>
+    act('fold', async () => {
+      if (!draft) return
+      await client.compact(sessionId, { policyRevision, summaryRevision: draft.summaryRevision, summary: text, covers: draft.messageIds })
+      await load()
+      onChanged()
+    })
+  const restore = (revision: number) =>
+    act('restore', async () => {
+      if (!summary) return
+      await client.restore(sessionId, revision, summary.revision)
+      await load()
+      onChanged()
+    })
+  const fork = () =>
+    act('fork', async () => {
+      const result = await client.fork(sessionId, { policyRevision, lastMessageId, summary: summary?.summary ?? '' })
+      setForkOpen(false)
+      onChanged()
+      navigate(`/chat/${result.sessionId}`)
+    })
 
   const locked = disabled || busy
   const hasSettings = policyRevision > 0
   const earlier = summary?.versions.filter(version => version.revision !== summary.revision) ?? []
   const folded = compaction?.folded.length ?? 0
 
-  return <section className="space-y-3" aria-label="Summary">
-    <h3 className="text-sm font-medium">Summary</h3>
+  return (
+    <section className="space-y-3" aria-label="Summary">
+      <h3 className="text-sm font-medium">Summary</h3>
 
-    <div className="space-y-2">
-      <Textarea aria-label="Summary" rows={6} placeholder="No summary yet." value={text} disabled={locked || !summary} onChange={event => setText(event.target.value)} />
-      <div className="flex flex-wrap items-center gap-2">
-        <Button size="sm" disabled={locked || !summary || text === (summary.summary ?? '')} onClick={save}>Save</Button>
-        <Button size="sm" variant="outline" disabled={locked || !summary} onClick={makeDraft}><Sparkles aria-hidden="true" />Draft with AI</Button>
+      <div className="space-y-2">
+        <Textarea aria-label="Summary" rows={6} placeholder="No summary yet." value={text} disabled={locked || !summary} onChange={event => setText(event.target.value)} />
+        <div className="flex flex-wrap items-center gap-2">
+          <Button size="sm" disabled={locked || !summary || text === (summary.summary ?? '')} onClick={save}>
+            Save
+          </Button>
+          <Button size="sm" variant="outline" disabled={locked || !summary} onClick={makeDraft}>
+            <Sparkles aria-hidden="true" />
+            Draft with AI
+          </Button>
+        </div>
+        {errors.edit && <ChatFeatureError text={errors.edit} />}
       </div>
-      {errors.edit && <ChatFeatureError text={errors.edit} />}
-    </div>
 
-    {draft && <div className="space-y-2">
-      <p className="text-xs text-muted-foreground">Read {count(draft.messageIds.length, 'message', 'messages')}{draft.truncated && ' · shortened'}</p>
-      <Button size="sm" variant="outline" disabled={locked || !hasSettings || text.trim() === ''} onClick={fold}>Fold these messages</Button>
-      {!hasSettings && <p className="text-xs text-muted-foreground">{needsSettings}</p>}
-    </div>}
-    {errors.fold && <ChatFeatureError text={errors.fold} />}
+      {draft && (
+        <div className="space-y-2">
+          <p className="text-xs text-muted-foreground">
+            Read {count(draft.messageIds.length, 'message', 'messages')}
+            {draft.truncated && ' · shortened'}
+          </p>
+          <Button size="sm" variant="outline" disabled={locked || !hasSettings || text.trim() === ''} onClick={fold}>
+            Fold these messages
+          </Button>
+          {!hasSettings && <p className="text-xs text-muted-foreground">{needsSettings}</p>}
+        </div>
+      )}
+      {errors.fold && <ChatFeatureError text={errors.fold} />}
 
-    {folded > 0 && <p className="text-xs text-muted-foreground">{folded === 1 ? '1 message folded' : `${folded} messages folded`} into the summary.</p>}
+      {folded > 0 && <p className="text-xs text-muted-foreground">{folded === 1 ? '1 message folded' : `${folded} messages folded`} into the summary.</p>}
 
-    {earlier.length > 0 && <Collapsible>
-      <CollapsibleTrigger render={<Button size="sm" variant="ghost" className="-ml-2.5 text-xs" />}>Earlier versions ({earlier.length})</CollapsibleTrigger>
-      <CollapsibleContent>
-        <ul className="mt-2 space-y-2">
-          {earlier.map(version => <li key={version.revision} className="space-y-1 rounded-md border p-2 text-xs">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="text-muted-foreground">Version {version.revision} · {new Date(version.createdAt * 1000).toLocaleString()}{version.restoredFrom !== null && ` · restored from ${version.restoredFrom}`}</span>
-              <Button size="sm" variant="ghost" disabled={locked} onClick={() => restore(version.revision)}>Restore</Button>
-            </div>
-            {version.summary && <p className="line-clamp-2 whitespace-pre-line break-words">{version.summary}</p>}
-          </li>)}
-        </ul>
-        {errors.restore && <ChatFeatureError text={errors.restore} className="mt-2" />}
-      </CollapsibleContent>
-    </Collapsible>}
+      {earlier.length > 0 && (
+        <Collapsible>
+          <CollapsibleTrigger render={<Button size="sm" variant="ghost" className="-ml-2.5 text-xs" />}>Earlier versions ({earlier.length})</CollapsibleTrigger>
+          <CollapsibleContent>
+            <ul className="mt-2 space-y-2">
+              {earlier.map(version => (
+                <li key={version.revision} className="space-y-1 rounded-md border p-2 text-xs">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-muted-foreground">
+                      Version {version.revision} · {new Date(version.createdAt * 1000).toLocaleString()}
+                      {version.restoredFrom !== null && ` · restored from ${version.restoredFrom}`}
+                    </span>
+                    <Button size="sm" variant="ghost" disabled={locked} onClick={() => restore(version.revision)}>
+                      Restore
+                    </Button>
+                  </div>
+                  {version.summary && <p className="line-clamp-2 whitespace-pre-line break-words">{version.summary}</p>}
+                </li>
+              ))}
+            </ul>
+            {errors.restore && <ChatFeatureError text={errors.restore} className="mt-2" />}
+          </CollapsibleContent>
+        </Collapsible>
+      )}
 
-    <div className="space-y-2">
-      <Button size="sm" variant="outline" disabled={locked || !summary || !hasSettings} onClick={() => { setErrors({}); setForkOpen(true) }}>Continue in a new chat</Button>
-      {summary && !hasSettings && <p className="text-xs text-muted-foreground">{needsSettings}</p>}
-    </div>
+      <div className="space-y-2">
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={locked || !summary || !hasSettings}
+          onClick={() => {
+            setErrors({})
+            setForkOpen(true)
+          }}
+        >
+          Continue in a new chat
+        </Button>
+        {summary && !hasSettings && <p className="text-xs text-muted-foreground">{needsSettings}</p>}
+      </div>
 
-    <AlertDialog open={forkOpen} onOpenChange={open => { if (!busy) setForkOpen(open) }}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Continue in a new chat?</AlertDialogTitle>
-          <AlertDialogDescription>This chat closes and a new one starts from the summary and the pinned messages.</AlertDialogDescription>
-          {errors.fork && <ChatFeatureError text={errors.fork} />}
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogClose render={<Button variant="outline" disabled={busy} />}>Cancel</AlertDialogClose>
-          <Button disabled={busy || disabled} onClick={fork}>Continue</Button>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  </section>
+      <AlertDialog
+        open={forkOpen}
+        onOpenChange={open => {
+          if (!busy) setForkOpen(open)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Continue in a new chat?</AlertDialogTitle>
+            <AlertDialogDescription>This chat closes and a new one starts from the summary and the pinned messages.</AlertDialogDescription>
+            {errors.fork && <ChatFeatureError text={errors.fork} />}
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogClose render={<Button variant="outline" disabled={busy} />}>Cancel</AlertDialogClose>
+            <Button disabled={busy || disabled} onClick={fork}>
+              Continue
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </section>
+  )
 }

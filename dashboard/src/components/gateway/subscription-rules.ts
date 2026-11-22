@@ -13,7 +13,7 @@ export const chatGPTConnectionRules = {
     const pending = next.available && !next.connected && next.loginState === 'pending' && !!next.loginId
     const issued = operation?.operation === 'login' ? next.deviceCode : null
     const retained = !operation && previous?.loginId === next.loginId ? previous?.deviceCode : null
-    return { ...next, deviceCode: pending ? issued ?? retained ?? null : null }
+    return { ...next, deviceCode: pending ? (issued ?? retained ?? null) : null }
   },
 }
 
@@ -28,4 +28,3 @@ export const nativeClaudeConnectionRules = {
     return { ...next, authorizationUrl: next.available && !next.connected && next.loginState === 'pending' && next.loginId ? next.authorizationUrl : null }
   },
 }
-

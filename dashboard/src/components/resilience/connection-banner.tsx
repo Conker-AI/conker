@@ -19,11 +19,19 @@ export function ConnectionBanner({ probe }: { probe: () => Promise<unknown> }) {
   const [checking, setChecking] = useState(false)
   const [back, setBack] = useState(false)
   const latestProbe = useRef(probe)
-  useEffect(() => { latestProbe.current = probe }, [probe])
+  useEffect(() => {
+    latestProbe.current = probe
+  }, [probe])
 
   const check = useCallback(async () => {
     setChecking(true)
-    try { await latestProbe.current() } catch { /* The transport reports reachability either way. */ } finally { setChecking(false) }
+    try {
+      await latestProbe.current()
+    } catch {
+      /* The transport reports reachability either way. */
+    } finally {
+      setChecking(false)
+    }
   }, [])
 
   useEffect(() => {
@@ -38,15 +46,30 @@ export function ConnectionBanner({ probe }: { probe: () => Promise<unknown> }) {
         timer = setTimeout(() => setBack(false), backOnlineMs)
       }
     })
-    return () => { unsubscribe(); if (timer) clearTimeout(timer) }
+    return () => {
+      unsubscribe()
+      if (timer) clearTimeout(timer)
+    }
   }, [check])
 
   const unreachable = online && gateway === 'unreachable'
   useEffect(() => {
     if (!unreachable) return
-    let attempt = 0, timer: ReturnType<typeof setTimeout> | null = null, cancelled = false
-    const schedule = () => { if (cancelled) return; timer = setTimeout(() => { void check().finally(schedule) }, backoff[Math.min(attempt++, backoff.length - 1)] * 1000) }
-    const now = () => { if (document.visibilityState === 'visible') void check() }
+    let attempt = 0,
+      timer: ReturnType<typeof setTimeout> | null = null,
+      cancelled = false
+    const schedule = () => {
+      if (cancelled) return
+      timer = setTimeout(
+        () => {
+          void check().finally(schedule)
+        },
+        backoff[Math.min(attempt++, backoff.length - 1)] * 1000,
+      )
+    }
+    const now = () => {
+      if (document.visibilityState === 'visible') void check()
+    }
     schedule()
     window.addEventListener('focus', now)
     document.addEventListener('visibilitychange', now)
@@ -60,14 +83,28 @@ export function ConnectionBanner({ probe }: { probe: () => Promise<unknown> }) {
   }, [unreachable, check])
 
   if (!online) return <Line icon={<WifiOff className="text-warning-foreground" />} text="You’re offline. Conker reconnects when your connection is back." />
-  if (unreachable) return <Line icon={<CloudOff className="text-warning-foreground" />} text={checking ? 'Can’t reach your Conker server. Checking…' : 'Can’t reach your Conker server. Trying again…'}
-    action={<Button type="button" size="xs" variant="outline" disabled={checking} onClick={() => void check()}>Retry now</Button>} />
+  if (unreachable)
+    return (
+      <Line
+        icon={<CloudOff className="text-warning-foreground" />}
+        text={checking ? 'Can’t reach your Conker server. Checking…' : 'Can’t reach your Conker server. Trying again…'}
+        action={
+          <Button type="button" size="xs" variant="outline" disabled={checking} onClick={() => void check()}>
+            Retry now
+          </Button>
+        }
+      />
+    )
   if (back) return <Line icon={<Check className="text-success-foreground" />} text="Back online." />
   return null
 }
 
 function Line({ icon, text, action }: { icon: ReactNode; text: string; action?: ReactNode }) {
-  return <div role="status" aria-live="polite" data-slot="connection-banner" className="flex min-h-10 shrink-0 items-center gap-2 border-b bg-muted px-4 py-1.5 text-sm [&_svg]:size-4 [&_svg]:shrink-0">
-    {icon}<p className="min-w-0 flex-1">{text}</p>{action}
-  </div>
+  return (
+    <div role="status" aria-live="polite" data-slot="connection-banner" className="flex min-h-10 shrink-0 items-center gap-2 border-b bg-muted px-4 py-1.5 text-sm [&_svg]:size-4 [&_svg]:shrink-0">
+      {icon}
+      <p className="min-w-0 flex-1">{text}</p>
+      {action}
+    </div>
+  )
 }

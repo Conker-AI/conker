@@ -29,7 +29,8 @@ function at(document: unknown, field: string): unknown {
 
 function withField(document: Record<string, unknown>, field: string, value: unknown): Record<string, unknown> {
   const copy = structuredClone(document)
-  const parts = field.split('.'), leaf = parts.pop()!
+  const parts = field.split('.'),
+    leaf = parts.pop()!
   let target: Record<string, unknown> = copy
   for (const part of parts) target = (target[part] ??= {}) as Record<string, unknown>
   target[leaf] = value
@@ -48,29 +49,45 @@ export function useSettings(client: GatewayControlClient) {
   const [loading, setLoading] = useState(true)
   const [statuses, setStatuses] = useState<Record<string, RowStatus>>({})
   const [device, setDevice] = useState(0)
-  const latest = useRef(documents), queues = useRef(new Map<string, Promise<void>>()), timers = useRef(new Map<string, number>())
-  useEffect(() => { latest.current = documents }, [documents])
+  const latest = useRef(documents),
+    queues = useRef(new Map<string, Promise<void>>()),
+    timers = useRef(new Map<string, number>())
+  useEffect(() => {
+    latest.current = documents
+  }, [documents])
 
-  const load = useCallback(async (signal?: AbortSignal) => {
-    setLoading(true)
-    const [settings, preferences, search, tools, lockdown] = await Promise.allSettled([client.settings.read(signal), client.settings.preferences(signal), client.search.settings(signal),
-      client.settings.tools(signal), client.settings.lockdown(signal)])
-    if (signal?.aborted) return
-    const next: Documents = {
-      settings: settings.status === 'fulfilled' ? settings.value : null,
-      preferences: preferences.status === 'fulfilled' ? preferences.value : null,
-      search: search.status === 'fulfilled' ? search.value as Documents['search'] : null,
-      tools: tools.status === 'fulfilled' ? tools.value : null,
-      lockdown: lockdown.status === 'fulfilled' ? lockdown.value : null,
-    }
-    const message = (result: PromiseSettledResult<unknown>) => result.status === 'rejected' ? gatewayError(result.reason).message : undefined
-    setLoadErrors({ settings: message(settings), preferences: message(preferences), search: message(search), tools: message(tools), lockdown: message(lockdown) })
-    setDocuments(next); latest.current = next; setLoading(false)
-    if (next.settings) publishServerSettings(next.settings)
-  }, [client])
+  const load = useCallback(
+    async (signal?: AbortSignal) => {
+      setLoading(true)
+      const [settings, preferences, search, tools, lockdown] = await Promise.allSettled([
+        client.settings.read(signal),
+        client.settings.preferences(signal),
+        client.search.settings(signal),
+        client.settings.tools(signal),
+        client.settings.lockdown(signal),
+      ])
+      if (signal?.aborted) return
+      const next: Documents = {
+        settings: settings.status === 'fulfilled' ? settings.value : null,
+        preferences: preferences.status === 'fulfilled' ? preferences.value : null,
+        search: search.status === 'fulfilled' ? (search.value as Documents['search']) : null,
+        tools: tools.status === 'fulfilled' ? tools.value : null,
+        lockdown: lockdown.status === 'fulfilled' ? lockdown.value : null,
+      }
+      const message = (result: PromiseSettledResult<unknown>) => (result.status === 'rejected' ? gatewayError(result.reason).message : undefined)
+      setLoadErrors({ settings: message(settings), preferences: message(preferences), search: message(search), tools: message(tools), lockdown: message(lockdown) })
+      setDocuments(next)
+      latest.current = next
+      setLoading(false)
+      if (next.settings) publishServerSettings(next.settings)
+    },
+    [client],
+  )
   useEffect(() => {
     const controller = new AbortController()
-    queueMicrotask(() => { if (!controller.signal.aborted) void load(controller.signal) })
+    queueMicrotask(() => {
+      if (!controller.signal.aborted) void load(controller.signal)
+    })
     return () => controller.abort()
   }, [load])
 
@@ -83,77 +100,125 @@ export function useSettings(client: GatewayControlClient) {
   }
 
   /** The value shown for a setting: what its home holds, or its default. */
-  const value = useCallback((setting: Setting): SettingValue => {
-    void device
-    const home = homeOf(setting)
-    if (setting.id === 'appearance.theme') return theme
-    if (home === 'browser') return readDeviceSetting(setting)
-    if (home === 'settings') return (documents.settings?.values[setting.id] as SettingValue | undefined) ?? setting.default
-    if (home === 'preferences' && setting.home?.service === 'pi') return (at(documents.preferences?.preferences, setting.home.field) as SettingValue | undefined) ?? setting.default
-    if (home === 'search' && setting.home?.service === 'pi') return (at(documents.search?.configuration, setting.home.field) as SettingValue | undefined) ?? setting.default
-    // A ToolGate number left null keeps today's limit, which is the registry default.
-    if (home === 'tools' && setting.home?.service === 'toolgate') return (at(documents.tools?.settings, setting.home.field) as SettingValue | undefined) ?? setting.default
-    if (home === 'lockdown' && setting.home?.service === 'toolgate') return (at(documents.lockdown, setting.home.field) as SettingValue | undefined) ?? setting.default
-    return setting.default
-  }, [documents, theme, device])
+  const value = useCallback(
+    (setting: Setting): SettingValue => {
+      void device
+      const home = homeOf(setting)
+      if (setting.id === 'appearance.theme') return theme
+      if (home === 'browser') return readDeviceSetting(setting)
+      if (home === 'settings') return (documents.settings?.values[setting.id] as SettingValue | undefined) ?? setting.default
+      if (home === 'preferences' && setting.home?.service === 'pi') return (at(documents.preferences?.preferences, setting.home.field) as SettingValue | undefined) ?? setting.default
+      if (home === 'search' && setting.home?.service === 'pi') return (at(documents.search?.configuration, setting.home.field) as SettingValue | undefined) ?? setting.default
+      // A ToolGate number left null keeps today's limit, which is the registry default.
+      if (home === 'tools' && setting.home?.service === 'toolgate') return (at(documents.tools?.settings, setting.home.field) as SettingValue | undefined) ?? setting.default
+      if (home === 'lockdown' && setting.home?.service === 'toolgate') return (at(documents.lockdown, setting.home.field) as SettingValue | undefined) ?? setting.default
+      return setting.default
+    },
+    [documents, theme, device],
+  )
 
   /** Whether this setting's home could be read, so the row can be changed. */
-  const available = useCallback((setting: Setting) => {
-    const home = homeOf(setting)
-    return home === null || home === 'browser' || documents[home] !== null
-  }, [documents])
+  const available = useCallback(
+    (setting: Setting) => {
+      const home = homeOf(setting)
+      return home === null || home === 'browser' || documents[home] !== null
+    },
+    [documents],
+  )
 
   const report = useCallback((id: string, status: RowStatus | null) => {
     window.clearTimeout(timers.current.get(id))
-    setStatuses(current => { const next = { ...current }; if (status) next[id] = status; else delete next[id]; return next })
-    if (status?.state === 'saved') timers.current.set(id, window.setTimeout(() => setStatuses(current => { const next = { ...current }; delete next[id]; return next }), 2500))
+    setStatuses(current => {
+      const next = { ...current }
+      if (status) next[id] = status
+      else delete next[id]
+      return next
+    })
+    if (status?.state === 'saved')
+      timers.current.set(
+        id,
+        window.setTimeout(
+          () =>
+            setStatuses(current => {
+              const next = { ...current }
+              delete next[id]
+              return next
+            }),
+          2500,
+        ),
+      )
   }, [])
 
-  const write = useCallback((setting: Setting, next: SettingValue) => {
-    const home = homeOf(setting)
-    if (!home) return
-    if (setting.id === 'appearance.theme') { setTheme(next as 'system' | 'light' | 'dark'); report(setting.id, { state: 'saved' }); return }
-    if (home === 'browser') { writeDeviceSetting(setting, next); setDevice(count => count + 1); report(setting.id, { state: 'saved' }); return }
-    report(setting.id, { state: 'saving' })
-    const task = async () => {
-      const current = latest.current
-      try {
-        if (home === 'settings' && current.settings) {
-          const values = { ...current.settings.values }
-          // Back at its default, a setting leaves the document: "changed" stays honest.
-          if (sameValue(next, setting.default)) delete values[setting.id]; else values[setting.id] = next
-          const saved = await client.settings.save(values, current.settings.revision)
-          setDocuments(documents => ({ ...documents, settings: saved })); latest.current = { ...latest.current, settings: saved }
-          // Every other screen follows at once (the sidebar, Home, Memory...).
-          publishServerSettings(saved)
-        } else if (home === 'preferences' && current.preferences && setting.home?.service === 'pi') {
-          const saved = await client.settings.savePreferences(withField(current.preferences.preferences, setting.home.field, next), current.preferences.revision)
-          setDocuments(documents => ({ ...documents, preferences: saved })); latest.current = { ...latest.current, preferences: saved }
-        } else if (home === 'search' && current.search && setting.home?.service === 'pi') {
-          const saved = await client.search.save(withField(current.search.configuration, setting.home.field, next) as never, current.search.revision) as unknown as Documents['search']
-          setDocuments(documents => ({ ...documents, search: saved })); latest.current = { ...latest.current, search: saved }
-        } else if (home === 'tools' && current.tools && setting.home?.service === 'toolgate') {
-          // Back at its default, a number goes back to null: today's limit, which follows ToolGate's own.
-          const stored = setting.type === 'number' && sameValue(next, setting.default) ? null : next
-          const saved = await client.settings.saveTools(withField(current.tools.settings, setting.home.field, stored), current.tools.revision)
-          setDocuments(documents => ({ ...documents, tools: saved })); latest.current = { ...latest.current, tools: saved }
-        } else if (home === 'lockdown' && current.lockdown) {
-          const saved = await client.settings.setLockdown(next === true)
-          setDocuments(documents => ({ ...documents, lockdown: saved })); latest.current = { ...latest.current, lockdown: saved }
-        } else throw new GatewayError('dependency')
+  const write = useCallback(
+    (setting: Setting, next: SettingValue) => {
+      const home = homeOf(setting)
+      if (!home) return
+      if (setting.id === 'appearance.theme') {
+        setTheme(next as 'system' | 'light' | 'dark')
         report(setting.id, { state: 'saved' })
-      } catch (cause) {
-        const failure = gatewayError(cause)
-        if (failure.status === 409) { await load(); report(setting.id, { state: 'failed', message: 'Changed somewhere else. Showing the latest; try again.' }) }
-        else report(setting.id, { state: 'failed', message: failure.kind === 'verification-cancelled' ? 'Not saved: the password was not confirmed.' : failure.message })
+        return
       }
-    }
-    const queued = (queues.current.get(home) ?? Promise.resolve()).then(task)
-    queues.current.set(home, queued)
-  }, [client, load, setTheme, report])
+      if (home === 'browser') {
+        writeDeviceSetting(setting, next)
+        setDevice(count => count + 1)
+        report(setting.id, { state: 'saved' })
+        return
+      }
+      report(setting.id, { state: 'saving' })
+      const task = async () => {
+        const current = latest.current
+        try {
+          if (home === 'settings' && current.settings) {
+            const values = { ...current.settings.values }
+            // Back at its default, a setting leaves the document: "changed" stays honest.
+            if (sameValue(next, setting.default)) delete values[setting.id]
+            else values[setting.id] = next
+            const saved = await client.settings.save(values, current.settings.revision)
+            setDocuments(documents => ({ ...documents, settings: saved }))
+            latest.current = { ...latest.current, settings: saved }
+            // Every other screen follows at once (the sidebar, Home, Memory...).
+            publishServerSettings(saved)
+          } else if (home === 'preferences' && current.preferences && setting.home?.service === 'pi') {
+            const saved = await client.settings.savePreferences(withField(current.preferences.preferences, setting.home.field, next), current.preferences.revision)
+            setDocuments(documents => ({ ...documents, preferences: saved }))
+            latest.current = { ...latest.current, preferences: saved }
+          } else if (home === 'search' && current.search && setting.home?.service === 'pi') {
+            const saved = (await client.search.save(withField(current.search.configuration, setting.home.field, next) as never, current.search.revision)) as unknown as Documents['search']
+            setDocuments(documents => ({ ...documents, search: saved }))
+            latest.current = { ...latest.current, search: saved }
+          } else if (home === 'tools' && current.tools && setting.home?.service === 'toolgate') {
+            // Back at its default, a number goes back to null: today's limit, which follows ToolGate's own.
+            const stored = setting.type === 'number' && sameValue(next, setting.default) ? null : next
+            const saved = await client.settings.saveTools(withField(current.tools.settings, setting.home.field, stored), current.tools.revision)
+            setDocuments(documents => ({ ...documents, tools: saved }))
+            latest.current = { ...latest.current, tools: saved }
+          } else if (home === 'lockdown' && current.lockdown) {
+            const saved = await client.settings.setLockdown(next === true)
+            setDocuments(documents => ({ ...documents, lockdown: saved }))
+            latest.current = { ...latest.current, lockdown: saved }
+          } else throw new GatewayError('dependency')
+          report(setting.id, { state: 'saved' })
+        } catch (cause) {
+          const failure = gatewayError(cause)
+          if (failure.status === 409) {
+            await load()
+            report(setting.id, { state: 'failed', message: 'Changed somewhere else. Showing the latest; try again.' })
+          } else report(setting.id, { state: 'failed', message: failure.kind === 'verification-cancelled' ? 'Not saved: the password was not confirmed.' : failure.message })
+        }
+      }
+      const queued = (queues.current.get(home) ?? Promise.resolve()).then(task)
+      queues.current.set(home, queued)
+    },
+    [client, load, setTheme, report],
+  )
 
   return {
-    loading, loadErrors, statuses, value, available, reload: () => load(),
+    loading,
+    loadErrors,
+    statuses,
+    value,
+    available,
+    reload: () => load(),
     set: write,
     reset: (setting: Setting) => write(setting, setting.default),
     changed: (setting: Setting) => setting.type !== 'custom' && !sameValue(value(setting), setting.default),

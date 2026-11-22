@@ -21,7 +21,13 @@ export function errorReport(error: unknown): string {
   if (error instanceof GatewayError) lines.push(`Kind: ${error.kind}${error.status ? ` (HTTP ${error.status})` : ''}`)
   if (error instanceof Error) {
     lines.push(`Error: ${error.name}: ${redact(error.message)}`)
-    if (error.stack) lines.push(...error.stack.split('\n').slice(1, 9).map(line => `  ${redact(line.trim())}`))
+    if (error.stack)
+      lines.push(
+        ...error.stack
+          .split('\n')
+          .slice(1, 9)
+          .map(line => `  ${redact(line.trim())}`),
+      )
   } else lines.push(`Error: ${redact(String(error))}`)
   if (typeof navigator !== 'undefined') lines.push(`Browser: ${navigator.userAgent}`)
   return lines.join('\n')
@@ -42,7 +48,7 @@ const titles: Partial<Record<GatewayErrorKind, string>> = {
 export const retryableKinds = new Set<GatewayErrorKind>(['network', 'dependency', 'aborted', 'invalid-response', 'http'])
 
 export function failureTitle(error: unknown, fallback = 'Couldn’t load this') {
-  return error instanceof GatewayError ? titles[error.kind] ?? fallback : fallback
+  return error instanceof GatewayError ? (titles[error.kind] ?? fallback) : fallback
 }
 
 /** What to do next when a read failed; the transport's own messages are written for actions. */

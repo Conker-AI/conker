@@ -11,8 +11,8 @@ export function insertTranscript(current: string, transcript: string, anchor: Dr
   const end = unchanged ? Math.max(start, Math.min(current.length, anchor.end)) : current.length
   const before = current.slice(0, start)
   const after = current.slice(end)
-  const prefix = before && !/\s$/.test(before) ? " " : ""
-  const suffix = after && !/^[\s.,!?;:،。！？]/u.test(after) ? " " : ""
+  const prefix = before && !/\s$/.test(before) ? ' ' : ''
+  const suffix = after && !/^[\s.,!?;:،。！？]/u.test(after) ? ' ' : ''
   const insertion = prefix + words + suffix
   return { text: before + insertion + after, caret: before.length + insertion.length }
 }

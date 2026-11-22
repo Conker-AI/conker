@@ -1,6 +1,6 @@
-"use client"
+'use client'
 
-import * as React from "react"
+import * as React from 'react'
 import {
   type ColumnDef,
   type ColumnFiltersState,
@@ -14,24 +14,17 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
-} from "@tanstack/react-table"
-import { X } from "lucide-react"
+} from '@tanstack/react-table'
+import { X } from 'lucide-react'
 
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import { WorkspaceSearch, CollectionToolbar, CollectionEmpty } from "@/components/design-system/primitives"
-import { Button } from "@/components/ui/button"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { cn } from "@/lib/utils"
-import { DataTableViewOptions } from "@/components/table/data-table-view-options"
-import { DataTableFacetedFilter } from "@/components/table/data-table-faceted-filter"
-import { DataTablePagination } from "@/components/table/data-table-pagination"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { WorkspaceSearch, CollectionToolbar, CollectionEmpty } from '@/components/design-system/primitives'
+import { Button } from '@/components/ui/button'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { cn } from '@/lib/utils'
+import { DataTableViewOptions } from '@/components/table/data-table-view-options'
+import { DataTableFacetedFilter } from '@/components/table/data-table-faceted-filter'
+import { DataTablePagination } from '@/components/table/data-table-pagination'
 
 export interface DataTableFilter {
   column: string
@@ -63,7 +56,7 @@ export function DataTable<TData, TValue>({
   columns,
   data,
   searchColumn,
-  searchPlaceholder = "Search…",
+  searchPlaceholder = 'Search…',
   filters = [],
   toolbarAction,
   toolbarFilters,
@@ -71,7 +64,7 @@ export function DataTable<TData, TValue>({
   onRowClick,
   paginate = true,
   renderItem,
-  itemLabel = "records",
+  itemLabel = 'records',
 }: DataTableProps<TData, TValue>) {
   const [rowSelection, setRowSelection] = React.useState({})
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
@@ -98,109 +91,173 @@ export function DataTable<TData, TValue>({
   })
 
   const isFiltered = table.getState().columnFilters.length > 0
-  const empty = <CollectionEmpty title={isFiltered ? 'No results found' : emptyState?.title ?? 'No results found'} description={isFiltered ? 'Try a different search or clear your filters.' : emptyState?.description ?? 'Try a different search or clear your filters.'} action={emptyState?.action} icon={isFiltered ? undefined : emptyState?.icon} clearLabel="Clear filters" onClear={isFiltered ? () => table.resetColumnFilters() : undefined} />
+  const empty = (
+    <CollectionEmpty
+      title={isFiltered ? 'No results found' : (emptyState?.title ?? 'No results found')}
+      description={isFiltered ? 'Try a different search or clear your filters.' : (emptyState?.description ?? 'Try a different search or clear your filters.')}
+      action={emptyState?.action}
+      icon={isFiltered ? undefined : emptyState?.icon}
+      clearLabel="Clear filters"
+      onClear={isFiltered ? () => table.resetColumnFilters() : undefined}
+    />
+  )
 
   return (
     <div className="min-w-0 space-y-(--collection-section-gap)">
-      <CollectionToolbar search={searchColumn && <WorkspaceSearch
-        label={searchPlaceholder.replace(/[…]+$/, "")}
-        placeholder={searchPlaceholder}
-        value={(table.getColumn(searchColumn)?.getFilterValue() as string) ?? ""}
-        onChange={event => table.getColumn(searchColumn)?.setFilterValue(event.target.value)}
-      />} count={table.getFilteredRowModel().rows.length} unit={itemLabel} filters={<>
-        {toolbarFilters}
-        {filters.map(
-          (f) =>
-            table.getColumn(f.column) && (
-              <DataTableFacetedFilter
-                key={f.column}
-                column={table.getColumn(f.column)}
-                title={f.title}
-                options={f.options}
-              />
-            )
-        )}
-        {isFiltered && (
-          <Button
-            variant="ghost"
-            onClick={() => table.resetColumnFilters()}
-            size="sm"
-          >
-            Reset
-            <X className="ml-2 size-4" />
-          </Button>
-        )}
-        </>} actions={<>
-          {toolbarAction}
-          {renderItem && data.length > 0 && <div className="xl:hidden"><Select value={sorting.length ? `${sorting[0].id}:${sorting[0].desc ? "desc" : "asc"}` : "default"} items={[{ value: "default", label: "Default order" }, ...table.getAllColumns().filter(column => column.getCanSort()).flatMap(column => [{ value: `${column.id}:asc`, label: `${column.id.replace(/([A-Z])/g, " $1")} · ascending` }, { value: `${column.id}:desc`, label: `${column.id.replace(/([A-Z])/g, " $1")} · descending` }])]} onValueChange={value => { if (value === null) return;
-            if (value === "default") setSorting([])
-            else { const [id, direction] = value.split(":"); setSorting([{ id, desc: direction === "desc" }]) }
-          }}><SelectTrigger size="sm" aria-label="Sort records"><SelectValue /></SelectTrigger><SelectContent>
-            <SelectItem value="default">Default order</SelectItem>
-            {table.getAllColumns().filter(column => column.getCanSort()).flatMap(column => [
-              <SelectItem key={`${column.id}:asc`} value={`${column.id}:asc`}>{column.id.replace(/([A-Z])/g, " $1")} · ascending</SelectItem>,
-              <SelectItem key={`${column.id}:desc`} value={`${column.id}:desc`}>{column.id.replace(/([A-Z])/g, " $1")} · descending</SelectItem>,
-            ])}
-          </SelectContent></Select></div>}
-          {data.length > 0 && <div className={renderItem ? "hidden xl:block" : undefined}><DataTableViewOptions table={table} /></div>}
-        </>} />
+      <CollectionToolbar
+        search={
+          searchColumn && (
+            <WorkspaceSearch
+              label={searchPlaceholder.replace(/[…]+$/, '')}
+              placeholder={searchPlaceholder}
+              value={(table.getColumn(searchColumn)?.getFilterValue() as string) ?? ''}
+              onChange={event => table.getColumn(searchColumn)?.setFilterValue(event.target.value)}
+            />
+          )
+        }
+        count={table.getFilteredRowModel().rows.length}
+        unit={itemLabel}
+        filters={
+          <>
+            {toolbarFilters}
+            {filters.map(f => table.getColumn(f.column) && <DataTableFacetedFilter key={f.column} column={table.getColumn(f.column)} title={f.title} options={f.options} />)}
+            {isFiltered && (
+              <Button variant="ghost" onClick={() => table.resetColumnFilters()} size="sm">
+                Reset
+                <X className="ml-2 size-4" />
+              </Button>
+            )}
+          </>
+        }
+        actions={
+          <>
+            {toolbarAction}
+            {renderItem && data.length > 0 && (
+              <div className="xl:hidden">
+                <Select
+                  value={sorting.length ? `${sorting[0].id}:${sorting[0].desc ? 'desc' : 'asc'}` : 'default'}
+                  items={[
+                    { value: 'default', label: 'Default order' },
+                    ...table
+                      .getAllColumns()
+                      .filter(column => column.getCanSort())
+                      .flatMap(column => [
+                        { value: `${column.id}:asc`, label: `${column.id.replace(/([A-Z])/g, ' $1')} · ascending` },
+                        { value: `${column.id}:desc`, label: `${column.id.replace(/([A-Z])/g, ' $1')} · descending` },
+                      ]),
+                  ]}
+                  onValueChange={value => {
+                    if (value === null) return
+                    if (value === 'default') setSorting([])
+                    else {
+                      const [id, direction] = value.split(':')
+                      setSorting([{ id, desc: direction === 'desc' }])
+                    }
+                  }}
+                >
+                  <SelectTrigger size="sm" aria-label="Sort records">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="default">Default order</SelectItem>
+                    {table
+                      .getAllColumns()
+                      .filter(column => column.getCanSort())
+                      .flatMap(column => [
+                        <SelectItem key={`${column.id}:asc`} value={`${column.id}:asc`}>
+                          {column.id.replace(/([A-Z])/g, ' $1')} · ascending
+                        </SelectItem>,
+                        <SelectItem key={`${column.id}:desc`} value={`${column.id}:desc`}>
+                          {column.id.replace(/([A-Z])/g, ' $1')} · descending
+                        </SelectItem>,
+                      ])}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            {data.length > 0 && (
+              <div className={renderItem ? 'hidden xl:block' : undefined}>
+                <DataTableViewOptions table={table} />
+              </div>
+            )}
+          </>
+        }
+      />
 
       {/* Structured data shares collection density and retains table semantics. */}
-      {renderItem && <div className="collection-surface xl:hidden">
-        {table.getRowModel().rows.length ? <ul className="divide-y">{table.getRowModel().rows.map(row => <li key={row.id}>{renderItem(row.original)}</li>)}</ul>
-          : empty}
-      </div>}
-      <div className={cn("collection-surface", renderItem && "hidden xl:block")}>
-        {data.length === 0 ? empty :
-        <Table>
-          <TableHeader className="bg-background">
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id} className="hover:bg-transparent">
-                {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id} colSpan={header.colSpan} className="h-(--control-height) px-4">
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(header.column.columnDef.header, header.getContext())}
-                  </TableHead>
-                ))}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
-                  onClick={onRowClick ? event => {
-                    if ((event.target as HTMLElement).closest("a,button,input,[role=button]")) return
-                    onRowClick(row.original)
-                  } : undefined}
-                  tabIndex={onRowClick ? 0 : undefined}
-                  onKeyDown={onRowClick ? (event) => {
-                    if (event.target === event.currentTarget && (event.key === "Enter" || event.key === " ")) {
-                      event.preventDefault()
-                      onRowClick(row.original)
-                    }
-                  } : undefined}
-                  className={cn("h-(--collection-row-height)", onRowClick && "cursor-pointer focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring")}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className="px-4 py-2.5 whitespace-normal">
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
+      {renderItem && (
+        <div className="collection-surface xl:hidden">
+          {table.getRowModel().rows.length ? (
+            <ul className="divide-y">
+              {table.getRowModel().rows.map(row => (
+                <li key={row.id}>{renderItem(row.original)}</li>
+              ))}
+            </ul>
+          ) : (
+            empty
+          )}
+        </div>
+      )}
+      <div className={cn('collection-surface', renderItem && 'hidden xl:block')}>
+        {data.length === 0 ? (
+          empty
+        ) : (
+          <Table>
+            <TableHeader className="bg-background">
+              {table.getHeaderGroups().map(headerGroup => (
+                <TableRow key={headerGroup.id} className="hover:bg-transparent">
+                  {headerGroup.headers.map(header => (
+                    <TableHead key={header.id} colSpan={header.colSpan} className="h-(--control-height) px-4">
+                      {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                    </TableHead>
                   ))}
                 </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={columns.length} className="p-0">
-                  {empty}
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>}
+              ))}
+            </TableHeader>
+            <TableBody>
+              {table.getRowModel().rows?.length ? (
+                table.getRowModel().rows.map(row => (
+                  <TableRow
+                    key={row.id}
+                    data-state={row.getIsSelected() && 'selected'}
+                    onClick={
+                      onRowClick
+                        ? event => {
+                            if ((event.target as HTMLElement).closest('a,button,input,[role=button]')) return
+                            onRowClick(row.original)
+                          }
+                        : undefined
+                    }
+                    tabIndex={onRowClick ? 0 : undefined}
+                    onKeyDown={
+                      onRowClick
+                        ? event => {
+                            if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) {
+                              event.preventDefault()
+                              onRowClick(row.original)
+                            }
+                          }
+                        : undefined
+                    }
+                    className={cn('h-(--collection-row-height)', onRowClick && 'cursor-pointer focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring')}
+                  >
+                    {row.getVisibleCells().map(cell => (
+                      <TableCell key={cell.id} className="px-4 py-2.5 whitespace-normal">
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={columns.length} className="p-0">
+                    {empty}
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        )}
       </div>
 
       {paginate && data.length > 10 && <DataTablePagination table={table} />}
