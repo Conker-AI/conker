@@ -9,7 +9,7 @@ function walk(directory) {
   for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
     const file = path.join(directory, entry.name)
     if (entry.isDirectory()) walk(file)
-    else if (extensions.some((extension) => entry.name.endsWith(extension))) {
+    else if (!/.test.tsx?$/.test(entry.name) && extensions.some((extension) => entry.name.endsWith(extension))) {
       files.push(path.resolve(file))
     }
   }
