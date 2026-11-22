@@ -9,7 +9,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 from scripts import local_stack, workspace
-from scripts import workspace_search as search
+from scripts.devstack import workspace_search as search
 
 
 def config():
@@ -120,7 +120,9 @@ def test_meaning_search_starts_its_services_before_memorygate(monkeypatch, capsy
         lambda config, service: seen.append(service) or "stopped",
     )
     monkeypatch.setattr(sys, "argv", ["workspace.py", "status"])
-    monkeypatch.setattr("workspace_memory.status", lambda config: "not configured", raising=False)
+    monkeypatch.setattr(
+        "scripts.devstack.workspace_memory.status", lambda config: "not configured", raising=False
+    )
     workspace.main()
     assert seen == [
         "postgres",
@@ -212,7 +214,9 @@ def test_the_start_order_is_the_same_every_time(monkeypatch, capsys):
     configured = {**config(), "meaning_search": {"model": "qwen3-embedding:0.6b"}}
     monkeypatch.setattr(workspace, "read_config", lambda: configured)
     monkeypatch.setattr(sys, "argv", ["workspace.py", "status"])
-    monkeypatch.setattr("workspace_memory.status", lambda config: "not configured", raising=False)
+    monkeypatch.setattr(
+        "scripts.devstack.workspace_memory.status", lambda config: "not configured", raising=False
+    )
     runs = []
     for _ in range(2):
         seen = []

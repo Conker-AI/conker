@@ -145,7 +145,7 @@ def test_bad_values_are_refused_before_calling_pi(monkeypatch, capsys):
 
 
 def test_a_loop_line_carries_no_terminal_control_characters():
-    from scripts import conker_loops
+    from scripts.cli import conker_loops
 
     item = {**LOOP, "text": "Send\x1b[2J the essay", "sessionTitle": "Ex\x1b]0;hacked\x07ams"}
     page = {**PAGE, "items": [item]}

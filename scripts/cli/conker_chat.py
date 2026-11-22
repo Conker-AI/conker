@@ -2,7 +2,7 @@
 
 import re
 
-from scripts.conker_context import pi_call
+from scripts.cli.conker_context import pi_call
 
 LANGUAGE = r"auto|[a-z]{2,3}(-[A-Za-z0-9]{2,8}){0,3}"
 

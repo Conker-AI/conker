@@ -13,7 +13,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "services" / "subscriptions"))
 import workspace_providers
 
-from scripts import provider_lifecycle
+from scripts.devstack import provider_lifecycle
 
 LAUNCHER = Path("C:/synthetic/scripts/local_stack.py")
 COMMAND = ["python", str(LAUNCHER), "serve", "providers"]

@@ -10,7 +10,7 @@ import pytest
 
 SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
 sys.path.insert(0, str(SCRIPTS))
-import workspace_build as build  # noqa: E402
+from scripts.devstack import workspace_build as build  # noqa: E402
 
 
 @pytest.fixture

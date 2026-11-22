@@ -1,4 +1,4 @@
-"""conker tool draft on an installed stack: scripts/tool_drafts.py, with Pi reached in its container.
+"""conker tool draft on an installed stack: scripts/cli/tool_drafts.py, with Pi reached in its container.
 
 The launcher runs this on the host for both deployment layouts. As for conker config
 (scripts/config_cli.py), each call is one `docker compose exec` into the pi container, where a
@@ -21,7 +21,7 @@ if __package__ in {None, ""}:
 
 from config_cli import RELAY, compose, reason
 
-from scripts import tool_drafts
+from scripts.cli import tool_drafts
 
 ROUTES = re.compile(r"/tool-drafts|/change-requests/creq_[a-f0-9]{32}(?:/retry)?")
 
