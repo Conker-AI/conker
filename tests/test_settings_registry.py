@@ -6,6 +6,7 @@ import subprocess
 import sys
 from pathlib import Path
 from types import SimpleNamespace
+from typing import Any
 
 import pytest
 
@@ -160,7 +161,7 @@ def test_every_setting_is_complete_and_consistent():
             "basic",
             "advanced",
         }, name
-        home = setting.get("home")
+        home: Any = setting.get("home")
         if setting["type"] == "custom":
             assert setting["component"] in COMPONENTS and setting["effect"] == "live", name
             assert home is None and setting["default"] is None, name
@@ -177,7 +178,8 @@ def test_every_setting_is_complete_and_consistent():
                 assert setting["scope"] == "global", name
         for other in setting["related"] + [setting.get("dependsOn", {}).get("id")]:
             assert other is None or other in ids, (name, other)
-        default, values = setting["default"], config.values_of(setting)
+        default: Any = setting["default"]
+        values = config.values_of(setting)
         if setting["type"] == "select":
             assert default in values and len(values) == len(set(values)), name
         if setting["type"] == "list":

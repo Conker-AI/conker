@@ -20,7 +20,7 @@ from scripts.validate_capabilities import REQUIRED_CAPABILITIES, MatrixError, va
 SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
 DEFERRED_ID = "owner-terminal"
 GAP = "Waits for a terminal boundary that is tested on Linux."
-SUMMARY = {"schemaVersion": 1, "capabilities": 41, "active": 40, "deferred": 1}
+SUMMARY: dict[str, object] = {"schemaVersion": 1, "capabilities": 41, "active": 40, "deferred": 1}
 
 
 def active_row(identity: str) -> dict:
