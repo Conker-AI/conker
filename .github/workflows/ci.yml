@@ -69,6 +69,7 @@ jobs:
         # someone else's machine.
         run: |
           bash -n install.sh
+          for part in deploy/install/*.sh; do bash -n "$part"; done
           bash -n conker
 
       - name: Release compatibility manifest
@@ -80,6 +81,10 @@ jobs:
       - name: File sizes
         # 600 lines per source file; files that were already larger may only shrink.
         run: python scripts/check_file_sizes.py
+
+      - name: Test skips
+        # Every skip/xfail marker needs a reason and the per-file counts in skip-baseline.txt may only shrink.
+        run: python scripts/check_skips.py
 
       - name: Code map
         # docs/reference/codemap.md is generated (one line per file); a stale map fails here.
@@ -99,7 +104,8 @@ jobs:
       - name: ShellCheck
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
-          shellcheck --severity=warning install.sh conker
+          # -x follows install.sh into the parts it sources; each part is also checked on its own.
+          shellcheck -x --severity=warning install.sh conker deploy/install/*.sh
 
       - name: Line endings must be LF
         # A CRLF in a shell script is a "bad interpreter" failure that nothing
@@ -119,7 +125,7 @@ jobs:
           CONKER_TEST_TOOLGATE: ${{ github.workspace }}/.test-gates/toolgate
         # The coverage floor is CI's Linux coverage after the refusal tests (about 80%, 2026-11-14),
         # rounded down, so it only stops coverage from falling (.coveragerc names what is measured).
-        run: python -m pytest tests/ -q --cov --cov-report=term --cov-fail-under=80 --junitxml=junit.xml
+        run: python -m pytest tests/ -q --cov --cov-report=term --cov-fail-under=82 --junitxml=junit.xml
 
       - name: Test report (reruns, skips, slowest)
         # No test is retried here. This lists any test that ran more than once, every skip and the

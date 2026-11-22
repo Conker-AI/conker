@@ -16,6 +16,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import recovery_layout  # noqa: E402
 import service_keys  # noqa: E402
 
+from tests.installer_source import installer_text  # noqa: E402
 from tests.ubuntu_generator import prepare  # noqa: E402
 
 
@@ -184,7 +185,7 @@ def test_ollama_keeps_a_model_loaded_a_day_unless_the_owner_says_otherwise(tmp_p
     compose = yaml.safe_load((ROOT / "docker-compose.yml").read_text(encoding="utf-8"))
     ollama = compose["services"]["ollama"]["environment"]
     assert ollama["OLLAMA_KEEP_ALIVE"] == "${CONKER_OLLAMA_KEEP_ALIVE:-24h}"
-    installer = (ROOT / "install.sh").read_text(encoding="utf-8")
+    installer = installer_text()
     assert "CONKER_OLLAMA_KEEP_ALIVE=$(keep_optional CONKER_OLLAMA_KEEP_ALIVE)" in installer
     assert "\nCONKER_OLLAMA_KEEP_ALIVE=$CONKER_OLLAMA_KEEP_ALIVE\n" in installer
 
@@ -217,7 +218,7 @@ def test_the_repository_compose_wires_the_service_keys_to_pi(tmp_path):
         assert environment[f"{prefix}_PI_SERVICE_KEY"] == f"${{{prefix}_PI_SERVICE_KEY:-}}"
         assert f"{prefix}_PI_SERVICE_KEY" not in json.dumps(services["pi"])
     assert services["gateway"]["environment"]["GATEWAY_PI_URL"] == "http://pi:8050"
-    installer = (ROOT / "install.sh").read_text(encoding="utf-8")
+    installer = installer_text()
     for name in ("MEMORYGATE_PI_SERVICE_KEY", "TOOLGATE_PI_SERVICE_KEY"):
         assert f"{name}=$(keep_or_make_long {name})" in installer
         assert f"\n{name}=${name}\n" in installer

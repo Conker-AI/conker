@@ -14,7 +14,7 @@ import sys
 from pathlib import Path
 
 LIMIT = 600
-SUFFIXES = (".py", ".ts", ".tsx", ".js", ".mjs")
+SUFFIXES = (".py", ".ts", ".tsx", ".js", ".mjs", ".sh")
 ALLOWLIST = Path("file-size-allowlist.txt")
 
 
@@ -33,9 +33,25 @@ def generated(path: str) -> bool:
         return False
 
 
+# Shell scripts without an extension (the `conker` launcher) count by their #! line.
+def extensionless_shell(path: str) -> bool:
+    if "." in Path(path).name:
+        return False
+    try:
+        with open(path, encoding="utf-8", errors="replace") as handle:
+            first = handle.readline()
+    except (FileNotFoundError, IsADirectoryError):
+        return False
+    return first.startswith("#!") and first.rstrip().endswith(("sh", "bash"))
+
+
 def tracked_sources() -> list[str]:
     out = subprocess.run(["git", "ls-files"], capture_output=True, text=True, check=True).stdout
-    return [path for path in out.splitlines() if path.endswith(SUFFIXES) and not generated(path)]
+    return [
+        path
+        for path in out.splitlines()
+        if (path.endswith(SUFFIXES) or extensionless_shell(path)) and not generated(path)
+    ]
 
 
 def allowlist() -> dict[str, int]:
