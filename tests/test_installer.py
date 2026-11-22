@@ -66,6 +66,23 @@ pytestmark = pytest.mark.skipif(
 )
 
 
+def test_a_checkout_without_its_parts_stops_before_checking_anything(tmp_path):
+    for name in ("install.sh", "docker-compose.yml"):
+        shutil.copy(ROOT / name, tmp_path / name)
+    result = subprocess.run(
+        ["bash", str(tmp_path / "install.sh"), "--check"],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+        env={**os.environ, "NO_COLOR": "1"},
+        cwd=tmp_path,
+    )
+    assert result.returncode == 1
+    assert "deploy/install/machine.sh is missing" in result.stderr
+    assert "Checking this machine" not in result.stdout
+
+
 def has_docker() -> bool:
     if not shutil.which("docker"):
         return False
