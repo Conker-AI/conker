@@ -148,7 +148,8 @@ jobs:
           fetch-depth: 0
 
       - name: Scan
-        # gitleaks 8.28.0, pinned by digest; the default rules, no custom allowlist.
+        # gitleaks 8.28.0, pinned by digest; the default rules. --verbose lists each finding (file, line,
+        # commit, rule) with its value redacted, so a red run says where to look.
         env:
           GITLEAKS: ghcr.io/gitleaks/gitleaks:v8.28.0@sha256:cdbb7c955abce02001a9f6c9f602fb195b7fadc1e812065883f695d1eeaba854
         run: |
@@ -157,4 +158,4 @@ jobs:
           else
             range=""
           fi
-          docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/repo" "$GITLEAKS" git /repo --no-banner --redact --exit-code 1 $range
+          docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/repo" "$GITLEAKS" git /repo --no-banner --redact --verbose --exit-code 1 $range
