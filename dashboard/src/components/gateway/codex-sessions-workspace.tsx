@@ -11,40 +11,267 @@ import { GatewayPageFrame } from './page-frame'
 import { useCodexSessions } from './use-codex-sessions'
 
 const sources = { cli: 'Codex CLI', vscode: 'Editor extension', exec: 'Codex exec', appServer: 'App server', subAgent: 'Subagent', custom: 'Custom', unknown: 'Not reported' }
-function codexThreadTitle(row: CodexThread) { if (row.name) return row.name; const preview = [...row.preview]; return preview.length ? `${preview.slice(0, 120).join('')}${preview.length > 120 || row.previewTruncated ? '…' : ''}` : 'Unnamed Codex thread' }
+function codexThreadTitle(row: CodexThread) {
+  if (row.name) return row.name
+  const preview = [...row.preview]
+  return preview.length ? `${preview.slice(0, 120).join('')}${preview.length > 120 || row.previewTruncated ? '…' : ''}` : 'Unnamed Codex thread'
+}
 const CODEX_TEXT = (row: CodexThread) => [row.name, row.preview, row.cwd, row.modelProvider, sources[row.source]]
-const CODEX_SORTS = { updated: { label: 'Recently changed', compare: byNewest<CodexThread>(row => row.updatedAt) }, created: { label: 'Newest', compare: byNewest<CodexThread>(row => row.createdAt) }, name: { label: 'Name', compare: byName<CodexThread>(codexThreadTitle) } }
-function when(seconds: number) { const date = new Date(seconds * 1000); return Number.isFinite(date.getTime()) ? date.toLocaleString() : 'Timestamp outside display range' }
-export function GatewayCodexSessionsWorkspace({ client, authStore, archived, onArchived, providerControl }: { client: CodexSessionsClient; authStore: GatewayAuthStore; archived: boolean; onArchived: (value: boolean) => void; providerControl: ReactNode }) {
-  const state = useCodexSessions(client, authStore, archived), { controller, selected } = state
-  const [copied, setCopied] = useState<CodexThread | null>(null), current = useRef({ controller, selected })
-  useLayoutEffect(() => { current.current = { controller, selected } })
-  const view = useListView(state.rows, { text: CODEX_TEXT, sorts: CODEX_SORTS }), visible = view.rows, searching = !!view.query.trim()
-  const error = state.error === 'cursor' ? 'This page link is no longer usable. Refresh history to start again.' : state.error === 'more' ? 'More saved threads could not be loaded. Your loaded rows are still here.' : state.error ? state.loaded ? 'History could not be refreshed. Showing the last loaded metadata.' : 'Saved Codex history could not be read. Refresh history to try again.' : null
+const CODEX_SORTS = {
+  updated: { label: 'Recently changed', compare: byNewest<CodexThread>(row => row.updatedAt) },
+  created: { label: 'Newest', compare: byNewest<CodexThread>(row => row.createdAt) },
+  name: { label: 'Name', compare: byName<CodexThread>(codexThreadTitle) },
+}
+function when(seconds: number) {
+  const date = new Date(seconds * 1000)
+  return Number.isFinite(date.getTime()) ? date.toLocaleString() : 'Timestamp outside display range'
+}
+export function GatewayCodexSessionsWorkspace({
+  client,
+  authStore,
+  archived,
+  onArchived,
+  providerControl,
+}: {
+  client: CodexSessionsClient
+  authStore: GatewayAuthStore
+  archived: boolean
+  onArchived: (value: boolean) => void
+  providerControl: ReactNode
+}) {
+  const state = useCodexSessions(client, authStore, archived),
+    { controller, selected } = state
+  const [copied, setCopied] = useState<CodexThread | null>(null),
+    current = useRef({ controller, selected })
+  useLayoutEffect(() => {
+    current.current = { controller, selected }
+  })
+  const view = useListView(state.rows, { text: CODEX_TEXT, sorts: CODEX_SORTS }),
+    visible = view.rows,
+    searching = !!view.query.trim()
+  const error =
+    state.error === 'cursor'
+      ? 'This page link is no longer usable. Refresh history to start again.'
+      : state.error === 'more'
+        ? 'More saved threads could not be loaded. Your loaded rows are still here.'
+        : state.error
+          ? state.loaded
+            ? 'History could not be refreshed. Showing the last loaded metadata.'
+            : 'Saved Codex history could not be read. Refresh history to try again.'
+          : null
   async function copy(row: CodexThread) {
     const latest = controller.store.getState()
     if (!latest.active || !latest.detailCurrent || latest.selected !== row) return
-    try { await navigator.clipboard.writeText(codexResumeCommand(row.id)); if (current.current.controller === controller && current.current.selected === row) setCopied(row) } catch { /* The exact command remains selectable. */ }
+    try {
+      await navigator.clipboard.writeText(codexResumeCommand(row.id))
+      if (current.current.controller === controller && current.current.selected === row) setCopied(row)
+    } catch {
+      /* The exact command remains selectable. */
+    }
   }
   // Details open in place under the chosen record (owner: no side windows).
-  const details = <InlineDetails open={!!selected} onOpenChange={open => { if (!open) controller.close(selected) }} title={selected ? codexThreadTitle(selected) : 'Saved Codex thread'} description="Saved metadata only. Current activity is not visible in this view."><OverlayBody>{selected && <>
-      <div className="flex flex-wrap items-center justify-between gap-2"><p className="text-xs text-muted-foreground">Last loaded metadata</p><Button size="sm" variant="outline" aria-disabled={!!state.pending} className="aria-disabled:opacity-50" onClick={() => { if (!state.pending) void controller.get(selected) }}><RefreshCw />{state.pending === 'detail' ? 'Checking…' : 'Refresh details'}</Button></div>
-      {state.detailError && <p role="status" className="text-sm text-muted-foreground">This saved thread could not be checked. It may no longer be available. Refresh details before copying a resume command.</p>}
-      <ReferenceSection title="Saved thread"><dl className="space-y-2 text-xs"><div><dt className="text-muted-foreground">Thread ID</dt><dd className="font-mono">{selected.id}</dd></div><div><dt className="text-muted-foreground">Working directory</dt><dd className="font-mono">{selected.cwd}</dd></div><div><dt className="text-muted-foreground">Source</dt><dd>{sources[selected.source]}</dd></div><div><dt className="text-muted-foreground">Recorded model provider</dt><dd>{selected.modelProvider}</dd></div><div><dt className="text-muted-foreground">Created</dt><dd>{when(selected.createdAt)}</dd></div><div><dt className="text-muted-foreground">Updated</dt><dd>{when(selected.updatedAt)}</dd></div></dl></ReferenceSection>
-      <ReferenceSection title="Saved preview"><p className="whitespace-pre-wrap text-sm">{selected.preview || 'No preview was saved.'}</p>{selected.previewTruncated && <p className="text-xs text-muted-foreground">This preview was shortened. The full conversation is not loaded here.</p>}</ReferenceSection>
-      <ReferenceSection title="Continue in Codex"><p className="text-xs">From the Conker repository on this host, run this exact command. It resumes native work in the isolated profile. Review Codex’s own permissions and approvals there.</p><code className="block select-all whitespace-pre-wrap break-all rounded-md border bg-muted p-3 text-xs">{codexResumeCommand(selected.id)}</code><Button size="sm" variant="outline" aria-disabled={!state.detailCurrent || !!state.pending} className="aria-disabled:opacity-50" onClick={() => { if (state.detailCurrent && !state.pending) void copy(selected) }}><Copy />{copied === selected ? 'Copied command' : 'Copy resume command'}</Button></ReferenceSection>
-    </>}</OverlayBody></InlineDetails>
+  const details = (
+    <InlineDetails
+      open={!!selected}
+      onOpenChange={open => {
+        if (!open) controller.close(selected)
+      }}
+      title={selected ? codexThreadTitle(selected) : 'Saved Codex thread'}
+      description="Saved metadata only. Current activity is not visible in this view."
+    >
+      <OverlayBody>
+        {selected && (
+          <>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs text-muted-foreground">Last loaded metadata</p>
+              <Button
+                size="sm"
+                variant="outline"
+                aria-disabled={!!state.pending}
+                className="aria-disabled:opacity-50"
+                onClick={() => {
+                  if (!state.pending) void controller.get(selected)
+                }}
+              >
+                <RefreshCw />
+                {state.pending === 'detail' ? 'Checking…' : 'Refresh details'}
+              </Button>
+            </div>
+            {state.detailError && (
+              <p role="status" className="text-sm text-muted-foreground">
+                This saved thread could not be checked. It may no longer be available. Refresh details before copying a resume command.
+              </p>
+            )}
+            <ReferenceSection title="Saved thread">
+              <dl className="space-y-2 text-xs">
+                <div>
+                  <dt className="text-muted-foreground">Thread ID</dt>
+                  <dd className="font-mono">{selected.id}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">Working directory</dt>
+                  <dd className="font-mono">{selected.cwd}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">Source</dt>
+                  <dd>{sources[selected.source]}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">Recorded model provider</dt>
+                  <dd>{selected.modelProvider}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">Created</dt>
+                  <dd>{when(selected.createdAt)}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">Updated</dt>
+                  <dd>{when(selected.updatedAt)}</dd>
+                </div>
+              </dl>
+            </ReferenceSection>
+            <ReferenceSection title="Saved preview">
+              <p className="whitespace-pre-wrap text-sm">{selected.preview || 'No preview was saved.'}</p>
+              {selected.previewTruncated && <p className="text-xs text-muted-foreground">This preview was shortened. The full conversation is not loaded here.</p>}
+            </ReferenceSection>
+            <ReferenceSection title="Continue in Codex">
+              <p className="text-xs">From the Conker repository on this host, run this exact command. It resumes native work in the isolated profile. Review Codex’s own permissions and approvals there.</p>
+              <code className="block select-all whitespace-pre-wrap break-all rounded-md border bg-muted p-3 text-xs">{codexResumeCommand(selected.id)}</code>
+              <Button
+                size="sm"
+                variant="outline"
+                aria-disabled={!state.detailCurrent || !!state.pending}
+                className="aria-disabled:opacity-50"
+                onClick={() => {
+                  if (state.detailCurrent && !state.pending) void copy(selected)
+                }}
+              >
+                <Copy />
+                {copied === selected ? 'Copied command' : 'Copy resume command'}
+              </Button>
+            </ReferenceSection>
+          </>
+        )}
+      </OverlayBody>
+    </InlineDetails>
+  )
   const shown = !!selected && visible.some(row => row.id === selected.id)
-  return <GatewayPageFrame><div className="space-y-6">
-    <PageHeader actionsOnly title="Native sessions" description="Saved Codex threads in Conker’s isolated profile." density="compact" actions={<>{providerControl}<WorkspaceChoice label="Codex history scope" value={archived ? 'archived' : 'unarchived'} onValueChange={value => onArchived(value === 'archived')} options={[{ value: 'unarchived', label: 'Unarchived' }, { value: 'archived', label: 'Archived' }]} /><WorkspaceAction render={<Link to="/system?tab=terminal" />}><TerminalSquare />Terminal</WorkspaceAction><WorkspaceAction aria-disabled={!!state.pending || !state.active} className="aria-disabled:opacity-50" onClick={() => { if (!state.pending && state.active) void controller.refresh() }}><RefreshCw />{state.pending === 'list' ? 'Checking…' : 'Refresh history'}</WorkspaceAction></>} />
-    <p className="text-sm leading-6 text-muted-foreground">Saved Codex history from Conker’s isolated profile. Current activity in other Codex processes is not visible here.</p>
-    {!state.active && <p role="status" className="text-sm text-muted-foreground">Sign in to inspect saved native history.</p>}
-    {state.loaded && <p className="text-xs leading-5 text-muted-foreground">Last loaded metadata. Refresh history to include changes and restart paging. Opening a record reads metadata only; it does not resume work.</p>}
-    {error && state.loaded && <p role="status" className="text-sm text-muted-foreground">{error}</p>}
-    <ListCard query={view.query} onQueryChange={view.setQuery} label="Search Codex threads" placeholder="Search threads" sort={view.sort} count={visible.length} unit="threads loaded" emptyTitle={searching ? 'No matching Codex threads' : `No ${archived ? 'archived' : 'unarchived'} Codex threads found`} emptyDescription={searching ? 'Only loaded threads are searched. Load more threads to search further.' : 'This is saved history in Conker’s isolated Codex profile, not all Codex history on this computer.'} emptyContent={searching ? undefined : !state.loaded ? state.pending === 'list' ? <CollectionLoading label="Reading saved Codex history…" /> : <p role="status" className="py-8 text-sm text-muted-foreground">{state.active ? error ?? 'No history snapshot is available. Refresh history to check.' : 'Saved native history is hidden while signed out.'}</p> : undefined} icon={<TerminalSquare />}>
-      {visible.map(row => <li key={row.id}><RecordItem title={codexThreadTitle(row)} description={<span className="wrap-anywhere font-mono">{row.cwd}</span>} onOpen={() => { if (selected?.id === row.id) controller.close(selected); else controller.select(row) }} details={selected?.id === row.id ? details : undefined} selected={selected?.id === row.id} leading={<TerminalSquare className="size-4" />} meta={<><span>{sources[row.source]}</span><span className="wrap-anywhere">{row.modelProvider}</span><span>Updated {when(row.updatedAt)}</span></>} /></li>)}
-    </ListCard>
-    {!shown && details}
-    {state.loaded && <div className="flex flex-wrap items-center gap-3"><Button variant="outline" size="sm" aria-disabled={!!state.pending || !state.nextCursor && state.error !== 'cursor'} className="aria-disabled:opacity-50" onClick={() => { if (!state.pending) { if (state.error === 'cursor') void controller.refresh(); else if (state.nextCursor) void controller.more() } }}>{state.pending === 'more' ? 'Loading…' : state.error === 'cursor' ? 'Refresh history' : state.nextCursor ? 'Load more threads' : 'No more threads to load'}</Button>{!state.nextCursor && !state.error && <p className="text-xs text-muted-foreground">End of this saved-history result.</p>}</div>}
-  </div></GatewayPageFrame>
+  return (
+    <GatewayPageFrame>
+      <div className="space-y-6">
+        <PageHeader
+          actionsOnly
+          title="Native sessions"
+          description="Saved Codex threads in Conker’s isolated profile."
+          density="compact"
+          actions={
+            <>
+              {providerControl}
+              <WorkspaceChoice
+                label="Codex history scope"
+                value={archived ? 'archived' : 'unarchived'}
+                onValueChange={value => onArchived(value === 'archived')}
+                options={[
+                  { value: 'unarchived', label: 'Unarchived' },
+                  { value: 'archived', label: 'Archived' },
+                ]}
+              />
+              <WorkspaceAction render={<Link to="/system?tab=terminal" />}>
+                <TerminalSquare />
+                Terminal
+              </WorkspaceAction>
+              <WorkspaceAction
+                aria-disabled={!!state.pending || !state.active}
+                className="aria-disabled:opacity-50"
+                onClick={() => {
+                  if (!state.pending && state.active) void controller.refresh()
+                }}
+              >
+                <RefreshCw />
+                {state.pending === 'list' ? 'Checking…' : 'Refresh history'}
+              </WorkspaceAction>
+            </>
+          }
+        />
+        <p className="text-sm leading-6 text-muted-foreground">Saved Codex history from Conker’s isolated profile. Current activity in other Codex processes is not visible here.</p>
+        {!state.active && (
+          <p role="status" className="text-sm text-muted-foreground">
+            Sign in to inspect saved native history.
+          </p>
+        )}
+        {state.loaded && <p className="text-xs leading-5 text-muted-foreground">Last loaded metadata. Refresh history to include changes and restart paging. Opening a record reads metadata only; it does not resume work.</p>}
+        {error && state.loaded && (
+          <p role="status" className="text-sm text-muted-foreground">
+            {error}
+          </p>
+        )}
+        <ListCard
+          query={view.query}
+          onQueryChange={view.setQuery}
+          label="Search Codex threads"
+          placeholder="Search threads"
+          sort={view.sort}
+          count={visible.length}
+          unit="threads loaded"
+          emptyTitle={searching ? 'No matching Codex threads' : `No ${archived ? 'archived' : 'unarchived'} Codex threads found`}
+          emptyDescription={searching ? 'Only loaded threads are searched. Load more threads to search further.' : 'This is saved history in Conker’s isolated Codex profile, not all Codex history on this computer.'}
+          emptyContent={
+            searching ? undefined : !state.loaded ? (
+              state.pending === 'list' ? (
+                <CollectionLoading label="Reading saved Codex history…" />
+              ) : (
+                <p role="status" className="py-8 text-sm text-muted-foreground">
+                  {state.active ? (error ?? 'No history snapshot is available. Refresh history to check.') : 'Saved native history is hidden while signed out.'}
+                </p>
+              )
+            ) : undefined
+          }
+          icon={<TerminalSquare />}
+        >
+          {visible.map(row => (
+            <li key={row.id}>
+              <RecordItem
+                title={codexThreadTitle(row)}
+                description={<span className="wrap-anywhere font-mono">{row.cwd}</span>}
+                onOpen={() => {
+                  if (selected?.id === row.id) controller.close(selected)
+                  else controller.select(row)
+                }}
+                details={selected?.id === row.id ? details : undefined}
+                selected={selected?.id === row.id}
+                leading={<TerminalSquare className="size-4" />}
+                meta={
+                  <>
+                    <span>{sources[row.source]}</span>
+                    <span className="wrap-anywhere">{row.modelProvider}</span>
+                    <span>Updated {when(row.updatedAt)}</span>
+                  </>
+                }
+              />
+            </li>
+          ))}
+        </ListCard>
+        {!shown && details}
+        {state.loaded && (
+          <div className="flex flex-wrap items-center gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              aria-disabled={!!state.pending || (!state.nextCursor && state.error !== 'cursor')}
+              className="aria-disabled:opacity-50"
+              onClick={() => {
+                if (!state.pending) {
+                  if (state.error === 'cursor') void controller.refresh()
+                  else if (state.nextCursor) void controller.more()
+                }
+              }}
+            >
+              {state.pending === 'more' ? 'Loading…' : state.error === 'cursor' ? 'Refresh history' : state.nextCursor ? 'Load more threads' : 'No more threads to load'}
+            </Button>
+            {!state.nextCursor && !state.error && <p className="text-xs text-muted-foreground">End of this saved-history result.</p>}
+          </div>
+        )}
+      </div>
+    </GatewayPageFrame>
+  )
 }

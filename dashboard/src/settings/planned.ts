@@ -13,14 +13,20 @@ const EVENT = 'conker-settings-planned'
 export const isPlanned = (setting: Pick<Setting, 'effect'>) => setting.effect === 'stored'
 
 export function plannedShown(): boolean {
-  try { return window.localStorage.getItem(KEY) === 'true' } catch { return false }
+  try {
+    return window.localStorage.getItem(KEY) === 'true'
+  } catch {
+    return false
+  }
 }
 
 function remember(value: boolean) {
   try {
     if (value) window.localStorage.setItem(KEY, 'true')
     else window.localStorage.removeItem(KEY)
-  } catch { /* storage unavailable: the choice lasts for this page only */ }
+  } catch {
+    /* storage unavailable: the choice lasts for this page only */
+  }
   window.dispatchEvent(new CustomEvent(EVENT, { detail: value }))
 }
 
@@ -32,6 +38,9 @@ export function usePlannedShown(): [boolean, (value: boolean) => void] {
     window.addEventListener(EVENT, follow)
     return () => window.removeEventListener(EVENT, follow)
   }, [])
-  const set = useCallback((value: boolean) => { setShown(value); remember(value) }, [])
+  const set = useCallback((value: boolean) => {
+    setShown(value)
+    remember(value)
+  }, [])
   return [shown, set]
 }

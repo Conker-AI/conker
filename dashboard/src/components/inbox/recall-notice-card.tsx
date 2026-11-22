@@ -18,19 +18,51 @@ const WHEN: Record<RecallNotice['change'], string> = { corrected: 'Memory correc
  */
 export function RecallNoticeCard({ notice, busy, error, onDismiss }: { notice: RecallNotice; busy: boolean; error: string | null; onDismiss: () => void }) {
   const more = notice.chats - notice.sessions.length
-  return <InboxCard icon={<History />} title={notice.title} source={`${WHEN[notice.change]} · ${new Date(notice.since * 1000).toLocaleDateString()}`}
-    openLabel="See the chats" onLater={busy ? undefined : onDismiss} laterLabel="Dismiss"
-    summary={`${WHAT[notice.change]} The chats below are unchanged.`}
-    actions={<>
-      {notice.sessions.length > 0 && <ul aria-label="Chats with these answers" className="flex min-w-0 flex-col divide-y rounded-md border">
-        {notice.sessions.map(chat => <li key={chat.id} className="flex min-w-0 items-center gap-3 px-3 py-1.5">
-          <span className="min-w-0 flex-1 truncate">{chat.title || 'Untitled chat'}</span>
-          <Button type="button" size="xs" variant="ghost" render={<Link to={gatewayConversationLink(chat.id)} aria-label={`Open the chat ${chat.title || 'Untitled chat'}`} />}>Open chat</Button>
-        </li>)}
-      </ul>}
-      {more > 0 && <p className="text-muted-foreground">and {more} more {more === 1 ? 'chat' : 'chats'}</p>}
-      <div className="flex flex-wrap gap-2"><Button type="button" size="sm" variant="outline" disabled={busy} onClick={onDismiss}>Dismiss</Button></div>
-      {error && <p role="alert" className="text-sm text-destructive-foreground">{error}</p>}
-    </>}
-    facts={[['What changed', WHEN[notice.change]], ['Answers', String(notice.answers)], ['Chats', String(notice.chats)]]} />
+  return (
+    <InboxCard
+      icon={<History />}
+      title={notice.title}
+      source={`${WHEN[notice.change]} · ${new Date(notice.since * 1000).toLocaleDateString()}`}
+      openLabel="See the chats"
+      onLater={busy ? undefined : onDismiss}
+      laterLabel="Dismiss"
+      summary={`${WHAT[notice.change]} The chats below are unchanged.`}
+      actions={
+        <>
+          {notice.sessions.length > 0 && (
+            <ul aria-label="Chats with these answers" className="flex min-w-0 flex-col divide-y rounded-md border">
+              {notice.sessions.map(chat => (
+                <li key={chat.id} className="flex min-w-0 items-center gap-3 px-3 py-1.5">
+                  <span className="min-w-0 flex-1 truncate">{chat.title || 'Untitled chat'}</span>
+                  <Button type="button" size="xs" variant="ghost" render={<Link to={gatewayConversationLink(chat.id)} aria-label={`Open the chat ${chat.title || 'Untitled chat'}`} />}>
+                    Open chat
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          )}
+          {more > 0 && (
+            <p className="text-muted-foreground">
+              and {more} more {more === 1 ? 'chat' : 'chats'}
+            </p>
+          )}
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" size="sm" variant="outline" disabled={busy} onClick={onDismiss}>
+              Dismiss
+            </Button>
+          </div>
+          {error && (
+            <p role="alert" className="text-sm text-destructive-foreground">
+              {error}
+            </p>
+          )}
+        </>
+      }
+      facts={[
+        ['What changed', WHEN[notice.change]],
+        ['Answers', String(notice.answers)],
+        ['Chats', String(notice.chats)],
+      ]}
+    />
+  )
 }

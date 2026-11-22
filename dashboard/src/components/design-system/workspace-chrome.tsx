@@ -8,16 +8,30 @@ import { splitActionLabel } from '@/lib/route-actions'
 import { cn } from '@/lib/utils'
 
 type WorkspaceActionProps = Omit<ComponentProps<typeof Button>, 'size' | 'variant'> & {
-  emphasis?: 'quiet' | 'primary'; iconOnly?: boolean; menuItem?: boolean
+  emphasis?: 'quiet' | 'primary'
+  iconOnly?: boolean
+  menuItem?: boolean
   /** The page's main action: it stays in the phone top bar instead of the "…" menu. */
   keepVisible?: boolean
 }
 
 /** Routine toolbar commands are quiet; only an explicit commitment earns primary emphasis. */
 export function WorkspaceAction({ emphasis = 'quiet', iconOnly = false, menuItem = false, keepVisible, className, ...props }: WorkspaceActionProps) {
-  return <Button {...props} data-slot="workspace-action" data-keep-visible={keepVisible || undefined} size={iconOnly && !menuItem ? 'icon' : 'sm'}
-    variant={iconOnly || menuItem ? 'ghost' : emphasis === 'primary' ? 'default' : 'outline'}
-    className={cn(emphasis === 'quiet' && 'shadow-none', !menuItem && (iconOnly ? 'size-(--control-height-sm) max-sm:size-(--control-height)' : 'max-sm:min-h-(--control-height)'), menuItem && 'h-auto min-h-(--control-height-sm) w-full justify-start whitespace-normal text-left shadow-none', className)} />
+  return (
+    <Button
+      {...props}
+      data-slot="workspace-action"
+      data-keep-visible={keepVisible || undefined}
+      size={iconOnly && !menuItem ? 'icon' : 'sm'}
+      variant={iconOnly || menuItem ? 'ghost' : emphasis === 'primary' ? 'default' : 'outline'}
+      className={cn(
+        emphasis === 'quiet' && 'shadow-none',
+        !menuItem && (iconOnly ? 'size-(--control-height-sm) max-sm:size-(--control-height)' : 'max-sm:min-h-(--control-height)'),
+        menuItem && 'h-auto min-h-(--control-height-sm) w-full justify-start whitespace-normal text-left shadow-none',
+        className,
+      )}
+    />
+  )
 }
 
 export function WorkspaceChromeProvider({ children }: { children: ReactNode }) {
@@ -38,7 +52,7 @@ export type WorkspaceAppbarProps = {
 }
 
 function actionItems(children: ReactNode): ReactNode[] {
-  return Children.toArray(children).flatMap(child => isValidElement<{ children?: ReactNode }>(child) && (child.type === Fragment || child.type === 'div') ? actionItems(child.props.children) : [child])
+  return Children.toArray(children).flatMap(child => (isValidElement<{ children?: ReactNode }>(child) && (child.type === Fragment || child.type === 'div') ? actionItems(child.props.children) : [child]))
 }
 
 /** Keep primary work reachable even when the sidebar leaves a narrow action column. */
@@ -66,9 +80,50 @@ export function WorkspaceRouteActions({ children }: { children: ReactNode }) {
     return cloneElement(item as ReactElement<WorkspaceActionProps>, { iconOnly: true, 'aria-label': name, title: name, children: icons })
   })
   const menu = items.filter(item => !keptRaw.includes(item))
-  return <div ref={group} className="flex shrink-0 items-center gap-1">{items.length < 2 || !compact ? children : <>{kept}<DropdownMenu><DropdownMenuTrigger render={<WorkspaceAction iconOnly aria-label="More workspace actions" title="More workspace actions" />}><MoreHorizontal /></DropdownMenuTrigger><DropdownMenuContent align="end" aria-label="More workspace actions">
-    {menu.map((item, index) => isValidElement<{ className?: string; disabled?: boolean; children?: ReactNode; 'aria-label'?: string; menuItem?: boolean; mobileMenu?: boolean; options?: unknown }>(item) ? 'options' in item.props ? cloneElement(item, { key: index, menuItem: true, mobileMenu: isMobile }) : <DropdownMenuItem key={index} disabled={item.props.disabled} render={cloneElement(item, { ...(item.type === WorkspaceAction ? { menuItem: true } : {}), className: 'w-full justify-start whitespace-normal text-left', children: item.props['aria-label'] ? <>{item.props.children}<span>{item.props['aria-label']}</span></> : item.props.children })} /> : item)}
-  </DropdownMenuContent></DropdownMenu></>}</div>
+  return (
+    <div ref={group} className="flex shrink-0 items-center gap-1">
+      {items.length < 2 || !compact ? (
+        children
+      ) : (
+        <>
+          {kept}
+          <DropdownMenu>
+            <DropdownMenuTrigger render={<WorkspaceAction iconOnly aria-label="More workspace actions" title="More workspace actions" />}>
+              <MoreHorizontal />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" aria-label="More workspace actions">
+              {menu.map((item, index) =>
+                isValidElement<{ className?: string; disabled?: boolean; children?: ReactNode; 'aria-label'?: string; menuItem?: boolean; mobileMenu?: boolean; options?: unknown }>(item) ? (
+                  'options' in item.props ? (
+                    cloneElement(item, { key: index, menuItem: true, mobileMenu: isMobile })
+                  ) : (
+                    <DropdownMenuItem
+                      key={index}
+                      disabled={item.props.disabled}
+                      render={cloneElement(item, {
+                        ...(item.type === WorkspaceAction ? { menuItem: true } : {}),
+                        className: 'w-full justify-start whitespace-normal text-left',
+                        children: item.props['aria-label'] ? (
+                          <>
+                            {item.props.children}
+                            <span>{item.props['aria-label']}</span>
+                          </>
+                        ) : (
+                          item.props.children
+                        ),
+                      })}
+                    />
+                  )
+                ) : (
+                  item
+                ),
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </>
+      )}
+    </div>
+  )
 }
 
 /** One frame serves collection pages, conversations and graph workspaces. */
@@ -89,29 +144,55 @@ export function WorkspaceAppbar({ context, search, actions, sections, toolbar }:
     observer.observe(node)
     window.addEventListener('resize', update)
     update()
-    return () => { observer.disconnect(); window.removeEventListener('resize', update) }
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('resize', update)
+    }
   }, [setCompactSearch])
-  return <header ref={header} data-slot="appbar" className="workspace-appbar sticky top-0 z-20 shrink-0 border-b bg-background text-foreground">
-    <div className="workspace-appbar-row">
-      <div className="workspace-appbar-context">
-        {showSidebarTrigger && (isMobile
-          // A phone gets the familiar menu button, carrying the Inbox count (owner, 23 October).
-          ? <div className="relative shrink-0">
-            <Button type="button" variant="ghost" size="icon" data-slot="sidebar-trigger" className="workspace-sidebar-trigger" aria-label={`Menu${menuCount ? `, ${menuCount} waiting for you` : ''}`} title="Menu"
-              onClick={event => { if (!event.defaultPrevented) toggleSidebar(event.currentTarget) }}><Menu /></Button>
-            {!!menuCount && <span aria-hidden="true" className="pointer-events-none absolute -top-1 right-0 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-medium text-primary-foreground">{menuCount}</span>}
-          </div>
-          : <SidebarTrigger className="workspace-sidebar-trigger" aria-label="Expand the sidebar" title="Expand the sidebar" />)}
-        {context}
-        <div ref={chrome?.setSummary} className="workspace-appbar-summary shrink-0" />
+  return (
+    <header ref={header} data-slot="appbar" className="workspace-appbar sticky top-0 z-20 shrink-0 border-b bg-background text-foreground">
+      <div className="workspace-appbar-row">
+        <div className="workspace-appbar-context">
+          {showSidebarTrigger &&
+            (isMobile ? (
+              // A phone gets the familiar menu button, carrying the Inbox count (owner, 23 October).
+              <div className="relative shrink-0">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  data-slot="sidebar-trigger"
+                  className="workspace-sidebar-trigger"
+                  aria-label={`Menu${menuCount ? `, ${menuCount} waiting for you` : ''}`}
+                  title="Menu"
+                  onClick={event => {
+                    if (!event.defaultPrevented) toggleSidebar(event.currentTarget)
+                  }}
+                >
+                  <Menu />
+                </Button>
+                {!!menuCount && (
+                  <span aria-hidden="true" className="pointer-events-none absolute -top-1 right-0 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-medium text-primary-foreground">
+                    {menuCount}
+                  </span>
+                )}
+              </div>
+            ) : (
+              <SidebarTrigger className="workspace-sidebar-trigger" aria-label="Expand the sidebar" title="Expand the sidebar" />
+            ))}
+          {context}
+          <div ref={chrome?.setSummary} className="workspace-appbar-summary shrink-0" />
+        </div>
+        <div ref={chrome?.setSearch} className="workspace-appbar-search">
+          {search}
+        </div>
+        <div className="workspace-appbar-actions" aria-label="Workspace actions" role="toolbar">
+          <div ref={chrome?.setActions} className="workspace-route-actions" />
+          {actions}
+        </div>
       </div>
-      <div ref={chrome?.setSearch} className="workspace-appbar-search">{search}</div>
-      <div className="workspace-appbar-actions" aria-label="Workspace actions" role="toolbar">
-        <div ref={chrome?.setActions} className="workspace-route-actions" />
-        {actions}
-      </div>
-    </div>
-    {sections}
-    {toolbar && <div className="workspace-appbar-toolbar">{toolbar}</div>}
-  </header>
+      {sections}
+      {toolbar && <div className="workspace-appbar-toolbar">{toolbar}</div>}
+    </header>
+  )
 }

@@ -20,57 +20,111 @@ import { useSettings, type SettingsState } from './use-settings'
 
 /** Links from before the topics existed (`?tab=`) open the matching topic. */
 const OLD_TABS: Record<string, { group: string; focus?: string }> = {
-  general: { group: 'you' }, models: { group: 'models' }, providers: { group: 'models', focus: 'models.providers' }, connections: { group: 'integrations' },
-  access: { group: 'access' }, search: { group: 'search' },
+  general: { group: 'you' },
+  models: { group: 'models' },
+  providers: { group: 'models', focus: 'models.providers' },
+  connections: { group: 'integrations' },
+  access: { group: 'access' },
+  search: { group: 'search' },
 }
 
 function ChatScopeRow({ setting }: { setting: Setting }) {
-  return <div className="py-3">
-    <p className="text-sm font-medium leading-5">{setting.title}</p>
-    <p className="mt-0.5 text-sm leading-5 text-muted-foreground">{setting.description} <span className="whitespace-nowrap">Change this inside a {setting.scope}.</span></p>
-  </div>
+  return (
+    <div className="py-3">
+      <p className="text-sm font-medium leading-5">{setting.title}</p>
+      <p className="mt-0.5 text-sm leading-5 text-muted-foreground">
+        {setting.description} <span className="whitespace-nowrap">Change this inside a {setting.scope}.</span>
+      </p>
+    </div>
+  )
 }
 
 function SectionCard({ section, rows, state, custom, label }: { section: Pick<SettingsSection, 'id' | 'title' | 'description'>; rows: Setting[]; state: SettingsState; custom: (setting: Setting) => ReactNode; label?: string }) {
-  return <section aria-labelledby={`section-${section.id}`} className="flex flex-col gap-2">
-    <div>
-      <h3 id={`section-${section.id}`} className="text-sm font-semibold">{label ? <span className="font-normal text-muted-foreground">{label} · </span> : null}{section.title}</h3>
-      {section.description && <p className="mt-0.5 text-sm text-muted-foreground">{section.description}</p>}
-    </div>
-    <div className="divide-y rounded-xl border bg-card px-4">
-      {rows.map(setting => onScreen(setting) ? <SettingRow key={setting.id} setting={setting} state={state} custom={custom} /> : <ChatScopeRow key={setting.id} setting={setting} />)}
-    </div>
-  </section>
+  return (
+    <section aria-labelledby={`section-${section.id}`} className="flex flex-col gap-2">
+      <div>
+        <h3 id={`section-${section.id}`} className="text-sm font-semibold">
+          {label ? <span className="font-normal text-muted-foreground">{label} · </span> : null}
+          {section.title}
+        </h3>
+        {section.description && <p className="mt-0.5 text-sm text-muted-foreground">{section.description}</p>}
+      </div>
+      <div className="divide-y rounded-xl border bg-card px-4">
+        {rows.map(setting => (onScreen(setting) ? <SettingRow key={setting.id} setting={setting} state={state} custom={custom} /> : <ChatScopeRow key={setting.id} setting={setting} />))}
+      </div>
+    </section>
+  )
 }
 
-function GroupNav({ selected, onPick, query, onQuery, advanced, onAdvanced, changedOnly, onChangedOnly, changedCount, planned, onPlanned, topics }: {
-  selected: string | null; onPick: (group: string) => void; query: string; onQuery: (value: string) => void
-  advanced: boolean; onAdvanced: (value: boolean) => void; changedOnly: boolean; onChangedOnly: (value: boolean) => void; changedCount: number
-  planned: boolean; onPlanned: (value: boolean) => void; topics: SettingsGroup[]
+function GroupNav({
+  selected,
+  onPick,
+  query,
+  onQuery,
+  advanced,
+  onAdvanced,
+  changedOnly,
+  onChangedOnly,
+  changedCount,
+  planned,
+  onPlanned,
+  topics,
+}: {
+  selected: string | null
+  onPick: (group: string) => void
+  query: string
+  onQuery: (value: string) => void
+  advanced: boolean
+  onAdvanced: (value: boolean) => void
+  changedOnly: boolean
+  onChangedOnly: (value: boolean) => void
+  changedCount: number
+  planned: boolean
+  onPlanned: (value: boolean) => void
+  topics: SettingsGroup[]
 }) {
-  return <nav aria-label="Settings topics" className="flex flex-col gap-4">
-    <CollectionSearch label="Search settings" placeholder="Search settings" compact value={query} onChange={event => onQuery(event.target.value)} />
-    {/* View filters, not settings: pressed chips, so "on" reads at a glance in both themes. */}
-    <div role="group" aria-label="Filter settings" className="flex flex-wrap gap-2">
-      <Button type="button" size="sm" variant={advanced ? 'secondary' : 'outline'} aria-pressed={advanced} className="rounded-full" onClick={() => onAdvanced(!advanced)}>{advanced && <Check aria-hidden="true" />}Advanced</Button>
-      <Button type="button" size="sm" variant={changedOnly ? 'secondary' : 'outline'} aria-pressed={changedOnly} className="rounded-full" onClick={() => onChangedOnly(!changedOnly)}>{changedOnly && <Check aria-hidden="true" />}Changed{changedCount > 0 && <span className="tabular-nums text-muted-foreground">{changedCount}</span>}</Button>
-      <Button type="button" size="sm" variant={planned ? 'secondary' : 'outline'} aria-pressed={planned} title="Settings saved for features still being built" className="rounded-full" onClick={() => onPlanned(!planned)}>{planned && <Check aria-hidden="true" />}Planned</Button>
-    </div>
-    {CATEGORIES.map(category => {
-      const groups = topics.filter(group => group.category === category.id)
-      return groups.length ? <div key={category.id} className="flex flex-col gap-0.5">
-        <p className="px-2 pb-1 text-xs font-medium text-muted-foreground">{category.title}</p>
-        {groups.map(group => {
-          const Icon = groupIcon(group.icon)
-          const active = group.id === selected && !query && !changedOnly
-          return <button key={group.id} type="button" aria-current={active ? 'page' : undefined} onClick={() => onPick(group.id)}
-            className={cn('flex min-h-9 pointer-coarse:min-h-11 items-center gap-2.5 rounded-md px-2 text-left text-sm outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring', active && 'bg-accent font-medium')}>
-            <Icon aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" /><span className="min-w-0 flex-1 truncate">{group.title}</span><ChevronRight aria-hidden="true" className="size-4 text-muted-foreground md:hidden" />
-          </button>
-        })}
-      </div> : null
-    })}
-  </nav>
+  return (
+    <nav aria-label="Settings topics" className="flex flex-col gap-4">
+      <CollectionSearch label="Search settings" placeholder="Search settings" compact value={query} onChange={event => onQuery(event.target.value)} />
+      {/* View filters, not settings: pressed chips, so "on" reads at a glance in both themes. */}
+      <div role="group" aria-label="Filter settings" className="flex flex-wrap gap-2">
+        <Button type="button" size="sm" variant={advanced ? 'secondary' : 'outline'} aria-pressed={advanced} className="rounded-full" onClick={() => onAdvanced(!advanced)}>
+          {advanced && <Check aria-hidden="true" />}Advanced
+        </Button>
+        <Button type="button" size="sm" variant={changedOnly ? 'secondary' : 'outline'} aria-pressed={changedOnly} className="rounded-full" onClick={() => onChangedOnly(!changedOnly)}>
+          {changedOnly && <Check aria-hidden="true" />}Changed{changedCount > 0 && <span className="tabular-nums text-muted-foreground">{changedCount}</span>}
+        </Button>
+        <Button type="button" size="sm" variant={planned ? 'secondary' : 'outline'} aria-pressed={planned} title="Settings saved for features still being built" className="rounded-full" onClick={() => onPlanned(!planned)}>
+          {planned && <Check aria-hidden="true" />}Planned
+        </Button>
+      </div>
+      {CATEGORIES.map(category => {
+        const groups = topics.filter(group => group.category === category.id)
+        return groups.length ? (
+          <div key={category.id} className="flex flex-col gap-0.5">
+            <p className="px-2 pb-1 text-xs font-medium text-muted-foreground">{category.title}</p>
+            {groups.map(group => {
+              const Icon = groupIcon(group.icon)
+              const active = group.id === selected && !query && !changedOnly
+              return (
+                <button
+                  key={group.id}
+                  type="button"
+                  aria-current={active ? 'page' : undefined}
+                  onClick={() => onPick(group.id)}
+                  className={cn('flex min-h-9 pointer-coarse:min-h-11 items-center gap-2.5 rounded-md px-2 text-left text-sm outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring', active && 'bg-accent font-medium')}
+                >
+                  <Icon aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
+                  <span className="min-w-0 flex-1 truncate">{group.title}</span>
+                  <ChevronRight aria-hidden="true" className="size-4 text-muted-foreground md:hidden" />
+                </button>
+              )
+            })}
+          </div>
+        ) : null
+      })}
+    </nav>
+  )
 }
 
 /**
@@ -81,7 +135,13 @@ function GroupNav({ selected, onPick, query, onQuery, advanced, onAdvanced, chan
  * opens on its own page; on wider screens they sit side by side.
  */
 export function SettingsScreen({ client, authStore, onSignOut }: { client: GatewayControlClient; authStore: GatewayAuthStore; onSignOut?: () => void }) {
-  return <ModelsProvider client={client}><AccessProvider client={client}><Screen client={client} authStore={authStore} onSignOut={onSignOut} /></AccessProvider></ModelsProvider>
+  return (
+    <ModelsProvider client={client}>
+      <AccessProvider client={client}>
+        <Screen client={client} authStore={authStore} onSignOut={onSignOut} />
+      </AccessProvider>
+    </ModelsProvider>
+  )
 }
 
 function Screen({ client, authStore, onSignOut }: { client: GatewayControlClient; authStore: GatewayAuthStore; onSignOut?: () => void }) {
@@ -91,7 +151,8 @@ function Screen({ client, authStore, onSignOut }: { client: GatewayControlClient
   const groupId = params.get('group') ?? old?.group ?? null
   const focus = params.get('focus') ?? old?.focus ?? null
   const group = SETTINGS_GROUPS.find(item => item.id === groupId) ?? null
-  const [query, setQuery] = useState(''), [changedOnly, setChangedOnly] = useState(false)
+  const [query, setQuery] = useState(''),
+    [changedOnly, setChangedOnly] = useState(false)
   const [planned, setPlanned] = usePlannedShown()
   const shows = (setting: Setting) => planned || !isPlanned(setting) || setting.id === focus
   const topics = SETTINGS_GROUPS.filter(item => item.id === group?.id || item.sections.some(section => section.settings.some(shows)))
@@ -106,54 +167,141 @@ function Screen({ client, authStore, onSignOut }: { client: GatewayControlClient
     return () => window.clearTimeout(timer)
   }, [focus, groupId])
   const visible = (setting: Setting) => shows(setting) && (advanced || setting.tier === 'basic' || setting.id === focus)
-  const pick = (id: string) => { setQuery(''); setChangedOnly(false); setParams({ group: id }) }
+  const pick = (id: string) => {
+    setQuery('')
+    setChangedOnly(false)
+    setParams({ group: id })
+  }
   const changed = SETTINGS_GROUPS.flatMap(item => item.sections.flatMap(section => section.settings.filter(setting => shows(setting) && onScreen(setting) && state.changed(setting))))
   const problems = Object.values(state.loadErrors).filter(Boolean)
 
   let content: ReactNode
   if (query.trim() || changedOnly) {
-    const found = SETTINGS_GROUPS.flatMap(item => item.sections.map(section => ({ group: item, section,
-      rows: section.settings.filter(setting => shows(setting) && (changedOnly ? onScreen(setting) && state.changed(setting) : true) && (!query.trim() || matches(setting, query))) }))).filter(item => item.rows.length)
-    content = <div className="flex flex-col gap-6">
-      <h2 className="text-lg font-semibold">{changedOnly && !query.trim() ? 'Changed from the default' : `Results for “${query.trim()}”`}</h2>
-      {found.length ? found.map(item => <SectionCard key={`${item.group.id}.${item.section.id}`} section={item.section} label={item.group.title} rows={item.rows} state={state} custom={custom} />)
-        : <p className="text-sm text-muted-foreground">{changedOnly ? 'Everything is at its default.' : 'No setting matches. Try another word.'}</p>}
-    </div>
+    const found = SETTINGS_GROUPS.flatMap(item =>
+      item.sections.map(section => ({ group: item, section, rows: section.settings.filter(setting => shows(setting) && (changedOnly ? onScreen(setting) && state.changed(setting) : true) && (!query.trim() || matches(setting, query))) })),
+    ).filter(item => item.rows.length)
+    content = (
+      <div className="flex flex-col gap-6">
+        <h2 className="text-lg font-semibold">{changedOnly && !query.trim() ? 'Changed from the default' : `Results for “${query.trim()}”`}</h2>
+        {found.length ? (
+          found.map(item => <SectionCard key={`${item.group.id}.${item.section.id}`} section={item.section} label={item.group.title} rows={item.rows} state={state} custom={custom} />)
+        ) : (
+          <p className="text-sm text-muted-foreground">{changedOnly ? 'Everything is at its default.' : 'No setting matches. Try another word.'}</p>
+        )}
+      </div>
+    )
   } else if (group) {
     content = <GroupPage group={group} state={state} custom={custom} visible={visible} shows={shows} showAdvanced={() => state.set(advancedSetting, true)} showPlanned={() => setPlanned(true)} />
   }
 
-  return <GatewayPageFrame className="p-0 sm:p-0">
-    <PageHeader actionsOnly title="Settings" />
-    <div className="grid w-full gap-6 p-4 sm:p-6 md:grid-cols-[15rem_minmax(0,1fr)] md:gap-10">
-      <aside className={cn('md:sticky md:top-0 md:max-h-[calc(100dvh-6rem)] md:self-start md:overflow-y-auto md:pb-6', (group || query.trim() || changedOnly) && 'hidden md:block')}>
-        <GroupNav selected={group?.id ?? topics[0].id} onPick={pick} query={query} onQuery={setQuery} advanced={advanced} onAdvanced={value => state.set(advancedSetting, value)}
-          changedOnly={changedOnly} onChangedOnly={setChangedOnly} changedCount={changed.length} planned={planned} onPlanned={setPlanned} topics={topics} />
-      </aside>
-      <div data-settings-content className={cn('min-w-0 pb-16', !(group || query.trim() || changedOnly) && 'hidden md:block')}>
-        {(group || query.trim() || changedOnly) && <Button variant="ghost" size="sm" className="mb-3 -ml-2 md:hidden" render={<Link to="/settings" onClick={() => { setQuery(''); setChangedOnly(false) }} />}><ChevronLeft />All settings</Button>}
-        {problems.length > 0 && <Alert variant="warning" className="mb-4"><TriangleAlert /><AlertDescription>Some settings can’t be read right now, so they can’t be changed: {problems[0]} <button type="button" className="underline underline-offset-4" onClick={() => void state.reload()}>Try again</button></AlertDescription></Alert>}
-        {content ?? <GroupPage group={topics[0]} state={state} custom={custom} visible={visible} shows={shows} showAdvanced={() => state.set(advancedSetting, true)} showPlanned={() => setPlanned(true)} />}
+  return (
+    <GatewayPageFrame className="p-0 sm:p-0">
+      <PageHeader actionsOnly title="Settings" />
+      <div className="grid w-full gap-6 p-4 sm:p-6 md:grid-cols-[15rem_minmax(0,1fr)] md:gap-10">
+        <aside className={cn('md:sticky md:top-0 md:max-h-[calc(100dvh-6rem)] md:self-start md:overflow-y-auto md:pb-6', (group || query.trim() || changedOnly) && 'hidden md:block')}>
+          <GroupNav
+            selected={group?.id ?? topics[0].id}
+            onPick={pick}
+            query={query}
+            onQuery={setQuery}
+            advanced={advanced}
+            onAdvanced={value => state.set(advancedSetting, value)}
+            changedOnly={changedOnly}
+            onChangedOnly={setChangedOnly}
+            changedCount={changed.length}
+            planned={planned}
+            onPlanned={setPlanned}
+            topics={topics}
+          />
+        </aside>
+        <div data-settings-content className={cn('min-w-0 pb-16', !(group || query.trim() || changedOnly) && 'hidden md:block')}>
+          {(group || query.trim() || changedOnly) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="mb-3 -ml-2 md:hidden"
+              render={
+                <Link
+                  to="/settings"
+                  onClick={() => {
+                    setQuery('')
+                    setChangedOnly(false)
+                  }}
+                />
+              }
+            >
+              <ChevronLeft />
+              All settings
+            </Button>
+          )}
+          {problems.length > 0 && (
+            <Alert variant="warning" className="mb-4">
+              <TriangleAlert />
+              <AlertDescription>
+                Some settings can’t be read right now, so they can’t be changed: {problems[0]}{' '}
+                <button type="button" className="underline underline-offset-4" onClick={() => void state.reload()}>
+                  Try again
+                </button>
+              </AlertDescription>
+            </Alert>
+          )}
+          {content ?? <GroupPage group={topics[0]} state={state} custom={custom} visible={visible} shows={shows} showAdvanced={() => state.set(advancedSetting, true)} showPlanned={() => setPlanned(true)} />}
+        </div>
       </div>
-    </div>
-  </GatewayPageFrame>
+    </GatewayPageFrame>
+  )
 }
 
-function GroupPage({ group, state, custom, visible, shows, showAdvanced, showPlanned }: {
-  group: SettingsGroup; state: SettingsState; custom: (setting: Setting) => ReactNode; visible: (setting: Setting) => boolean
-  shows: (setting: Setting) => boolean; showAdvanced: () => void; showPlanned: () => void
+function GroupPage({
+  group,
+  state,
+  custom,
+  visible,
+  shows,
+  showAdvanced,
+  showPlanned,
+}: {
+  group: SettingsGroup
+  state: SettingsState
+  custom: (setting: Setting) => ReactNode
+  visible: (setting: Setting) => boolean
+  shows: (setting: Setting) => boolean
+  showAdvanced: () => void
+  showPlanned: () => void
 }) {
   const sections = group.sections.map(section => ({ section, rows: section.settings.filter(visible) })).filter(item => item.rows.length)
   const hidden = group.sections.reduce((count, section) => count + section.settings.filter(setting => shows(setting) && !visible(setting)).length, 0)
   const onlyPlanned = !group.sections.some(section => section.settings.some(shows))
-  return <div className="flex flex-col gap-7">
-    <header>
-      <h2 className="text-xl font-semibold">{group.title}</h2>
-      <p className="mt-1 text-sm text-muted-foreground">{group.description}</p>
-    </header>
-    {state.loading && <p role="status" className="text-sm text-muted-foreground">Loading your settings…</p>}
-    {sections.map(item => <SectionCard key={item.section.id} section={item.section} rows={item.rows} state={state} custom={custom} />)}
-    {onlyPlanned && <p className="text-sm text-muted-foreground">Every setting here is planned: Conker keeps your choice until the feature that uses it is built. <button type="button" className="font-medium text-foreground underline underline-offset-4" onClick={showPlanned}>Show planned</button></p>}
-    {hidden > 0 && <p className="text-sm text-muted-foreground">{hidden} advanced {hidden === 1 ? 'setting is' : 'settings are'} hidden here. <button type="button" className="font-medium text-foreground underline underline-offset-4" onClick={showAdvanced}>Show advanced</button></p>}
-  </div>
+  return (
+    <div className="flex flex-col gap-7">
+      <header>
+        <h2 className="text-xl font-semibold">{group.title}</h2>
+        <p className="mt-1 text-sm text-muted-foreground">{group.description}</p>
+      </header>
+      {state.loading && (
+        <p role="status" className="text-sm text-muted-foreground">
+          Loading your settings…
+        </p>
+      )}
+      {sections.map(item => (
+        <SectionCard key={item.section.id} section={item.section} rows={item.rows} state={state} custom={custom} />
+      ))}
+      {onlyPlanned && (
+        <p className="text-sm text-muted-foreground">
+          Every setting here is planned: Conker keeps your choice until the feature that uses it is built.{' '}
+          <button type="button" className="font-medium text-foreground underline underline-offset-4" onClick={showPlanned}>
+            Show planned
+          </button>
+        </p>
+      )}
+      {hidden > 0 && (
+        <p className="text-sm text-muted-foreground">
+          {hidden} advanced {hidden === 1 ? 'setting is' : 'settings are'} hidden here.{' '}
+          <button type="button" className="font-medium text-foreground underline underline-offset-4" onClick={showAdvanced}>
+            Show advanced
+          </button>
+        </p>
+      )}
+    </div>
+  )
 }

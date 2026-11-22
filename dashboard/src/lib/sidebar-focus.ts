@@ -1,21 +1,27 @@
 /** The mobile sidebar has external triggers, so Base UI cannot infer its return target. */
 export function createSidebarFocus() {
-  let open = false, generation = 0, href = '', destination: 'opener' | 'content' = 'opener'
+  let open = false,
+    generation = 0,
+    href = '',
+    destination: 'opener' | 'content' = 'opener'
   let opener: HTMLElement | null = null
-  const usable = (element: HTMLElement | null): element is HTMLElement => Boolean(element?.isConnected && element !== document.body && !element.matches(':disabled') && !element.closest('[inert], [aria-hidden="true"]') && element.getClientRects().length)
+  const usable = (element: HTMLElement | null): element is HTMLElement =>
+    Boolean(element?.isConnected && element !== document.body && !element.matches(':disabled') && !element.closest('[inert], [aria-hidden="true"]') && element.getClientRects().length)
   return {
     isOpen: () => open,
     change(next: boolean, target?: HTMLElement, focus: 'opener' | 'content' = 'opener') {
       if (next && !open) {
         opener = target ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null)
-        href = window.location.href; destination = 'opener'
+        href = window.location.href
+        destination = 'opener'
       } else if (!next && focus === 'content') destination = 'content'
       if (open !== next) generation++
       open = next
     },
     /** Base UI `finalFocus`: always returns false because focus is moved here, a frame later. */
     restore(root: () => HTMLElement | null): false {
-      const ticket = generation, wrapper = root()
+      const ticket = generation,
+        wrapper = root()
       requestAnimationFrame(() => {
         if (ticket !== generation || open || !wrapper?.isConnected || root() !== wrapper) return
         // Search or another dialog may own focus after this sidebar closes.

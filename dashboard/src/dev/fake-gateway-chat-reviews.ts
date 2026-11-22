@@ -6,7 +6,8 @@ type Json = Record<string, unknown>
 type Request = { method?: 'GET' | 'POST' | 'PUT'; body?: Json }
 type Vote = 'up' | 'down' | 'winner'
 
-const session = '(ses_[0-9a-f]{16})', message = '(msg_[0-9a-f]{16})'
+const session = '(ses_[0-9a-f]{16})',
+  message = '(msg_[0-9a-f]{16})'
 const base = `^/api/control/pi/sessions/${session}`
 const routes = {
   judge: new RegExp(`${base}/response-families/${message}/judge$`),
@@ -41,7 +42,9 @@ export function createFakeChatReviews(now: () => number, fail: (status: number) 
     ].map((content, index) => ({ ...root, id: store.nextId('msg'), seq: root.seq + index + 1, content, created_at: root.created_at + (index + 1) * 60 }))
     const versions = [root, ...retries]
     const selected = versions[versions.length - 1].id
-    versions.forEach((item, index) => { item.response_family = { root_message_id: root.id, retry_of: index === 0 ? null : versions[index - 1].id, selected_message_id: selected, revision: index + 1 } })
+    versions.forEach((item, index) => {
+      item.response_family = { root_message_id: root.id, retry_of: index === 0 ? null : versions[index - 1].id, selected_message_id: selected, revision: index + 1 }
+    })
     chat.messages.push(...retries)
   }
 
@@ -87,7 +90,8 @@ export function createFakeChatReviews(now: () => number, fail: (status: number) 
     const request = body(options, { request_id: () => true, model_id: isModel, rubric: value => typeof value === 'string' && [...value].length <= 2000 })
     const family = familyOf(sessionId, rootId)
     if (family.length < 2) throw refusal(409, 'too_few')
-    const key = `${sessionId}:${rootId}`, list = judgementsByFamily.get(key) ?? []
+    const key = `${sessionId}:${rootId}`,
+      list = judgementsByFamily.get(key) ?? []
     judgementsByFamily.set(key, list)
     return remember(list, request, () => {
       const scores = family.map((item, index) => ({
@@ -95,22 +99,36 @@ export function createFakeChatReviews(now: () => number, fail: (status: number) 
         score: Math.max(1, Math.min(10, 3 + Math.floor(item.content.length / 40))),
         reason: index === 0 ? 'Clear, but short on detail.' : 'Covers the question with more detail.',
       }))
-      const winner = scores.reduce((best, item) => item.score > best.score ? item : best)
+      const winner = scores.reduce((best, item) => (item.score > best.score ? item : best))
       return {
-        request_id: request.request_id, judgeModelId: typeof request.model_id === 'string' ? request.model_id : 'preview-judge', rubric: request.rubric ?? '',
-        scores, winner: winner.message_id, excluded: [], created_at: now() / 1000,
+        request_id: request.request_id,
+        judgeModelId: typeof request.model_id === 'string' ? request.model_id : 'preview-judge',
+        rubric: request.rubric ?? '',
+        scores,
+        winner: winner.message_id,
+        excluded: [],
+        created_at: now() / 1000,
       }
     })
   }
 
   function vote(sessionId: string, rootId: string, options: Request): Json {
     const value = options.body
-    if (!value || typeof value !== 'object' || Array.isArray(value) || Object.keys(value).some(key => key !== 'message_id' && key !== 'vote')
-      || typeof value.message_id !== 'string' || value.message_id.length < 1 || value.message_id.length > 128
-      || !['up', 'down', 'winner', 'clear'].includes(String(value.vote))) return fail(422)
+    if (
+      !value ||
+      typeof value !== 'object' ||
+      Array.isArray(value) ||
+      Object.keys(value).some(key => key !== 'message_id' && key !== 'vote') ||
+      typeof value.message_id !== 'string' ||
+      value.message_id.length < 1 ||
+      value.message_id.length > 128 ||
+      !['up', 'down', 'winner', 'clear'].includes(String(value.vote))
+    )
+      return fail(422)
     const family = familyOf(sessionId, rootId)
     if (!family.some(item => item.id === value.message_id)) throw refusal(422, 'not_a_version')
-    const key = `${sessionId}:${rootId}`, votes = votesByFamily.get(key) ?? {}
+    const key = `${sessionId}:${rootId}`,
+      votes = votesByFamily.get(key) ?? {}
     votesByFamily.set(key, votes)
     if (value.vote === 'clear') delete votes[value.message_id]
     else {
@@ -127,24 +145,35 @@ export function createFakeChatReviews(now: () => number, fail: (status: number) 
     // `conker-fake-fail` = fact-check shows the refusal a model choice fixes.
     if (globalThis.sessionStorage?.getItem('conker-fake-fail') === 'fact-check') throw refusal(503, 'not_configured')
     if (answer.content.length < 40) throw refusal(409, 'no_sources')
-    const key = `${sessionId}:${messageId}`, list = factChecksByMessage.get(key) ?? []
+    const key = `${sessionId}:${messageId}`,
+      list = factChecksByMessage.get(key) ?? []
     factChecksByMessage.set(key, list)
     return remember(list, request, () => {
-      const sentences = answer.content.split(/(?<=[.!?])\s+/).map(item => item.trim()).filter(item => item.length > 0)
+      const sentences = answer.content
+        .split(/(?<=[.!?])\s+/)
+        .map(item => item.trim())
+        .filter(item => item.length > 0)
       const marks = ['supported', 'no-source', 'contradicted'] as const
       const claims = (sentences.length > 0 ? sentences : [answer.content]).slice(0, 3).map((sentence, index) => {
         const mark = marks[index % marks.length]
         return {
-          claim: sentence.slice(0, 300), mark, sources: mark === 'no-source' ? [] : ['cite:preview-1'],
+          claim: sentence.slice(0, 300),
+          mark,
+          sources: mark === 'no-source' ? [] : ['cite:preview-1'],
           note: mark === 'supported' ? 'The source says the same.' : mark === 'contradicted' ? 'The source says something different.' : 'No source covers this.',
         }
       })
       const counts = { supported: 0, contradicted: 0, 'no-source': 0 }
       for (const claim of claims) counts[claim.mark]++
       return {
-        request_id: request.request_id, message_id: messageId, modelId: typeof request.model_id === 'string' ? request.model_id : 'preview-checker', claims, counts,
+        request_id: request.request_id,
+        message_id: messageId,
+        modelId: typeof request.model_id === 'string' ? request.model_id : 'preview-checker',
+        claims,
+        counts,
         sources: claims.some(claim => claim.sources.length > 0) ? [{ id: 'cite:preview-1', title: 'Preview source', url: 'https://example.com/' }] : [],
-        sourcesTruncated: false, created_at: now() / 1000,
+        sourcesTruncated: false,
+        created_at: now() / 1000,
       }
     })
   }

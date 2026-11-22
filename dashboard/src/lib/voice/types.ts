@@ -26,6 +26,8 @@ export interface VoiceInputClient {
 }
 
 export const unavailableVoiceInput: VoiceInputClient = {
-  availability: () => ({ supported: false, reason: "Voice typing is not connected in this client." }),
-  start: async () => { throw new Error("Voice typing is not connected in this client.") },
+  availability: () => ({ supported: false, reason: 'Voice typing is not connected in this client.' }),
+  start: async () => {
+    throw new Error('Voice typing is not connected in this client.')
+  },
 }

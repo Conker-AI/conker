@@ -1,21 +1,25 @@
 export type ToolRecordView = {
-  tool: string | null          // 'sandbox.run'
-  label: string                // human name: last dotted part, '_' and '-' to spaces, first letter up: 'Run'; null tool -> 'Tool'
+  tool: string | null // 'sandbox.run'
+  label: string // human name: last dotted part, '_' and '-' to spaces, first letter up: 'Run'; null tool -> 'Tool'
   status: 'ok' | 'failed' | 'timed out' | 'declined' | 'unknown'
-  summary: string              // one line for the folded row, at most 80 chars, ends with '…' if cut
-  output: string | null        // stdout, else a string result, else null
-  error: string | null         // stderr when non-empty
+  summary: string // one line for the folded row, at most 80 chars, ends with '…' if cut
+  output: string | null // stdout, else a string result, else null
+  error: string | null // stderr when non-empty
   durationMs: number | null
-  raw: string                  // pretty JSON (2 spaces) of the parsed object, or the text as given
-  chat?: string                // conker.run_agent only: the chat the other agent answered in
+  raw: string // pretty JSON (2 spaces) of the parsed object, or the text as given
+  chat?: string // conker.run_agent only: the chat the other agent answered in
 }
 
 type Fields = Record<string, unknown>
 
 const isFields = (value: unknown): value is Fields => typeof value === 'object' && value !== null && !Array.isArray(value)
-const text = (value: unknown) => typeof value === 'string' && value.trim() ? value : null
-const firstLine = (value: string) => value.split('\n').map((line) => line.trim()).find(Boolean) ?? ''
-const cut = (value: string) => value.length > 80 ? `${value.slice(0, 79).trimEnd()}…` : value
+const text = (value: unknown) => (typeof value === 'string' && value.trim() ? value : null)
+const firstLine = (value: string) =>
+  value
+    .split('\n')
+    .map(line => line.trim())
+    .find(Boolean) ?? ''
+const cut = (value: string) => (value.length > 80 ? `${value.slice(0, 79).trimEnd()}…` : value)
 
 function parse(value: string): unknown {
   try {
@@ -40,16 +44,21 @@ function statusOf(record: Fields, result: Fields | null): ToolRecordView['status
  * found or the other agent's reply (Pi reads those back from their own store), so only the outcome
  * shows here.
  */
-function ownTool(tool: string, result: Fields | null): Pick<ToolRecordView, 'label' | 'status' | 'summary'> & { chat?: string } | null {
+function ownTool(tool: string, result: Fields | null): (Pick<ToolRecordView, 'label' | 'status' | 'summary'> & { chat?: string }) | null {
   if (tool === 'conker.recall') {
     const count = typeof result?.count === 'number' ? result.count : 0
     if (result?.status === 'found' || result?.status === 'none') return { label: 'Searched memory', status: 'ok', summary: `${count} found` }
     return { label: 'Searched memory', status: 'failed', summary: 'Couldn’t search memory' }
   }
   if (tool !== 'conker.run_agent') return null
-  const name = text(result?.agentName), chat = text(result?.sessionId)
-  const outcome = result?.status === 'done' ? { status: 'ok' as const, summary: 'Answered in its own chat' }
-    : result?.status === 'failed' ? { status: 'failed' as const, summary: 'Didn’t finish; see its chat' } : { status: 'failed' as const, summary: 'Not run' }
+  const name = text(result?.agentName),
+    chat = text(result?.sessionId)
+  const outcome =
+    result?.status === 'done'
+      ? { status: 'ok' as const, summary: 'Answered in its own chat' }
+      : result?.status === 'failed'
+        ? { status: 'failed' as const, summary: 'Didn’t finish; see its chat' }
+        : { status: 'failed' as const, summary: 'Not run' }
   return { label: name ? cut(`Ran ${name}`) : 'Ran an agent', ...outcome, ...(chat ? { chat } : {}) }
 }
 
@@ -59,7 +68,12 @@ export function readToolRecord(value: string): ToolRecordView {
     return { tool: null, label: 'Tool', status: 'unknown', summary: cut(firstLine(value)), output: null, error: null, durationMs: null, raw: value }
   }
   const tool = text(record.tool)
-  const label = tool ? (tool.split('.').pop() ?? tool).replace(/[_-]+/g, ' ').trim().replace(/^./, (first) => first.toUpperCase()) : 'Tool'
+  const label = tool
+    ? (tool.split('.').pop() ?? tool)
+        .replace(/[_-]+/g, ' ')
+        .trim()
+        .replace(/^./, first => first.toUpperCase())
+    : 'Tool'
   const result = isFields(record.result) ? record.result : null
   const status = statusOf(record, result)
   const output = text(result?.stdout) ?? text(record.result)

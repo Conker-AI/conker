@@ -16,8 +16,17 @@ export function startTurnUsageRead(client: Pick<GatewayRuntimeClient, 'getTurnUs
       if (current()) publish({ status: 'ready', usage })
     } catch (error) {
       if (!current()) return
-      const failure = gatewayError(error), unavailable = failure.status === 404
-      publish({ status: 'error', unavailable, message: unavailable ? 'Usage is unavailable for this turn. Its source may have been forgotten.' : ['browser-expired', 'session-changed'].includes(failure.kind) ? 'Sign in again to view usage.' : 'Could not load usage. Try reading it again.' })
+      const failure = gatewayError(error),
+        unavailable = failure.status === 404
+      publish({
+        status: 'error',
+        unavailable,
+        message: unavailable
+          ? 'Usage is unavailable for this turn. Its source may have been forgotten.'
+          : ['browser-expired', 'session-changed'].includes(failure.kind)
+            ? 'Sign in again to view usage.'
+            : 'Could not load usage. Try reading it again.',
+      })
     }
   })
   return { done, cancel: () => controller.abort() }

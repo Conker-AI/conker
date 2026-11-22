@@ -12,44 +12,135 @@ import { cn } from '@/lib/utils'
 export function GatewayPrivacyControl({ client, sessionId, disabled, onPrivacy }: { client: GatewayControlClient; sessionId: string; disabled: boolean; onPrivacy: (sessionId: string, harnessDisabled: boolean) => void }) {
   const [saved, setSaved] = useState<OwnerSessionSettings | null>(null)
   const [draft, setDraft] = useState({ memoryDisabled: false, harnessDisabled: false })
-  const [open, setOpen] = useState(false), [pending, setPending] = useState(true), [error, setError] = useState('')
+  const [open, setOpen] = useState(false),
+    [pending, setPending] = useState(true),
+    [error, setError] = useState('')
   const lifetime = useRef<AbortController | null>(null)
   useEffect(() => {
-    const controller = new AbortController(); lifetime.current = controller
-    client.sessionSettings(sessionId, controller.signal).then(value => {
-      if (!controller.signal.aborted) { setSaved(value); setDraft(value.settings.privacy); onPrivacy(sessionId, value.settings.privacy.harnessDisabled) }
-    }).catch(error => { if (!controller.signal.aborted) setError(error.message) }).finally(() => { if (!controller.signal.aborted) setPending(false) })
+    const controller = new AbortController()
+    lifetime.current = controller
+    client
+      .sessionSettings(sessionId, controller.signal)
+      .then(value => {
+        if (!controller.signal.aborted) {
+          setSaved(value)
+          setDraft(value.settings.privacy)
+          onPrivacy(sessionId, value.settings.privacy.harnessDisabled)
+        }
+      })
+      .catch(error => {
+        if (!controller.signal.aborted) setError(error.message)
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setPending(false)
+      })
     return () => controller.abort()
   }, [client, sessionId, onPrivacy])
   async function reload() {
-    setPending(true); setError('')
-    try { const value = await client.sessionSettings(sessionId, lifetime.current?.signal); if (!lifetime.current?.signal.aborted) { setSaved(value); setDraft(value.settings.privacy); onPrivacy(sessionId, value.settings.privacy.harnessDisabled) } }
-    catch (error) { if (!lifetime.current?.signal.aborted) setError(error instanceof Error ? error.message : 'Could not load privacy settings.') }
-    finally { if (!lifetime.current?.signal.aborted) setPending(false) }
+    setPending(true)
+    setError('')
+    try {
+      const value = await client.sessionSettings(sessionId, lifetime.current?.signal)
+      if (!lifetime.current?.signal.aborted) {
+        setSaved(value)
+        setDraft(value.settings.privacy)
+        onPrivacy(sessionId, value.settings.privacy.harnessDisabled)
+      }
+    } catch (error) {
+      if (!lifetime.current?.signal.aborted) setError(error instanceof Error ? error.message : 'Could not load privacy settings.')
+    } finally {
+      if (!lifetime.current?.signal.aborted) setPending(false)
+    }
   }
   async function save() {
     if (!saved || pending || disabled) return
-    setPending(true); setError('')
+    setPending(true)
+    setError('')
     try {
       const value = await client.saveSessionSettings(sessionId, { ...saved, settings: { ...saved.settings, privacy: draft } }, lifetime.current?.signal)
-      if (!lifetime.current?.signal.aborted) { setSaved(value); setDraft(value.settings.privacy); onPrivacy(sessionId, value.settings.privacy.harnessDisabled); setOpen(false) }
-    } catch (error) { if (!lifetime.current?.signal.aborted) setError(error instanceof Error ? error.message : 'Could not save privacy settings.') }
-    finally { if (!lifetime.current?.signal.aborted) setPending(false) }
+      if (!lifetime.current?.signal.aborted) {
+        setSaved(value)
+        setDraft(value.settings.privacy)
+        onPrivacy(sessionId, value.settings.privacy.harnessDisabled)
+        setOpen(false)
+      }
+    } catch (error) {
+      if (!lifetime.current?.signal.aborted) setError(error instanceof Error ? error.message : 'Could not save privacy settings.')
+    } finally {
+      if (!lifetime.current?.signal.aborted) setPending(false)
+    }
   }
   const active = saved?.settings.privacy.memoryDisabled || saved?.settings.privacy.harnessDisabled
   useComposerValue('incognito', active ? 'Private chat' : null)
   const label = active ? 'Private chat: on' : 'Private chat'
-  return <Popover open={open} onOpenChange={value => { if (!pending) { setOpen(value); if (value && saved) setDraft(saved.settings.privacy) } }}>
-    <PopoverTrigger render={<Button type="button" size="sm" className={cn('shrink-0 rounded-full font-normal', !active && 'text-muted-foreground')} variant={active ? 'secondary' : 'ghost'} aria-pressed={Boolean(active)} aria-label={label} disabled={disabled} />}><HatGlasses className="size-4" /><span data-label className="sr-only">{label}</span></PopoverTrigger>
-    <PopoverContent align="start" sideOffset={8} className="w-[min(20rem,calc(100vw-1rem))] space-y-3 p-3">
-      <div><p className="text-sm font-medium">Private chat</p><p className="mt-0.5 text-xs text-muted-foreground">Controls future messages in this chat.</p></div>
-      <div className="flex items-center justify-between gap-4"><Label htmlFor="live-use-memory" className="min-w-0 flex-col items-start gap-0"><span className="block text-sm">Remember this chat</span><span className="mt-0.5 block text-xs font-normal leading-4 text-muted-foreground">Recall what you told Conker and learn from this chat.</span></Label><Switch id="live-use-memory" checked={!draft.memoryDisabled} disabled={!saved || pending || disabled} onCheckedChange={value => setDraft(current => ({ ...current, memoryDisabled: !value }))} /></div>
-      <div className="flex items-center justify-between gap-4"><Label htmlFor="live-use-assistant" className="min-w-0 flex-col items-start gap-0"><span className="block text-sm">Let Conker use tools</span><span className="mt-0.5 block text-xs font-normal leading-4 text-muted-foreground">Pick the best model and prepare actions for you to approve.</span></Label><Switch id="live-use-assistant" checked={!draft.harnessDisabled} disabled={!saved || pending || disabled} onCheckedChange={value => setDraft(current => ({ ...current, harnessDisabled: !value }))} /></div>
-      <p className="text-xs text-muted-foreground">Messages still stay in chat history.</p>
-      {pending && <p role="status" className="text-xs text-muted-foreground">Checking settings…</p>}
-      {error && <div className="space-y-2"><p role="alert" className="text-xs text-destructive-foreground">{error}</p><Button variant="outline" size="sm" disabled={pending} onClick={() => void reload()}>Try again</Button></div>}
-      <Button className="w-full" size="sm" disabled={!saved || pending || disabled} onClick={() => void save()}>Done</Button>
-    </PopoverContent>
-  </Popover>
+  return (
+    <Popover
+      open={open}
+      onOpenChange={value => {
+        if (!pending) {
+          setOpen(value)
+          if (value && saved) setDraft(saved.settings.privacy)
+        }
+      }}
+    >
+      <PopoverTrigger
+        render={
+          <Button
+            type="button"
+            size="sm"
+            className={cn('shrink-0 rounded-full font-normal', !active && 'text-muted-foreground')}
+            variant={active ? 'secondary' : 'ghost'}
+            aria-pressed={Boolean(active)}
+            aria-label={label}
+            disabled={disabled}
+          />
+        }
+      >
+        <HatGlasses className="size-4" />
+        <span data-label className="sr-only">
+          {label}
+        </span>
+      </PopoverTrigger>
+      <PopoverContent align="start" sideOffset={8} className="w-[min(20rem,calc(100vw-1rem))] space-y-3 p-3">
+        <div>
+          <p className="text-sm font-medium">Private chat</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">Controls future messages in this chat.</p>
+        </div>
+        <div className="flex items-center justify-between gap-4">
+          <Label htmlFor="live-use-memory" className="min-w-0 flex-col items-start gap-0">
+            <span className="block text-sm">Remember this chat</span>
+            <span className="mt-0.5 block text-xs font-normal leading-4 text-muted-foreground">Recall what you told Conker and learn from this chat.</span>
+          </Label>
+          <Switch id="live-use-memory" checked={!draft.memoryDisabled} disabled={!saved || pending || disabled} onCheckedChange={value => setDraft(current => ({ ...current, memoryDisabled: !value }))} />
+        </div>
+        <div className="flex items-center justify-between gap-4">
+          <Label htmlFor="live-use-assistant" className="min-w-0 flex-col items-start gap-0">
+            <span className="block text-sm">Let Conker use tools</span>
+            <span className="mt-0.5 block text-xs font-normal leading-4 text-muted-foreground">Pick the best model and prepare actions for you to approve.</span>
+          </Label>
+          <Switch id="live-use-assistant" checked={!draft.harnessDisabled} disabled={!saved || pending || disabled} onCheckedChange={value => setDraft(current => ({ ...current, harnessDisabled: !value }))} />
+        </div>
+        <p className="text-xs text-muted-foreground">Messages still stay in chat history.</p>
+        {pending && (
+          <p role="status" className="text-xs text-muted-foreground">
+            Checking settings…
+          </p>
+        )}
+        {error && (
+          <div className="space-y-2">
+            <p role="alert" className="text-xs text-destructive-foreground">
+              {error}
+            </p>
+            <Button variant="outline" size="sm" disabled={pending} onClick={() => void reload()}>
+              Try again
+            </Button>
+          </div>
+        )}
+        <Button className="w-full" size="sm" disabled={!saved || pending || disabled} onClick={() => void save()}>
+          Done
+        </Button>
+      </PopoverContent>
+    </Popover>
+  )
 }
 composerItem(GatewayPrivacyControl, 'incognito')

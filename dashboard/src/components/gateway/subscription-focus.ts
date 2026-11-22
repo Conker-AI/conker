@@ -12,11 +12,16 @@ export function restoreSubscriptionFocus(action: ActionFocus, source: object, au
   return true
 }
 export function useSubscriptionActionFocus(source: object, authStore: GatewayAuthStore, phase: SubscriptionPhase) {
-  const action = useRef<ActionFocus | null>(null), target = useRef<HTMLButtonElement>(null)
-  useLayoutEffect(() => { if (action.current && restoreSubscriptionFocus(action.current, source, authStore, target.current, phase)) action.current = null })
-  return { target, remember(event: MouseEvent<HTMLButtonElement>) {
-    const owner = authStore.getState().session?.sessionId
-    action.current = owner && document.activeElement === event.currentTarget ? { node: event.currentTarget, source, owner } : null
-  } }
+  const action = useRef<ActionFocus | null>(null),
+    target = useRef<HTMLButtonElement>(null)
+  useLayoutEffect(() => {
+    if (action.current && restoreSubscriptionFocus(action.current, source, authStore, target.current, phase)) action.current = null
+  })
+  return {
+    target,
+    remember(event: MouseEvent<HTMLButtonElement>) {
+      const owner = authStore.getState().session?.sessionId
+      action.current = owner && document.activeElement === event.currentTarget ? { node: event.currentTarget, source, owner } : null
+    },
+  }
 }
-

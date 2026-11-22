@@ -8,7 +8,9 @@ type Request = { method?: 'GET' | 'POST' | 'PUT'; body?: Json }
 type Version = { revision: number; summary: string | null; source_session_id: string | null; created_at: number; restored_from: number | null }
 type SummaryState = { versions: Version[]; compaction: { summaryRevision: number; covered: string[]; folded: string[] } }
 
-const refuse = (status: number, code: string): never => { throw new GatewayError('http', status, undefined, code as never) }
+const refuse = (status: number, code: string): never => {
+  throw new GatewayError('http', status, undefined, code as never)
+}
 
 export function createFakeChatSummary(now: () => number, fail: (status: number) => never, store: FakeChatStore) {
   void fail
@@ -16,7 +18,7 @@ export function createFakeChatSummary(now: () => number, fail: (status: number) 
   const states = new Map<string, SummaryState>()
   const stateOf = (sessionId: string) => {
     let state = states.get(sessionId)
-    if (!state) states.set(sessionId, state = { versions: [], compaction: { summaryRevision: 0, covered: [], folded: [] } })
+    if (!state) states.set(sessionId, (state = { versions: [], compaction: { summaryRevision: 0, covered: [], folded: [] } }))
     return state
   }
   const seconds = () => now()
@@ -29,12 +31,16 @@ export function createFakeChatSummary(now: () => number, fail: (status: number) 
     const latest = state.versions[0]
     return { revision: latest?.revision ?? 0, summary: latest?.summary ?? null, source_session_id: latest?.source_session_id ?? null, versions: state.versions.map(version => ({ ...version })) }
   }
-  const invalid = (): never => { throw new GatewayError('http', 422) }
+  const invalid = (): never => {
+    throw new GatewayError('http', 422)
+  }
 
   return function handle(path: string, method: 'GET' | 'POST' | 'PUT', options: Request): Json | undefined {
     const match = path.match(/^\/api\/control\/pi\/context\/(ses_[0-9a-f]{16})(\/.*)?$/)
     if (!match) return undefined
-    const sessionId = match[1], subPath = match[2] ?? '', body = (options.body ?? {}) as Json
+    const sessionId = match[1],
+      subPath = match[2] ?? '',
+      body = (options.body ?? {}) as Json
     const owns = (subPath === '' && method === 'GET') || ['/summary', '/summary/restore', '/summary/draft', '/compaction', '/compact', '/fork'].includes(subPath)
     if (!owns) return undefined
     const session = store.sessions.find(item => item.id === sessionId)

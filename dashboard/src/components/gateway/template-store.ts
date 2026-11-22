@@ -32,10 +32,14 @@ export function replaceTemplates(items: readonly PromptTemplate[]) {
 export const useTemplateCatalogue = () => useStore(catalogue, state => state)
 
 /** The draft text for a template: empty until every required field is filled, so it cannot be sent early. */
-export const templateText = (template: PromptTemplate, values: TemplateValues) => missingRequired(template, values).length ? '' : compilePrompt(template, values)
+export const templateText = (template: PromptTemplate, values: TemplateValues) => (missingRequired(template, values).length ? '' : compilePrompt(template, values))
 export function chooseTemplate(key: string, template: PromptTemplate | null) {
   store.setState(state => {
-    if (template === null) { const entries = { ...state.entries }; delete entries[key]; return { entries } }
+    if (template === null) {
+      const entries = { ...state.entries }
+      delete entries[key]
+      return { entries }
+    }
     return { entries: { ...state.entries, [key]: { template, values: emptyValues(template) } } }
   })
 }

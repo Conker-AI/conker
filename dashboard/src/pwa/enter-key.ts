@@ -1,7 +1,7 @@
-import { useSyncExternalStore } from "react"
-import { useIsMobile } from "@/hooks/use-mobile"
+import { useSyncExternalStore } from 'react'
+import { useIsMobile } from '@/hooks/use-mobile'
 
-const coarse = "(pointer: coarse)"
+const coarse = '(pointer: coarse)'
 
 /**
  * What Enter does in the message composer. On a phone (touch, phone width) Enter adds a new line and
@@ -14,12 +14,16 @@ export function enterSends(phoneWidth: boolean, touch: boolean) {
 
 function subscribe(onChange: () => void) {
   const query = window.matchMedia(coarse)
-  query.addEventListener("change", onChange)
-  return () => query.removeEventListener("change", onChange)
+  query.addEventListener('change', onChange)
+  return () => query.removeEventListener('change', onChange)
 }
 
 export function useEnterSends() {
   const phoneWidth = useIsMobile()
-  const touch = useSyncExternalStore(subscribe, () => window.matchMedia(coarse).matches, () => false)
+  const touch = useSyncExternalStore(
+    subscribe,
+    () => window.matchMedia(coarse).matches,
+    () => false,
+  )
   return enterSends(phoneWidth, touch)
 }

@@ -10,47 +10,146 @@ import { gatewayError } from '@/lib/gateway/transport'
 import { composerOutlined } from './composer-select'
 import { cn } from '@/lib/utils'
 
-export function GatewaySessionAgentControl({ client, sessionId, activeAgentId, activeAgentName, disabled, onSaved, compact = false }: { client: GatewayControlClient; sessionId: string; activeAgentId: string; activeAgentName: string; disabled: boolean; onSaved: (agentId: string) => void; compact?: boolean }) {
+export function GatewaySessionAgentControl({
+  client,
+  sessionId,
+  activeAgentId,
+  activeAgentName,
+  disabled,
+  onSaved,
+  compact = false,
+}: {
+  client: GatewayControlClient
+  sessionId: string
+  activeAgentId: string
+  activeAgentName: string
+  disabled: boolean
+  onSaved: (agentId: string) => void
+  compact?: boolean
+}) {
   const [open, setOpen] = useState(false)
   const [profiles, setProfiles] = useState<AgentProfile[]>([])
   const [settings, setSettings] = useState<OwnerSessionSettings | null>(null)
   const [selected, setSelected] = useState(activeAgentId)
-  const [pending, setPending] = useState(false), [saving, setSaving] = useState(false)
+  const [pending, setPending] = useState(false),
+    [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   useEffect(() => {
     if (!open) return
     const controller = new AbortController()
-    Promise.all([client.agents(controller.signal), client.sessionSettings(sessionId, controller.signal)]).then(([agents, saved]) => {
-      if (!controller.signal.aborted) { setProfiles(agents.filter(agent => agent.archived_at === null)); setSettings(saved); setSelected(saved.settings.agentId) }
-    }).catch(error => { if (!controller.signal.aborted) setError(gatewayError(error).message) })
-      .finally(() => { if (!controller.signal.aborted) setPending(false) })
+    Promise.all([client.agents(controller.signal), client.sessionSettings(sessionId, controller.signal)])
+      .then(([agents, saved]) => {
+        if (!controller.signal.aborted) {
+          setProfiles(agents.filter(agent => agent.archived_at === null))
+          setSettings(saved)
+          setSelected(saved.settings.agentId)
+        }
+      })
+      .catch(error => {
+        if (!controller.signal.aborted) setError(gatewayError(error).message)
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setPending(false)
+      })
     return () => controller.abort()
   }, [client, open, sessionId])
   async function save() {
     if (!settings || pending || disabled || !profiles.some(agent => agent.id === selected)) return
-    if (selected === settings.settings.agentId) { setOpen(false); return }
-    setPending(true); setSaving(true); setError('')
+    if (selected === settings.settings.agentId) {
+      setOpen(false)
+      return
+    }
+    setPending(true)
+    setSaving(true)
+    setError('')
     try {
       const saved = await client.saveSessionSettings(sessionId, { ...settings, settings: { ...settings.settings, agentId: selected } })
-      setSettings(saved); onSaved(saved.settings.agentId); setOpen(false)
-    } catch (error) { setError(gatewayError(error).message) }
-    finally { setPending(false); setSaving(false) }
+      setSettings(saved)
+      onSaved(saved.settings.agentId)
+      setOpen(false)
+    } catch (error) {
+      setError(gatewayError(error).message)
+    } finally {
+      setPending(false)
+      setSaving(false)
+    }
   }
-  return <>
-    <Button type="button" size={compact ? 'sm' : 'icon'} variant="ghost" className={compact ? cn('h-8 min-w-0 max-w-40 shrink gap-2 px-2 font-normal text-muted-foreground max-sm:w-9 max-sm:shrink-0 max-sm:px-0', composerOutlined) : undefined} aria-label={`Conversation agent: ${activeAgentName}`} title={`Conversation agent: ${activeAgentName}`} disabled={disabled} onClick={() => { setPending(true); setError(''); setOpen(true) }}>{compact ? <><Bot className="sm:hidden" /><span className="truncate max-sm:sr-only">{activeAgentName}</span><ChevronDown className="size-4 shrink-0 max-sm:hidden" /></> : <Bot />}</Button>
-    <Dialog open={open} onOpenChange={value => { if (!saving) setOpen(value) }}><TaskDialogContent title="Hand off this chat" description="Choose who handles the next turn. Earlier replies keep their original author.">
-      <OverlayBody><div className="space-y-4">
-        <RadioGroup value={selected} onValueChange={setSelected} disabled={pending || disabled} aria-label="Conversation agent" className="gap-2">
-          {profiles.map(agent => <Label key={agent.id} htmlFor={`live-agent-${agent.id}`} className="flex cursor-pointer items-start gap-3 rounded-lg border p-3 has-data-checked:border-primary has-data-checked:bg-muted">
-            <Bot className="mt-0.5 size-5 shrink-0 text-muted-foreground" />
-            <span className="min-w-0 flex-1"><span className="block text-sm font-medium">{agent.configuration.name}</span><span className="mt-1 block text-xs font-normal leading-5 text-muted-foreground">{agent.configuration.role}</span></span>
-            <RadioGroupItem id={`live-agent-${agent.id}`} value={agent.id} />
-          </Label>)}
-        </RadioGroup>
-        {pending && <p role="status" className="text-sm text-muted-foreground">Loading saved agent…</p>}
-        {error && <p role="alert" className="text-sm text-destructive-foreground">{error}</p>}
-      </div></OverlayBody>
-      <FormActions inset><Button variant="outline" disabled={saving} onClick={() => setOpen(false)}>Cancel</Button><Button disabled={pending || disabled || !settings || !profiles.some(agent => agent.id === selected)} onClick={() => void save()}>{selected === settings?.settings.agentId ? <><Check />Done</> : 'Hand off'}</Button></FormActions>
-    </TaskDialogContent></Dialog>
-  </>
+  return (
+    <>
+      <Button
+        type="button"
+        size={compact ? 'sm' : 'icon'}
+        variant="ghost"
+        className={compact ? cn('h-8 min-w-0 max-w-40 shrink gap-2 px-2 font-normal text-muted-foreground max-sm:w-9 max-sm:shrink-0 max-sm:px-0', composerOutlined) : undefined}
+        aria-label={`Conversation agent: ${activeAgentName}`}
+        title={`Conversation agent: ${activeAgentName}`}
+        disabled={disabled}
+        onClick={() => {
+          setPending(true)
+          setError('')
+          setOpen(true)
+        }}
+      >
+        {compact ? (
+          <>
+            <Bot className="sm:hidden" />
+            <span className="truncate max-sm:sr-only">{activeAgentName}</span>
+            <ChevronDown className="size-4 shrink-0 max-sm:hidden" />
+          </>
+        ) : (
+          <Bot />
+        )}
+      </Button>
+      <Dialog
+        open={open}
+        onOpenChange={value => {
+          if (!saving) setOpen(value)
+        }}
+      >
+        <TaskDialogContent title="Hand off this chat" description="Choose who handles the next turn. Earlier replies keep their original author.">
+          <OverlayBody>
+            <div className="space-y-4">
+              <RadioGroup value={selected} onValueChange={setSelected} disabled={pending || disabled} aria-label="Conversation agent" className="gap-2">
+                {profiles.map(agent => (
+                  <Label key={agent.id} htmlFor={`live-agent-${agent.id}`} className="flex cursor-pointer items-start gap-3 rounded-lg border p-3 has-data-checked:border-primary has-data-checked:bg-muted">
+                    <Bot className="mt-0.5 size-5 shrink-0 text-muted-foreground" />
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-medium">{agent.configuration.name}</span>
+                      <span className="mt-1 block text-xs font-normal leading-5 text-muted-foreground">{agent.configuration.role}</span>
+                    </span>
+                    <RadioGroupItem id={`live-agent-${agent.id}`} value={agent.id} />
+                  </Label>
+                ))}
+              </RadioGroup>
+              {pending && (
+                <p role="status" className="text-sm text-muted-foreground">
+                  Loading saved agent…
+                </p>
+              )}
+              {error && (
+                <p role="alert" className="text-sm text-destructive-foreground">
+                  {error}
+                </p>
+              )}
+            </div>
+          </OverlayBody>
+          <FormActions inset>
+            <Button variant="outline" disabled={saving} onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+            <Button disabled={pending || disabled || !settings || !profiles.some(agent => agent.id === selected)} onClick={() => void save()}>
+              {selected === settings?.settings.agentId ? (
+                <>
+                  <Check />
+                  Done
+                </>
+              ) : (
+                'Hand off'
+              )}
+            </Button>
+          </FormActions>
+        </TaskDialogContent>
+      </Dialog>
+    </>
+  )
 }

@@ -12,9 +12,17 @@ export function createGatewayAuthClient({ transport, files, verification, now = 
   let queue: Promise<unknown> = Promise.resolve()
   let bootstrapFlight: Promise<GatewaySession> | null = null
   const listeners = new Set<() => void>()
-  const publish = () => { for (const listener of listeners) listener() }
-  const clear = () => { generation++; session = null; verification?.cancelAll(); publish() }
-  const publicSession = (): GatewaySession | null => session ? { authenticated: session.authenticated, sessionId: session.sessionId, expiresAt: session.expiresAt, unlockExpiresAt: session.unlockExpiresAt, setupRequired: session.setupRequired } : null
+  const publish = () => {
+    for (const listener of listeners) listener()
+  }
+  const clear = () => {
+    generation++
+    session = null
+    verification?.cancelAll()
+    publish()
+  }
+  const publicSession = (): GatewaySession | null =>
+    session ? { authenticated: session.authenticated, sessionId: session.sessionId, expiresAt: session.expiresAt, unlockExpiresAt: session.unlockExpiresAt, setupRequired: session.setupRequired } : null
   const unlocked = () => !!session?.authenticated && session.expiresAt > now() && session.unlockExpiresAt !== null && session.unlockExpiresAt > now()
   const serial = <T>(action: () => Promise<T>): Promise<T> => {
     const next = queue.then(action, action)
@@ -24,11 +32,22 @@ export function createGatewayAuthClient({ transport, files, verification, now = 
   function parse(value: Record<string, unknown>, login = false): PrivateSession {
     const { authenticated, session_id, expires_at, unlock_expires_at, csrf_token } = value
     const setup_required = login ? false : value.setup_required
-    if (typeof authenticated !== 'boolean' || typeof setup_required !== 'boolean' || (authenticated && setup_required) ||
-      (login && authenticated !== true) || typeof session_id !== 'string' || !/^[A-Za-z0-9_-]{16,128}$/.test(session_id) ||
-      typeof csrf_token !== 'string' || !/^[A-Za-z0-9_-]{32,128}$/.test(csrf_token) ||
-      typeof expires_at !== 'number' || !Number.isFinite(expires_at) || expires_at <= now() || expires_at > now() + 86_460 ||
-      (authenticated ? typeof unlock_expires_at !== 'number' || !Number.isFinite(unlock_expires_at) || unlock_expires_at <= now() || unlock_expires_at > expires_at : unlock_expires_at !== null)) throw new GatewayError('invalid-response')
+    if (
+      typeof authenticated !== 'boolean' ||
+      typeof setup_required !== 'boolean' ||
+      (authenticated && setup_required) ||
+      (login && authenticated !== true) ||
+      typeof session_id !== 'string' ||
+      !/^[A-Za-z0-9_-]{16,128}$/.test(session_id) ||
+      typeof csrf_token !== 'string' ||
+      !/^[A-Za-z0-9_-]{32,128}$/.test(csrf_token) ||
+      typeof expires_at !== 'number' ||
+      !Number.isFinite(expires_at) ||
+      expires_at <= now() ||
+      expires_at > now() + 86_460 ||
+      (authenticated ? typeof unlock_expires_at !== 'number' || !Number.isFinite(unlock_expires_at) || unlock_expires_at <= now() || unlock_expires_at > expires_at : unlock_expires_at !== null)
+    )
+      throw new GatewayError('invalid-response')
     return { authenticated, sessionId: session_id, expiresAt: expires_at, unlockExpiresAt: unlock_expires_at as number | null, csrfToken: csrf_token, setupRequired: setup_required }
   }
   async function readSession(): Promise<GatewaySession> {
@@ -36,71 +55,112 @@ export function createGatewayAuthClient({ transport, files, verification, now = 
     try {
       const next = parse(await transport.request('/auth/session'))
       if (started !== generation) throw new GatewayError('browser-expired')
-      if (next.sessionId !== session?.sessionId || next.csrfToken !== session?.csrfToken) { generation++; verification?.cancelAll() }
+      if (next.sessionId !== session?.sessionId || next.csrfToken !== session?.csrfToken) {
+        generation++
+        verification?.cancelAll()
+      }
       session = next
       publish()
       return publicSession()!
-    } catch (error) { if (started === generation) clear(); throw gatewayError(error) }
+    } catch (error) {
+      if (started === generation) clear()
+      throw gatewayError(error)
+    }
   }
   async function classifyDenied(error: unknown): Promise<never> {
     const failure = gatewayError(error)
     if (failure.status !== 401 && failure.status !== 403) throw failure
     clear()
     let checked: GatewaySession
-    try { checked = await readSession() } catch { throw new GatewayError('verification-failed', failure.status) }
+    try {
+      checked = await readSession()
+    } catch {
+      throw new GatewayError('verification-failed', failure.status)
+    }
     throw new GatewayError(checked.authenticated ? 'upstream-denied' : 'browser-expired', failure.status)
   }
   /** A signed-in, unlocked session to send under; an expired one is read again first. */
-  const ticketFor = () => serial(async (): Promise<Ticket> => {
-    if (!session || session.expiresAt <= now() || session.authenticated && !unlocked()) { clear(); await readSession() }
-    if (!unlocked()) throw new GatewayError('browser-expired')
-    return { generation, sessionId: session!.sessionId, csrfToken: session!.csrfToken }
-  })
+  const ticketFor = () =>
+    serial(async (): Promise<Ticket> => {
+      if (!session || session.expiresAt <= now() || (session.authenticated && !unlocked())) {
+        clear()
+        await readSession()
+      }
+      if (!unlocked()) throw new GatewayError('browser-expired')
+      return { generation, sessionId: session!.sessionId, csrfToken: session!.csrfToken }
+    })
   const currentFor = (ticket: Ticket) => () => ticket.generation === generation && ticket.sessionId === session?.sessionId && unlocked()
   /** Ask for the password and trade it for a one-use proof bound to this exact operation. */
   async function proof(operation: GatewayVerifiedOperation, ticket: Ticket, current: () => boolean, signal?: AbortSignal): Promise<string> {
     if (!verification) throw new GatewayError('verification-required')
     const { describeGatewayOperation } = await import('./operation-review')
-    return verification.request(describeGatewayOperation(operation), async (password, verificationSignal) => {
-      if (!current() || signal?.aborted) throw new GatewayError('verification-cancelled')
-      let response: Record<string, unknown>
-      try {
-        response = await transport.request('/auth/verify', { method: 'POST', body: { password, operation }, csrfToken: ticket.csrfToken, signal: verificationSignal })
-      } catch (error) {
-        if (!current() || signal?.aborted || verificationSignal.aborted) throw new GatewayError('verification-cancelled')
-        const failure = gatewayError(error)
-        if (failure.status === 401 || failure.status === 403) {
-          // A wrong verification password must not erase an otherwise valid owner's draft.
-          await serial(readSession)
-          if (!current()) throw new GatewayError('verification-cancelled')
-          throw new GatewayError('verification-password', failure.status)
+    return verification.request(
+      describeGatewayOperation(operation),
+      async (password, verificationSignal) => {
+        if (!current() || signal?.aborted) throw new GatewayError('verification-cancelled')
+        let response: Record<string, unknown>
+        try {
+          response = await transport.request('/auth/verify', { method: 'POST', body: { password, operation }, csrfToken: ticket.csrfToken, signal: verificationSignal })
+        } catch (error) {
+          if (!current() || signal?.aborted || verificationSignal.aborted) throw new GatewayError('verification-cancelled')
+          const failure = gatewayError(error)
+          if (failure.status === 401 || failure.status === 403) {
+            // A wrong verification password must not erase an otherwise valid owner's draft.
+            await serial(readSession)
+            if (!current()) throw new GatewayError('verification-cancelled')
+            throw new GatewayError('verification-password', failure.status)
+          }
+          throw failure
         }
-        throw failure
-      }
-      if (!current() || signal?.aborted || verificationSignal.aborted) throw new GatewayError('verification-cancelled')
-      const token = response.verification_token, expiry = response.verification_expires_at, deadline = response.unlock_expires_at
-      if (typeof token !== 'string' || !/^[A-Za-z0-9_-]{43}$/.test(token) || typeof expiry !== 'number' || !Number.isFinite(expiry) || expiry <= now() || expiry > now() + 125 ||
-        typeof deadline !== 'number' || !Number.isFinite(deadline) || deadline <= now() || deadline > session!.expiresAt || expiry > deadline) throw new GatewayError('invalid-response')
-      session = { ...session!, unlockExpiresAt: deadline }
-      publish()
-      return token
-    }, signal)
+        if (!current() || signal?.aborted || verificationSignal.aborted) throw new GatewayError('verification-cancelled')
+        const token = response.verification_token,
+          expiry = response.verification_expires_at,
+          deadline = response.unlock_expires_at
+        if (
+          typeof token !== 'string' ||
+          !/^[A-Za-z0-9_-]{43}$/.test(token) ||
+          typeof expiry !== 'number' ||
+          !Number.isFinite(expiry) ||
+          expiry <= now() ||
+          expiry > now() + 125 ||
+          typeof deadline !== 'number' ||
+          !Number.isFinite(deadline) ||
+          deadline <= now() ||
+          deadline > session!.expiresAt ||
+          expiry > deadline
+        )
+          throw new GatewayError('invalid-response')
+        session = { ...session!, unlockExpiresAt: deadline }
+        publish()
+        return token
+      },
+      signal,
+    )
   }
   const client = {
     getSession: publicSession,
     lock: clear,
-    subscribe(listener: () => void) { listeners.add(listener); return () => { listeners.delete(listener) } },
+    subscribe(listener: () => void) {
+      listeners.add(listener)
+      return () => {
+        listeners.delete(listener)
+      }
+    },
     bootstrap(): Promise<GatewaySession> {
       if (bootstrapFlight) return bootstrapFlight
-      bootstrapFlight = serial(readSession).finally(() => { bootstrapFlight = null })
+      bootstrapFlight = serial(readSession).finally(() => {
+        bootstrapFlight = null
+      })
       return bootstrapFlight
     },
-    revalidate(): Promise<GatewaySession> { return serial(readSession) },
+    revalidate(): Promise<GatewaySession> {
+      return serial(readSession)
+    },
     login(password: string): Promise<GatewaySession> {
       return serial(async () => {
         // Password creation policy belongs to the host; authenticate existing credentials unchanged.
         if (typeof password !== 'string' || !password.length || [...password].length > 1024) throw new GatewayError('validation')
-        if (!session || session.expiresAt <= now() || session.authenticated && !unlocked()) await readSession()
+        if (!session || session.expiresAt <= now() || (session.authenticated && !unlocked())) await readSession()
         if (session!.setupRequired) throw new GatewayError('validation')
         if (session!.authenticated) return publicSession()!
         const previous = session!
@@ -119,7 +179,11 @@ export function createGatewayAuthClient({ transport, files, verification, now = 
           clear()
           const failure = gatewayError(error)
           if (failure.status === 401 || failure.status === 403) {
-            try { await readSession() } catch { throw new GatewayError('verification-failed', failure.status) }
+            try {
+              await readSession()
+            } catch {
+              throw new GatewayError('verification-failed', failure.status)
+            }
             throw new GatewayError('login-rejected', failure.status)
           }
           throw failure
@@ -130,7 +194,7 @@ export function createGatewayAuthClient({ transport, files, verification, now = 
       verification?.cancelAll()
       return serial(async () => {
         // An earlier logout may have failed before revocation. Explicit retries recheck the cookie.
-        if (!session || session.expiresAt <= now() || session.authenticated && !unlocked()) await readSession()
+        if (!session || session.expiresAt <= now() || (session.authenticated && !unlocked())) await readSession()
         const previous = session
         clear()
         // A lost logout acknowledgement can leave an anonymous cookie on explicit recheck.
@@ -143,7 +207,10 @@ export function createGatewayAuthClient({ transport, files, verification, now = 
     async audio(path: string, requestId: string, body: Uint8Array, signal?: AbortSignal): Promise<Record<string, unknown>> {
       if (signal?.aborted) throw new GatewayError('aborted')
       const ticket = await serial(async () => {
-        if (!session || session.expiresAt <= now() || session.authenticated && !unlocked()) { clear(); await readSession() }
+        if (!session || session.expiresAt <= now() || (session.authenticated && !unlocked())) {
+          clear()
+          await readSession()
+        }
         if (!unlocked()) throw new GatewayError('browser-expired')
         return { generation, sessionId: session!.sessionId, csrfToken: session!.csrfToken }
       })
@@ -164,7 +231,8 @@ export function createGatewayAuthClient({ transport, files, verification, now = 
     /** One owner download (a document, deck, spreadsheet, CSV or JSON). Reads never ask for the password. */
     async download(path: string, query: { format: GatewayFileFormat }, signal?: AbortSignal): Promise<GatewayDownload> {
       if (!files) throw new GatewayError('configuration')
-      const ticket = await ticketFor(), current = currentFor(ticket)
+      const ticket = await ticketFor(),
+        current = currentFor(ticket)
       if (!current()) throw new GatewayError('session-changed')
       try {
         const file = await files.download(path, query, signal)
@@ -172,7 +240,10 @@ export function createGatewayAuthClient({ transport, files, verification, now = 
         return file
       } catch (error) {
         if (!current()) throw new GatewayError('session-changed')
-        return serial(async () => { if (!current()) throw new GatewayError('session-changed'); return classifyDenied(error) })
+        return serial(async () => {
+          if (!current()) throw new GatewayError('session-changed')
+          return classifyDenied(error)
+        })
       }
     },
     /**
@@ -184,7 +255,8 @@ export function createGatewayAuthClient({ transport, files, verification, now = 
     async upload(path: string, body: Blob, signal?: AbortSignal): Promise<Record<string, unknown>> {
       if (!files) throw new GatewayError('configuration')
       if (signal?.aborted) throw new GatewayError('verification-cancelled')
-      const ticket = await ticketFor(), current = currentFor(ticket)
+      const ticket = await ticketFor(),
+        current = currentFor(ticket)
       if (!current()) throw new GatewayError('verification-cancelled')
       const send = (token: string | undefined) => files.upload(path, body, ticket.csrfToken, token, signal)
       try {
@@ -204,7 +276,10 @@ export function createGatewayAuthClient({ transport, files, verification, now = 
         const kind = gatewayError(error).kind
         if (kind === 'verification-required' || kind === 'verification-cancelled') throw error
         if (!current()) throw new GatewayError('session-changed')
-        return serial(async () => { if (!current()) throw new GatewayError('session-changed'); return classifyDenied(error) })
+        return serial(async () => {
+          if (!current()) throw new GatewayError('session-changed')
+          return classifyDenied(error)
+        })
       }
     },
     /**
@@ -221,7 +296,10 @@ export function createGatewayAuthClient({ transport, files, verification, now = 
         } catch (error) {
           if (ticket.generation !== generation) return
           const failure = gatewayError(error)
-          if (failure.status === 401 || failure.status === 403) { clear(); await readSession().catch(() => undefined) }
+          if (failure.status === 401 || failure.status === 403) {
+            clear()
+            await readSession().catch(() => undefined)
+          }
           return
         }
         if (ticket.generation !== generation || ticket.sessionId !== session?.sessionId) return
@@ -242,7 +320,10 @@ export function createGatewayAuthClient({ transport, files, verification, now = 
       const ticket = await serial(async () => {
         // Authentication endpoints belong to the methods above; callers cannot bypass rotation handling.
         if (!path.startsWith('/api/') && path !== '/health' && !isBrowserSessionRoute(path)) throw new GatewayError('validation')
-        if (!session || session.expiresAt <= now() || session.authenticated && !unlocked()) { clear(); await readSession() }
+        if (!session || session.expiresAt <= now() || (session.authenticated && !unlocked())) {
+          clear()
+          await readSession()
+        }
         if (!unlocked()) throw new GatewayError('browser-expired')
         return { generation, sessionId: session!.sessionId, csrfToken: session!.csrfToken }
       })

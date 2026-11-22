@@ -5,7 +5,10 @@ import type { RuntimeSession, RuntimeSessionDetail } from '@/lib/gateway/runtime
 export function createGatewaySourcePrivacyState() {
   return createStore<{ sessionIds: string[]; markForgotten: (ids: string[]) => void; reset: () => void }>((set, get) => ({
     sessionIds: [],
-    markForgotten: ids => { const merged = [...new Set([...get().sessionIds, ...ids])]; if (merged.length !== get().sessionIds.length) set({ sessionIds: merged }) },
+    markForgotten: ids => {
+      const merged = [...new Set([...get().sessionIds, ...ids])]
+      if (merged.length !== get().sessionIds.length) set({ sessionIds: merged })
+    },
     reset: () => set({ sessionIds: [] }),
   }))
 }
@@ -14,5 +17,10 @@ export function maskForgottenSession<T extends RuntimeSession>(session: T): T {
   return { ...session, status: 'forgotten', title: '', summary: null }
 }
 export function maskForgottenConversation(detail: RuntimeSessionDetail): RuntimeSessionDetail {
-  return { ...maskForgottenSession(detail), thinking: [], messages: detail.messages.map(message => ({ ...message, memoryDelivery: undefined, content: { kind: 'unavailable', reason: 'forgotten' } })), turns: detail.turns.map(turn => ({ ...turn, detail: null })) }
+  return {
+    ...maskForgottenSession(detail),
+    thinking: [],
+    messages: detail.messages.map(message => ({ ...message, memoryDelivery: undefined, content: { kind: 'unavailable', reason: 'forgotten' } })),
+    turns: detail.turns.map(turn => ({ ...turn, detail: null })),
+  }
 }

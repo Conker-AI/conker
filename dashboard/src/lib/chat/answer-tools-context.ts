@@ -37,29 +37,37 @@ export function useMessageRules(tools: AnswerTools | null, sessionId: string, re
   useEffect(() => {
     if (!client) return
     const controller = new AbortController()
-    client.get(sessionId, controller.signal)
-      .then(loaded => { if (!controller.signal.aborted) setSettings(loaded) })
-      .catch(() => { if (!controller.signal.aborted) setSettings(null) })
+    client
+      .get(sessionId, controller.signal)
+      .then(loaded => {
+        if (!controller.signal.aborted) setSettings(loaded)
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setSettings(null)
+      })
     return () => controller.abort()
   }, [client, sessionId, reloadKey])
 
-  const set = useCallback(async (messageId: string, rule: MessageRule | null) => {
-    if (!client || !settings || saving) return
-    setSaving(true)
-    setError(null)
-    try {
-      setSettings(await client.save(sessionId, withMessageRule(settings.policy, messageId, rule), settings.revision))
-    } catch (failure) {
-      if (gatewayError(failure).code === 'revision_conflict') {
-        setError({ messageId, text: "This chat's context changed. Try again." })
-        await client.get(sessionId).then(setSettings, () => setSettings(null))
-      } else {
-        setError({ messageId, text: chatFeatureMessage(failure) })
+  const set = useCallback(
+    async (messageId: string, rule: MessageRule | null) => {
+      if (!client || !settings || saving) return
+      setSaving(true)
+      setError(null)
+      try {
+        setSettings(await client.save(sessionId, withMessageRule(settings.policy, messageId, rule), settings.revision))
+      } catch (failure) {
+        if (gatewayError(failure).code === 'revision_conflict') {
+          setError({ messageId, text: "This chat's context changed. Try again." })
+          await client.get(sessionId).then(setSettings, () => setSettings(null))
+        } else {
+          setError({ messageId, text: chatFeatureMessage(failure) })
+        }
+      } finally {
+        setSaving(false)
       }
-    } finally {
-      setSaving(false)
-    }
-  }, [client, saving, sessionId, settings])
+    },
+    [client, saving, sessionId, settings],
+  )
 
-  return useMemo(() => client && settings ? { settings, saving, error, set } : null, [client, settings, saving, error, set])
+  return useMemo(() => (client && settings ? { settings, saving, error, set } : null), [client, settings, saving, error, set])
 }

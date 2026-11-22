@@ -20,21 +20,40 @@ export function MessageContextRule({ message }: { message: ChatMessage }) {
   const rules = useContext(MessageRulesContext)
   if (!tools || !rules || message.content.kind !== 'text' || !canRuleMessage(message.id)) return null
   const current = messageRuleOf(rules.settings.policy, message.id)
-  const choose = (value: string) => void rules.set(message.id, value === 'default' ? null : value as MessageRule)
-  return <>
-    <Menu>
-      <MenuTrigger render={<Button variant="ghost" size="icon" className="size-(--control-height-sm) shrink-0 text-muted-foreground hover:text-foreground" aria-label="What Conker remembers from this message" title="What Conker remembers from this message" disabled={tools.disabled || rules.saving} />}>
-        <Layers aria-hidden />
-      </MenuTrigger>
-      <MenuPopup align="start">
-        <MenuRadioGroup value={current ?? 'default'} onValueChange={choose}>
-          <MenuRadioItem value="default" closeOnClick>Default</MenuRadioItem>
-          {messageRules.map(rule => <MenuRadioItem key={rule} value={rule} closeOnClick>{ruleLabel(rule)}</MenuRadioItem>)}
-        </MenuRadioGroup>
-      </MenuPopup>
-    </Menu>
-    {current && <span className="text-muted-foreground">{ruleLabel(current)}</span>}
-  </>
+  const choose = (value: string) => void rules.set(message.id, value === 'default' ? null : (value as MessageRule))
+  return (
+    <>
+      <Menu>
+        <MenuTrigger
+          render={
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-(--control-height-sm) shrink-0 text-muted-foreground hover:text-foreground"
+              aria-label="What Conker remembers from this message"
+              title="What Conker remembers from this message"
+              disabled={tools.disabled || rules.saving}
+            />
+          }
+        >
+          <Layers aria-hidden />
+        </MenuTrigger>
+        <MenuPopup align="start">
+          <MenuRadioGroup value={current ?? 'default'} onValueChange={choose}>
+            <MenuRadioItem value="default" closeOnClick>
+              Default
+            </MenuRadioItem>
+            {messageRules.map(rule => (
+              <MenuRadioItem key={rule} value={rule} closeOnClick>
+                {ruleLabel(rule)}
+              </MenuRadioItem>
+            ))}
+          </MenuRadioGroup>
+        </MenuPopup>
+      </Menu>
+      {current && <span className="text-muted-foreground">{ruleLabel(current)}</span>}
+    </>
+  )
 }
 
 /** The plain message under the action bar when saving this message's rule failed. */

@@ -15,13 +15,36 @@ function age(seconds: number, now: number) {
  */
 export function AgentNoteCard({ note, now, onOpen, onLater }: { note: GatewayAgentNote; now: number; onOpen: () => void; onLater?: () => void }) {
   const navigate = useNavigate()
-  const open = () => { onOpen(); navigate(`/chat?session=${encodeURIComponent(note.sessionId)}`) }
-  return <InboxCard icon={<Sparkles />} title={note.title} source="AI job" summary={note.detail || undefined}
-    primary={<Button type="button" size="sm" onClick={open}>Open chat</Button>}
-    actions={<div className="flex flex-wrap gap-2">
-      <Button type="button" size="sm" onClick={open}>Open chat</Button>
-      <Button type="button" size="sm" variant="outline" onClick={onOpen}>Got it</Button>
-    </div>}
-    facts={[['From', 'An AI job'], ['Came', `${age(note.createdAt, now)} · ${new Date(note.createdAt * 1000).toLocaleString()}`]]}
-    onLater={onLater} />
+  const open = () => {
+    onOpen()
+    navigate(`/chat?session=${encodeURIComponent(note.sessionId)}`)
+  }
+  return (
+    <InboxCard
+      icon={<Sparkles />}
+      title={note.title}
+      source="AI job"
+      summary={note.detail || undefined}
+      primary={
+        <Button type="button" size="sm" onClick={open}>
+          Open chat
+        </Button>
+      }
+      actions={
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" size="sm" onClick={open}>
+            Open chat
+          </Button>
+          <Button type="button" size="sm" variant="outline" onClick={onOpen}>
+            Got it
+          </Button>
+        </div>
+      }
+      facts={[
+        ['From', 'An AI job'],
+        ['Came', `${age(note.createdAt, now)} · ${new Date(note.createdAt * 1000).toLocaleString()}`],
+      ]}
+      onLater={onLater}
+    />
+  )
 }

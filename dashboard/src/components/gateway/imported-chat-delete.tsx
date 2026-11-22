@@ -13,22 +13,47 @@ const messages = (count: number) => `${count.toLocaleString()} ${count === 1 ? '
  */
 export function useImportedChatDelete(client: GatewayImportsClient, onDeleted: (id: string) => void) {
   const [target, setTarget] = useState<Target | null>(null)
-  const [pending, setPending] = useState(false), [error, setError] = useState<string | null>(null)
+  const [pending, setPending] = useState(false),
+    [error, setError] = useState<string | null>(null)
   async function confirm() {
     if (!target || pending) return
-    setPending(true); setError(null)
+    setPending(true)
+    setError(null)
     try {
       const receipt = await client.deleteChat(target.id)
       setTarget(null)
       notifyDone(`Deleted ${messages(receipt.messagesDeleted)}`, receipt.memoryNote ?? undefined)
       onDeleted(target.id)
-    } catch (cause) { setError(importRefusalMessage(cause)) }
-    finally { setPending(false) }
+    } catch (cause) {
+      setError(importRefusalMessage(cause))
+    } finally {
+      setPending(false)
+    }
   }
-  const dialog = <ConfirmationDialog open={!!target} onOpenChange={open => { if (!open) { setTarget(null); setError(null) } }}
-    title="Delete this imported chat forever?" actionLabel="Delete forever" pending={pending} error={error} onConfirm={confirm}
-    description={target ? `“${target.title || 'Untitled chat'}” and its ${messages(target.messageCount)} are removed from Conker. This can’t be undone.` : ''}>
-    <p className="text-sm text-muted-foreground">Memories made from your words in this chat stay until you forget them in Memory.</p>
-  </ConfirmationDialog>
-  return { ask: (chat: Target) => { setError(null); setTarget(chat) }, dialog }
+  const dialog = (
+    <ConfirmationDialog
+      open={!!target}
+      onOpenChange={open => {
+        if (!open) {
+          setTarget(null)
+          setError(null)
+        }
+      }}
+      title="Delete this imported chat forever?"
+      actionLabel="Delete forever"
+      pending={pending}
+      error={error}
+      onConfirm={confirm}
+      description={target ? `“${target.title || 'Untitled chat'}” and its ${messages(target.messageCount)} are removed from Conker. This can’t be undone.` : ''}
+    >
+      <p className="text-sm text-muted-foreground">Memories made from your words in this chat stay until you forget them in Memory.</p>
+    </ConfirmationDialog>
+  )
+  return {
+    ask: (chat: Target) => {
+      setError(null)
+      setTarget(chat)
+    },
+    dialog,
+  }
 }
