@@ -90,4 +90,5 @@ jobs:
           path: |
             dashboard/playwright-report
             dashboard/test-results
+            dashboard/e2e/visual.spec.ts-snapshots
           retention-days: 7
