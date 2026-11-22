@@ -7,8 +7,8 @@ open-loops.md). Pi checks every value; this module only shapes the call and prin
 import re
 from datetime import date
 
-from scripts.conker_context import pi_call
-from scripts.conker_inputs import plain
+from scripts.cli.conker_context import pi_call
+from scripts.cli.conker_inputs import plain
 
 LOOP_ID = r"loop_[0-9a-f]{32}"
 SESSION = r"[A-Za-z0-9_-]{1,128}"

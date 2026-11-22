@@ -6,6 +6,25 @@ which module versions a release pins.
 
 ## Unreleased
 
+## 0.6.0
+
+- **The folded update card says "Updating to X.Y.Z...".** While an update runs, the card in the Inbox no longer loses its button in silence. (#391)
+- **Plain words.** "Conker runtime" and "needs a verified receipt" are written in everyday words on the server check and setup screens. (#392)
+- **Fewer settings that did nothing.** Sixteen settings that were only stored (devices, labs and server topics) are gone; the settings counts follow. (settings registry)
+- **Beta channel.** Every green `main` becomes a pre-release (`vX.Y.(Z+1)`); a server follows it only after `scripts/update_check.py --set-channel beta` on that server. Stable servers never see betas, and a stable release is always the next minor. (#383)
+- **Quality, no behaviour change.** Today's refactors and checks are in this release: Pi's package edges 84 -> 76 and file splits in Pi, ToolGate and MemoryGate, `ruff format` and its CI check, gitleaks and Trivy scans in every repository, pyright baselines lowered (scripts and tests 124 -> 90), the dashboard type check and Prettier check, screenshot, axe and coverage floors for the dashboard, and a sharded dashboard CI. (#379, #380, #384, #393, #394, #396, #397, #398)
+- **Pi 0.29.1, ToolGate 0.17.1 and MemoryGate 0.10.1** carry the refactors and scans above; SystemGate and Embeddings had no code change and stay at 0.5.4 and 0.1.9. The sandbox image is unchanged (only its verify tests changed).
+
+### Pinned in this release
+
+| Module | Version |
+|---|---|
+| Pi | v0.29.1 |
+| ToolGate | v0.17.1 |
+| MemoryGate | v0.10.1 |
+| SystemGate | v0.5.4 |
+| Embeddings | v0.1.9 |
+
 ## 0.5.0
 
 - **Refresh everything, and a release check when you enter.** A refresh button beside Ask Conker reads every screen again and asks the server to look for a new Conker release now (not only once a day); a found release shows as a notice with a View button and as the card in the Inbox. Opening the app, or coming back after five minutes, does the quiet part by itself and never reloads or remounts anything while you have unsaved work or a chat is sending. A window left open across an update reloads once when its files are gone. (#377)

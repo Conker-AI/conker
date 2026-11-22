@@ -1,4 +1,4 @@
-"""conker import on an installed stack: scripts/assistant_imports.py, with Pi reached in its container.
+"""conker import on an installed stack: scripts/cli/assistant_imports.py, with Pi reached in its container.
 
 The launcher runs this on the host for both deployment layouts. As for conker tool draft
 (scripts/tool_draft_cli.py), the call is one `docker compose exec` into the pi container, where a
@@ -20,7 +20,7 @@ if __package__ in {None, ""}:
 
 from config_cli import compose, reason
 
-from scripts import assistant_imports
+from scripts.cli import assistant_imports
 
 ROUTES = re.compile(r"/imports/(?:chatgpt|claude)/(?:preview|[0-9a-f]{64})")
 # Runs inside the pi container: the export arrives on stdin and goes to Pi as the request body.

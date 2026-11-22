@@ -1,4 +1,4 @@
-"""Refusals of the release gate's first-run steps (scripts/release_first_run.py): browser sign-in,
+"""Refusals of the release gate's first-run steps (scripts/release/release_first_run.py): browser sign-in,
 bounded JSON replies, model and boundary choices, setup status, the conversation and the rehearsal.
 Every command and HTTP call is a fake; nothing reaches a network, Docker or the home folder."""
 
@@ -11,9 +11,9 @@ from typing import Any, cast
 
 import pytest
 
-from scripts import release_first_run
-from scripts.release_checks import SETUP_STEP_IDS, AcceptanceError, Evidence
-from scripts.release_first_run import FirstRunSteps
+from scripts.release import release_first_run
+from scripts.release.release_checks import SETUP_STEP_IDS, AcceptanceError, Evidence
+from scripts.release.release_first_run import FirstRunSteps
 
 ROUTE = "qwen2.5:0.5b"
 

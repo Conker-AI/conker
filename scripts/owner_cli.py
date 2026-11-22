@@ -22,17 +22,17 @@ if __package__ in {None, ""}:
 
 import config_cli
 
-from scripts.conker_agents import operation as agents_operation
-from scripts.conker_agents import register as register_agents
-from scripts.conker_context import MEMORY_USES, pi_call
-from scripts.conker_inbox import operation as inbox_operation
-from scripts.conker_inbox import register as register_inbox
-from scripts.conker_loops import operation as loops_operation
-from scripts.conker_loops import register as register_loops
-from scripts.conker_prompt import operation as prompt_operation
-from scripts.conker_prompt import register as register_prompt
-from scripts.conker_spending import add_parser as register_spending
-from scripts.conker_spending import spending_operation
+from scripts.cli.conker_agents import operation as agents_operation
+from scripts.cli.conker_agents import register as register_agents
+from scripts.cli.conker_context import MEMORY_USES, pi_call
+from scripts.cli.conker_inbox import operation as inbox_operation
+from scripts.cli.conker_inbox import register as register_inbox
+from scripts.cli.conker_loops import operation as loops_operation
+from scripts.cli.conker_loops import register as register_loops
+from scripts.cli.conker_prompt import operation as prompt_operation
+from scripts.cli.conker_prompt import register as register_prompt
+from scripts.cli.conker_spending import add_parser as register_spending
+from scripts.cli.conker_spending import spending_operation
 
 COMMANDS = ("memory", "agent", "team", "inbox", "spending", "loops", "prompt")
 # What these commands may ask of Pi: (method, path). A body makes it a POST.

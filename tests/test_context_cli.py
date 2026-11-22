@@ -11,7 +11,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 from scripts import conker as cli
-from scripts.conker_context import NO_SETTINGS
+from scripts.cli.conker_context import NO_SETTINGS
 
 
 @pytest.fixture

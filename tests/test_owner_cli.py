@@ -17,7 +17,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import config_cli  # noqa: E402
 import owner_cli  # noqa: E402
 
-from scripts.conker_parser import build_parser  # noqa: E402
+from scripts.cli.conker_parser import build_parser  # noqa: E402
 
 # Development CLI commands an installed stack does not route, and why. Route a command (and drop it
 # here) rather than add to this list; a new command must land in one or the other.
@@ -347,7 +347,7 @@ def test_every_memory_and_team_verb_is_in_the_installed_help():
 
 
 def test_stored_text_cannot_carry_terminal_controls_into_the_output():
-    from scripts.conker_inputs import plain
+    from scripts.cli.conker_inputs import plain
 
     assert plain("a\x1b[2Jb\x07c\nd  e\x9bf") == "a [2Jb c d e f"
 

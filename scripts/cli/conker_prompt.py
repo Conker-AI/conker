@@ -9,9 +9,9 @@ import json
 import re
 from urllib.error import HTTPError
 
-from scripts.conker_context import pi_call
-from scripts.conker_templates import operation as templates_operation
-from scripts.conker_templates import register as register_templates
+from scripts.cli.conker_context import pi_call
+from scripts.cli.conker_templates import operation as templates_operation
+from scripts.cli.conker_templates import register as register_templates
 
 TEXT_LIMIT = 8000
 CHAT = r"ses_[0-9a-f]{16}"

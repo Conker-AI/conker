@@ -207,7 +207,7 @@ print('Owner login initialized. Password retained only in the private local gate
 
 
 def build():
-    from scripts.workspace_build import build_dashboard
+    from scripts.devstack.workspace_build import build_dashboard
 
     def require_stopped():
         if CONFIG.exists() and owned_process(read_config(), "gateway"):
@@ -477,17 +477,17 @@ def main():
         return
     config = read_config()
     if args.command == "memory-corrections":
-        from scripts.workspace_setup import configure_memory_corrections
+        from scripts.devstack.workspace_setup import configure_memory_corrections
 
         configure_memory_corrections(config)
         return
     if args.command == "meaning-search":
-        from scripts.workspace_search import enable
+        from scripts.devstack.workspace_search import enable
 
         enable(config)
         return
     if args.command == "enhance":
-        from scripts.workspace_setup import enhance
+        from scripts.devstack.workspace_setup import enhance
 
         enhance(config, args.pi_source, args.toolgate_source, args.memorygate_source)
         return
@@ -567,7 +567,7 @@ def main():
                 "listening": "running; listening (inspect System for health)",
             }[state]
             print(f"{service}: {label}")
-        from scripts.workspace_memory import status as memory_correction_status
+        from scripts.devstack.workspace_memory import status as memory_correction_status
 
         print("memory corrections: " + memory_correction_status(config))
         search = config.get("meaning_search")

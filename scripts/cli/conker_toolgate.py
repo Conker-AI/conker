@@ -3,7 +3,7 @@ buttons his Inbox shows when a tool asks him."""
 
 from __future__ import annotations
 
-from scripts.conker_inputs import (
+from scripts.cli.conker_inputs import (
     MCP_ID,
     TOOL_ID,
     identity,
