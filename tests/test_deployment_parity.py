@@ -13,6 +13,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import recovery_layout  # noqa: E402
 from release_manifest import parse_env  # noqa: E402
 
+from tests.installer_source import installer_text  # noqa: E402
 from tests.ubuntu_generator import prepare  # noqa: E402
 
 
@@ -40,7 +41,7 @@ def test_both_layouts_serve_compiled_dashboard_assets(tmp_path):
         "./sources/companion/dashboard/dist:/dashboard:ro"
         in manifest["services"]["gateway"]["volumes"]
     )
-    installer = (ROOT / "install.sh").read_text()
+    installer = installer_text()
     assert "NODE_BUILD_IMAGE" in installer
     assert "type=volume,dst=/workspace/node_modules" in installer
     assert "npm ci --no-audit --no-fund && npm run build" in installer
