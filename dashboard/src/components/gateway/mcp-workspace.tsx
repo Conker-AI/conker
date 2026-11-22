@@ -88,7 +88,7 @@ function McpDetail({ client, tool, onSaved, onClose, onReload }: { client: Gatew
   }
   return <InlineDetails onClose={onClose} busy={pending} title={tool.name} description={tool.description || 'Imported MCP tool'}>
     <OverlayBody>
-      <ReferenceSection title="Chat access"><p>{access ? access.enabled ? 'Available to this Conker chat runtime.' : 'Not available in chats yet.' : 'Checking access…'}</p><p className="text-xs text-muted-foreground">Each call requires approval in the Inbox. {tool.status === 'disabled' && 'This tool is disabled for all new calls.'}</p></ReferenceSection>
+      <ReferenceSection title="Chat access"><p>{access ? access.enabled ? 'Available in your Conker chats.' : 'Not available in chats yet.' : 'Checking access…'}</p><p className="text-xs text-muted-foreground">Each call requires approval in the Inbox. {tool.status === 'disabled' && 'This tool is disabled for all new calls.'}</p></ReferenceSection>
       <ReferenceSection title="Server"><p className="break-all">{tool.url}</p><p>Remote tool: {tool.tool_name}</p><p>{tool.secret_ref ? `Vault reference: ${tool.secret_ref}` : 'No credential reference'}</p></ReferenceSection>
       <ReferenceSection title="Saved definition"><p>{tool.id} · version {tool.version}</p><p className="break-all font-mono text-xs">Schema SHA-256 {tool.schema_hash}</p><p className="text-xs text-muted-foreground">Conker checks this schema before a call. If it changes, import the updated tool with a new ID and disable this one.</p></ReferenceSection>
       {error && <div className="space-y-2"><p role="alert" className="text-sm text-destructive-foreground">{error}</p><Button variant="outline" disabled={pending} onClick={onReload}>Reload saved tool</Button></div>}
