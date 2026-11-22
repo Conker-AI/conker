@@ -82,6 +82,10 @@ jobs:
         # 600 lines per source file; files that were already larger may only shrink.
         run: python scripts/check_file_sizes.py
 
+      - name: Test skips
+        # Every skip/xfail marker needs a reason and the per-file counts in skip-baseline.txt may only shrink.
+        run: python scripts/check_skips.py
+
       - name: Code map
         # docs/reference/codemap.md is generated (one line per file); a stale map fails here.
         run: python scripts/codemap.py --check

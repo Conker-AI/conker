@@ -168,7 +168,9 @@ def a_pi_toggle() -> dict:
             and home.get("path") == "/owner/settings"
         ):
             return setting
-    pytest.skip("the registry has no global Pi toggle")
+    pytest.fail(
+        "the registry has no global Pi toggle, so the refusal tests below have nothing to run on"
+    )
 
 
 @pytest.mark.parametrize(
