@@ -161,19 +161,6 @@ Shortcuts for working fast.
 | **Shortcut list on ?**<br>`keyboard.cheat_sheet` | Pressing ? shows every shortcut. (saved, not used yet) | on | owner settings |
 | **Approve with Enter**<br>`keyboard.approve_enter` | Lets you approve the open Inbox card with Enter; never for messages, money or deleting. (saved, not used yet) | off | owner settings |
 
-## Phone and devices
-
-How Conker works on your phone and other devices.
-
-### Phone
-
-| Setting | What it does | Default | Home |
-|---|---|---|---|
-| **Offer to install as an app**<br>`devices.install` | Offers to put Conker on your home screen like an app. (saved, not used yet) | on | owner settings |
-| **Phone navigation**<br>`devices.navigation` | How you move between places on a phone. Choices: Menu button, Bottom bar. (saved, not used yet) | Menu button | owner settings |
-| **Swipe Inbox cards**<br>`devices.swipe` | Swipe a card to move it to Later. (saved, not used yet) | on | owner settings |
-| **Offline reading**<br>`devices.offline` | Keeps your recent chats readable without a connection. (saved, not used yet) | off | owner settings |
-
 ## Inbox
 
 How requests, questions and the daily ritual work.
@@ -798,41 +785,6 @@ How tasks and projects are tracked.
 |---|---|---|---|
 | **Archive finished projects after**<br>`projects.archive_after` | Archives a finished project after this long; 0 keeps it. 0 to 365 days. (saved, not used yet) | `0` days | owner settings |
 
-## Server
-
-Updates, backups, remote access and resources.
-
-### Updates
-
-| Setting | What it does | Default | Home |
-|---|---|---|---|
-| **Updating**<br>`server.updates.mode` | Whether updates install on their own. Choices: Never, Tell me, Install at night. (saved, not used yet) | Tell me | owner settings |
-| **Update time**<br>`server.updates.time` | When night updates install. (saved, not used yet) | `03:00` | owner settings |
-
-### Backups
-
-| Setting | What it does | Default | Home |
-|---|---|---|---|
-| **Backups**<br>`server.backups.schedule` | How often your server is backed up. Choices: Off, Daily, Weekly. (saved, not used yet) | Weekly | owner settings |
-| **Include local models**<br>`server.backups.models` | Adds local models to backups; they are large. (saved, not used yet) | off | owner settings |
-| **Test restores**<br>`server.backups.test` | Checks once a month that a backup restores. (saved, not used yet) | off | owner settings |
-
-### Remote access
-
-| Setting | What it does | Default | Home |
-|---|---|---|---|
-| **Remote access**<br>`server.remote` | Lets your devices reach Conker away from home through Tailscale. (saved, not used yet) | on | owner settings |
-| **Domain**<br>`server.domain` | A web address for your server, if you have one. (saved, not used yet) | empty | owner settings |
-
-### Resources
-
-| Setting | What it does | Default | Home |
-|---|---|---|---|
-| **Disk warning**<br>`server.disk_warning` | Warns you when the disk is this full. 50 to 99 %. (saved, not used yet) | `85` % | owner settings |
-| **Clean up by itself**<br>`server.auto_clean` | Removes old images and caches when space runs low. (saved, not used yet) | on | owner settings |
-| **Log detail**<br>`server.log_level` | How much the services write to their logs. Choices: Errors, Warnings, Normal, Everything. (saved, not used yet) | Normal | owner settings |
-| **Health checks**<br>`server.health_interval` | How often the services are checked. 1 to 60 minutes. (saved, not used yet) | `5` minutes | owner settings |
-
 ## Logs and transparency
 
 Seeing what Conker did and why.
@@ -842,16 +794,6 @@ Seeing what Conker did and why.
 | Setting | What it does | Default | Home |
 |---|---|---|---|
 | **Watch Conker work**<br>`logs.watch` | A pane that shows searches, pages, commands and the browser live. (saved, not used yet) | off | owner settings |
-
-## Labs
-
-Experimental features and tools for fixing problems.
-
-### Labs
-
-| Setting | What it does | Default | Home |
-|---|---|---|---|
-| **API explorer**<br>`labs.api_explorer` | A screen for trying Conker's API. (saved, not used yet) | off | owner settings |
 
 ## Settings
 

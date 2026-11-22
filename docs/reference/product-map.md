@@ -26,10 +26,10 @@ is a gap, and a domain whose work sits in another row's package is a candidate t
 | Memory and knowledge | Context | `memory-exploration`, `memory-forgetting`, `memory-corrections` | `memory`, `context` | `memory`, `context` |
 | Work management | — | `tasks-activity`, `projects-context` | `projects` | — |
 | Search and research | Review | — | `search`, `research` | — |
-| System operations | — | `system-status`, `service-lifecycle`, `local-model-download`, `verified-backup`, `held-recovery`, `pinned-updates`, `host-inventory`, `owner-files`, `owner-terminal` | `server` | `host` |
+| System operations | — | `system-status`, `service-lifecycle`, `local-model-download`, `verified-backup`, `held-recovery`, `pinned-updates`, `host-inventory`, `owner-files`, `owner-terminal` | — | `host` |
 | Audit and economics | — | — | `logs`, `privacy`, `money` | — |
 | Delivery adapters | — | — | — | — |
-| The interface itself | — | `settings-registry` | `settings`, `appearance`, `accessibility`, `keyboard`, `home`, `day`, `devices`, `labs` | — |
+| The interface itself | — | `settings-registry` | `settings`, `appearance`, `accessibility`, `keyboard`, `home`, `day` | — |
 | Shared plumbing | — | — | — | `api`, `core` |
 
 ## What the table shows
