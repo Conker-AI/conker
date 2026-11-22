@@ -18,6 +18,7 @@ import threading
 import time
 import uuid
 from pathlib import Path
+from typing import Any
 from urllib.error import HTTPError
 from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_opener
 
@@ -58,7 +59,7 @@ class CodexAccounts:
 
     def __init__(self, executable: Path, home: Path):
         self.executable, self.home = executable, home
-        self.process = None
+        self.process: Any = None
         self.calls = threading.RLock()
         self.condition = threading.Condition()
         self.responses = {}
@@ -214,7 +215,7 @@ class CodexAccounts:
 class ChatGPTControl:
     def __init__(self, state: Path, executable: Path | None, *, rpc=None):
         self.home = state / "chatgpt-auth"
-        self.rpc = rpc or (
+        self.rpc: Any = rpc or (
             CodexAccounts(executable, self.home) if executable and executable.is_file() else None
         )
         self.lock = threading.RLock()

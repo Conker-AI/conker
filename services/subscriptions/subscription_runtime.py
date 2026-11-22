@@ -95,7 +95,7 @@ def serve():
     watch_namespace()
     app = create_app(
         configuration(),
-        chatgpt_relay=ChatGPTRelay(os.environ.get("SUBSCRIPTIONS_CHATGPT_SOCKET", SOCKET)),
+        chatgpt_relay=ChatGPTRelay(Path(os.environ.get("SUBSCRIPTIONS_CHATGPT_SOCKET", SOCKET))),
     )
     uvicorn.run(app, host="127.0.0.1", port=PORT, proxy_headers=False, access_log=False)
 
