@@ -332,12 +332,16 @@ def test_claude_cancel_kills_owned_process_and_reaps_before_return(tmp_path, mon
     native = Claude(tmp_path / "claude.exe", tmp_path / "auth")
     with ThreadPoolExecutor(max_workers=1) as pool:
         pending = pool.submit(native.complete, PAYLOAD, cancellation=control)
-        assert started.wait(2)
-        deadline = time.monotonic() + 2
-        while not child_pid_file.exists() and time.monotonic() < deadline:
-            time.sleep(0.01)
-        assert child_pid_file.exists()
-        child_pid = int(child_pid_file.read_text())
+        assert started.wait(30)
+        deadline = time.monotonic() + 30
+        child_pid = None
+        while child_pid is None and time.monotonic() < deadline:
+            try:
+                # The file can exist before the child has written (or flushed) its pid.
+                child_pid = int(child_pid_file.read_text().strip())
+            except (OSError, ValueError):
+                time.sleep(0.01)
+        assert child_pid is not None, "the child never wrote its pid"
         control.cancel()
         with pytest.raises(ValueError, match="request_canceled"):
             pending.result(timeout=3)
