@@ -5,18 +5,14 @@ name: Weekly security check
 # databases each Monday and whenever those dependencies change, and fails loudly: a red run,
 # which GitHub emails to whoever last edited this schedule. GitHub pauses schedules in public
 # repositories after 60 days without a commit; "Run workflow" on the Actions tab resumes it.
+# Every pull request and push to main is also scanned for committed secrets.
 
 on:
   schedule:
     - cron: "57 5 * * 1"
+  push:
+    branches: [main]
   pull_request:
-    paths:
-      - ".github/workflows/security.yml"
-      - "dashboard/package.json"
-      - "dashboard/package-lock.json"
-      - "dashboard/scripts/audit-npm.cjs"
-      - "services/decisions/requirements.txt"
-      - "versions.env"
   workflow_dispatch:
 
 # Read-only token: the check reads code and public advisories; it writes nothing.
@@ -24,8 +20,33 @@ permissions:
   contents: read
 
 jobs:
+  changes:
+    # The dependency checks run on the schedule, by hand, and on a pull request that changes what
+    # they read; the secret scan runs on every event.
+    runs-on: ubuntu-latest
+    outputs:
+      deps: ${{ steps.f.outputs.deps }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - id: f
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          deps_paths='^(\.github/workflows/security\.yml|dashboard/package(-lock)?\.json|dashboard/scripts/audit-npm\.cjs|services/decisions/requirements\.txt|versions\.env)$'
+          case "$EVENT" in
+            push) deps=false ;;
+            pull_request) deps=$(git diff --name-only "$BASE"...HEAD | grep -Eq "$deps_paths" && echo true || echo false) ;;
+            *) deps=true ;;
+          esac
+          echo "deps=$deps" >> "$GITHUB_OUTPUT"
+
   dashboard:
     name: Dashboard dependencies
+    needs: changes
+    if: needs.changes.outputs.deps == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -45,6 +66,8 @@ jobs:
 
   decisions:
     name: Decisions sidecar dependencies
+    needs: changes
+    if: needs.changes.outputs.deps == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -65,6 +88,8 @@ jobs:
 
   images:
     name: Released images
+    needs: changes
+    if: needs.changes.outputs.deps == 'true'
     runs-on: ubuntu-latest
     env:
       # Trivy 0.75.0, pinned by digest like every image an owner runs.
@@ -112,3 +137,25 @@ jobs:
             echo "::endgroup::"
           done
           exit "$status"
+
+  secrets:
+    name: Secret scan (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # Full history: a pull request is scanned for its own commits, everything else for all of them.
+          fetch-depth: 0
+
+      - name: Scan
+        # gitleaks 8.28.0, pinned by digest; the default rules and the false positives .gitleaks.toml
+        # names. --verbose lists each finding (file, line, commit, rule) with its value redacted.
+        env:
+          GITLEAKS: ghcr.io/gitleaks/gitleaks:v8.28.0@sha256:cdbb7c955abce02001a9f6c9f602fb195b7fadc1e812065883f695d1eeaba854
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            range="--log-opts=${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
+          else
+            range=""
+          fi
+          docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/repo" "$GITLEAKS" git /repo --config /repo/.gitleaks.toml --no-banner --redact --verbose --exit-code 1 $range
