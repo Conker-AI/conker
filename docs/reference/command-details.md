@@ -19,18 +19,18 @@ normal Conker snapshots. Reconnect after restoring onto another host; never copy
 desktop credentials into this store. Pi mounts `chatgpt-inference`; with the Claude plan
 runtime on, that runtime mounts it too, and in the Ubuntu layout only the runtime does. Only
 Gateway mounts `provider-control`
-([provider credentials](reference/provider-credentials.md#browser-and-recovery-boundaries)).
+([provider credentials](provider-credentials.md#browser-and-recovery-boundaries)).
 The main shell and tool permissions are unchanged.
 Commands use the same arguments everywhere. When a layout cannot safely provide an
 operation, help marks it unavailable and the command exits with an explanation;
 the source-built Ubuntu layout supports verified backup and held recovery, but
 cannot provide the repository install's branch-following update or single admin-key commands;
 it updates to a named release instead (`conker update --to X.Y.Z`, see [looking after your
-server](reference/server-care.md#update-to-a-new-release)).
+server](server-care.md#update-to-a-new-release)).
 
 `conker inspect RESOURCE` prints one fixed, read-only control-plane view as JSON. It takes no
 URL or path and never prints its credential, so redirect it to a file for a secret-free snapshot.
-The full route and authority table is in [CLI inspection](reference/cli-inspection.md).
+The full route and authority table is in [CLI inspection](cli-inspection.md).
 
 `conker apply models FILE` accepts the same `{expected_revision, configuration}`
 document as the model settings UI. The host only streams bounded JSON into the
@@ -62,7 +62,7 @@ UI and CLI because job inputs and publication identity need a dedicated safe edi
 
 `conker apply memory FILE` forgets or remembers one memory, or corrects one and retries a
 correction. The file shapes and recovery rules are in [CLI
-inspection](reference/cli-inspection.md#correct-retained-memory-text).
+inspection](cli-inspection.md#correct-retained-memory-text).
 
 `conker apply proposals FILE` records `accept`, `decline` or `never` for one
 inspected proposal. Acceptance records preference only: it cannot execute a tool or
@@ -80,7 +80,7 @@ the UI, message copies recheck provenance and privacy on Pi, and this command of
 no execution or arbitrary download operation.
 
 Use `conker inspect session-settings SESSION_ID` ([ID
-rules](reference/cli-inspection.md)) before `conker apply sessions FILE`. The apply
+rules](cli-inspection.md)) before `conker apply sessions FILE`. The apply
 document carries that session ID, its expected settings revision, and the complete
 typed settings object. Pi refuses busy, closed or call-controlled
 sessions and prevents inherited privacy from being weakened. Changes affect future
@@ -114,7 +114,7 @@ inventory REQUEST_ID` reconciles it. No process, port, container, or terminal
 action exists on either CLI resource.
 
 Read the Companion first with the `character` views ([CLI
-inspection](reference/cli-inspection.md)). `conker apply character FILE` accepts
+inspection](cli-inspection.md)). `conker apply character FILE` accepts
 only `save`, `import`, or `restore`. Save carries the complete validated profile and
 its expected revision; import validates a portable package into a draft without
 saving it; restore appends an old revision as a new immutable revision. Embedded
@@ -131,7 +131,7 @@ are absent; channel fields are preferences only, external effects still require
 ToolGate approval, and an uncertain turn must be inspected before any retry.
 
 Inspect the draft, its validation and its publications first ([CLI
-inspection](reference/cli-inspection.md)). `conker apply tools FILE` accepts only `save`,
+inspection](cli-inspection.md)). `conker apply tools FILE` accepts only `save`,
 `publish`, `access`, `run`, or `run_tool`. Drafts remain inert; publish creates an immutable
 pinned version but grants and runs nothing.
 Access, run and run_tool require both the owner credential and the distinct scoped
@@ -173,8 +173,8 @@ client accepts a provider URL, credential or arbitrary model route.
 
 `conker setup configure protection` saves where backups go and how many to keep;
 `conker setup run protection` backs up, verifies, prunes and records the receipt (it expires
-after 90 days). Procedure and failure rules: [backup and recovery](reference/recovery.md); owner
-steps: [looking after your server](reference/server-care.md#set-up-backups-once).
+after 90 days). Procedure and failure rules: [backup and recovery](recovery.md); owner
+steps: [looking after your server](server-care.md#set-up-backups-once).
 
 `setup rehearsal` projects three ordinary owner proofs: one completed conversation,
 one explicit review of the current memory choice, and one owner-approved invocation
@@ -183,7 +183,7 @@ no network or filesystem access. Run `--review-memory`, then `--start-approval`,
 the request in Inbox, then `--finish-approval REQUEST_ID` and `--finalize`.
 Pi alone creates the rehearsal receipt after all three proofs exist; uploaded
 rehearsal receipts are rejected. Release acceptance is a separate check and never
-completes it ([release acceptance](reference/release-acceptance.md)).
+completes it ([release acceptance](release-acceptance.md)).
 
 Repository updates refuse a dirty checkout, an active backup, or any recovery or
 update hold. The updater validates the candidate manifest and Compose model in a
@@ -199,5 +199,5 @@ equivalent private Git directory for a worktree). Receipts contain revisions and
 status, never `.env` values or command output. An interrupted mutating attempt is
 rolled back and verified before a rerun starts. On the source-built Ubuntu layout an update
 names a release (`conker update --check`, `conker update --to X.Y.Z`, or Update in the Inbox):
-see [looking after your server](reference/server-care.md#update-to-a-new-release) for the steps
+see [looking after your server](server-care.md#update-to-a-new-release) for the steps
 and what each result means, and deploy/ubuntu/README.md for how it works.
