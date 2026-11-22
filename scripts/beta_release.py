@@ -71,15 +71,25 @@ def changelog_with(text: str, version: str, titles: list[str]) -> str:
     marker = "## Unreleased\n"
     if marker not in text:
         raise BetaError("CHANGELOG.md has no ## Unreleased heading")
-    section = f"## {version}\n\nBeta build from main. Changes since the last tag:\n\n" + "\n".join(titles) + "\n\n"
+    section = (
+        f"## {version}\n\nBeta build from main. Changes since the last tag:\n\n"
+        + "\n".join(titles)
+        + "\n\n"
+    )
     head, tail = text.split(marker, 1)
     return head + marker + "\n" + section + tail.lstrip("\n")
 
 
 def main(argv: list[str]) -> int:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--dry-run", action="store_true", help="say what would be cut, change nothing")
-    parser.add_argument("--push", action="store_true", help="push the tag and publish the pre-release")
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument(
+        "--dry-run", action="store_true", help="say what would be cut, change nothing"
+    )
+    parser.add_argument(
+        "--push", action="store_true", help="push the tag and publish the pre-release"
+    )
     args = parser.parse_args(argv)
     try:
         tag, (major, minor, patch) = newest_tag()
@@ -92,7 +102,10 @@ def main(argv: list[str]) -> int:
             return 0
         version = f"{major}.{minor}.{patch + 1}"
         if args.dry_run:
-            print(f"Would cut v{version} from {len(titles)} merged pull requests:\n" + "\n".join(titles))
+            print(
+                f"Would cut v{version} from {len(titles)} merged pull requests:\n"
+                + "\n".join(titles)
+            )
             return 0
         env_path, log_path = ROOT / "versions.env", ROOT / "CHANGELOG.md"
         env = with_version(env_path.read_text(encoding="utf-8"), "CONKER_VERSION", version)
@@ -101,7 +114,10 @@ def main(argv: list[str]) -> int:
         changelog = changelog_with(log_path.read_text(encoding="utf-8"), version, titles)
         log_path.write_text(changelog, encoding="utf-8", newline="\n")
         notes = subprocess.run(
-            [sys.executable, "scripts/release_notes.py", f"v{version}"], cwd=ROOT, capture_output=True, text=True
+            [sys.executable, "scripts/release_notes.py", f"v{version}"],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
         )
         if notes.returncode != 0:
             raise BetaError("the release notes check failed: " + notes.stderr.strip())
@@ -112,8 +128,16 @@ def main(argv: list[str]) -> int:
             git("push", "origin", f"v{version}")
             subprocess.run(
                 [
-                    "gh", "release", "create", f"v{version}", "--verify-tag", "--prerelease",
-                    "--title", f"Conker {version} (beta)", "--notes", notes.stdout,
+                    "gh",
+                    "release",
+                    "create",
+                    f"v{version}",
+                    "--verify-tag",
+                    "--prerelease",
+                    "--title",
+                    f"Conker {version} (beta)",
+                    "--notes",
+                    notes.stdout,
                 ],
                 cwd=ROOT,
                 check=True,

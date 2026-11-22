@@ -9,4 +9,7 @@ def test_the_beta_section_goes_under_unreleased_with_the_titles():
 
 
 def test_with_version_changes_exactly_one_line():
-    assert with_version("A=1\nCONKER_VERSION=0.5.0\n", "CONKER_VERSION", "0.5.1") == "A=1\nCONKER_VERSION=0.5.1\n"
+    assert (
+        with_version("A=1\nCONKER_VERSION=0.5.0\n", "CONKER_VERSION", "0.5.1")
+        == "A=1\nCONKER_VERSION=0.5.1\n"
+    )

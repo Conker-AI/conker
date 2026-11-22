@@ -26,7 +26,9 @@ def git(*args: str, cwd: Path = ROOT) -> str:
 
 
 def main(argv: list[str]) -> int:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     parser.add_argument("name", help="folder name under wt/, for example feat-x")
     parser.add_argument("--branch", help="branch name (default: NAME)")
     parser.add_argument("--no-install", action="store_true", help="skip npm ci")
@@ -41,7 +43,11 @@ def main(argv: list[str]) -> int:
     git("fetch", "-q", "origin")
     git("worktree", "add", "-q", str(target), "-b", args.branch or args.name, "origin/main")
     if not args.no_install:
-        subprocess.run([NPM, "ci", "--prefer-offline", "--no-audit", "--no-fund"], cwd=target / "dashboard", check=True)
+        subprocess.run(
+            [NPM, "ci", "--prefer-offline", "--no-audit", "--no-fund"],
+            cwd=target / "dashboard",
+            check=True,
+        )
     print(target)
     return 0
 

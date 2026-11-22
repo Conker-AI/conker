@@ -282,8 +282,17 @@ def test_the_channel_is_stable_unless_the_owner_set_beta(tmp_path):
 
 def test_set_channel_writes_the_file_and_the_check_then_reads_beta(tmp_path, monkeypatch):
     seen = []
-    monkeypatch.setattr(update_check, "latest_release", lambda opener=None, channel="stable": seen.append(channel))
-    args = ["--root", str(tmp_path), "--source", str(source(tmp_path / "src", "0.5.0")), "--layout", "ubuntu"]
+    monkeypatch.setattr(
+        update_check, "latest_release", lambda opener=None, channel="stable": seen.append(channel)
+    )
+    args = [
+        "--root",
+        str(tmp_path),
+        "--source",
+        str(source(tmp_path / "src", "0.5.0")),
+        "--layout",
+        "ubuntu",
+    ]
     assert update_check.main([*args, "--set-channel", "beta"]) == 0
     assert (tmp_path / "state" / "update" / "channel").read_text(encoding="utf-8").strip() == "beta"
     update_check.main(args)

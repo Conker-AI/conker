@@ -439,7 +439,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--layout", choices=("ubuntu", "repository"), required=True)
     parser.add_argument("--report", action="store_true", help="also tell Pi (the Inbox)")
     parser.add_argument("--json", action="store_true", help="print the result as JSON")
-    parser.add_argument("--set-channel", choices=CHANNELS, help="follow stable releases or beta builds, then stop")
+    parser.add_argument(
+        "--set-channel", choices=CHANNELS, help="follow stable releases or beta builds, then stop"
+    )
     args = parser.parse_args(argv)
     failures = (CheckError, OSError, subprocess.SubprocessError)
     if args.set_channel:
@@ -453,7 +455,11 @@ def main(argv: list[str] | None = None) -> int:
             channel = read_channel(update_directory(args.root, args.layout))
         except (OSError, subprocess.SubprocessError):
             channel = "stable"  # no update folder yet (a checkout that is not one): the stable path says why
-        result = check(args.source) if channel == "stable" else check(args.source, lambda: latest_release(channel=channel))
+        result = (
+            check(args.source)
+            if channel == "stable"
+            else check(args.source, lambda: latest_release(channel=channel))
+        )
         if args.layout == "ubuntu":  # before Pi offers it, so the Inbox's Update finds it
             save_offers(update_directory(args.root, args.layout), result)
     except failures as error:
