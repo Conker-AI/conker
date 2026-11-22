@@ -6,6 +6,13 @@ which module versions a release pins.
 
 ## Unreleased
 
+## 0.6.3
+
+Beta build from main. Changes since the last tag:
+
+- test: refusal and failure paths for dev scripts; raise coverage floor (#409)
+- refactor: group dev scripts into packages (99 -> 73 flat files) (#407)
+
 ## 0.6.0
 
 - **The folded update card says "Updating to X.Y.Z...".** While an update runs, the card in the Inbox no longer loses its button in silence. (#391)
