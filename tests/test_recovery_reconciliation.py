@@ -14,7 +14,7 @@ def backup(source, target):
 
 
 def test_post_backup_deletions_receipts_and_revocation(tmp_path, monkeypatch):
-    pytest.importorskip("qdrant_client")
+    pytest.importorskip("qdrant_client", reason="the Qdrant client is a MemoryGate dependency")
     gates = Path(__file__).resolve().parents[2] / "gates"
     for path in (gates / "pi", gates / "toolgate", gates / "memorygate/services/api"):
         if not path.is_dir():
