@@ -179,3 +179,25 @@ for (const width of [320, 390]) {
     await context.close()
   })
 }
+
+for (const width of [320, 390, 1280]) {
+  test(`no composer toolbar control overlaps another at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 800 })
+    await page.addInitScript(() => sessionStorage.setItem('conker-fake-resume', 'empty'))
+    const errors = await open(page, '/chat?session=ses_1111111111111111')
+    const form = page.getByRole('form', { name: 'Message composer' })
+    await expect(form.getByRole('button', { name: /^Send/ })).toBeVisible()
+    const boxes = await form.locator('button, [role="button"], a').evaluateAll(nodes => nodes.flatMap(node => {
+      const r = node.getBoundingClientRect()
+      return r.width > 0 && r.height > 0 ? [{ name: node.getAttribute('aria-label') || node.textContent?.trim() || '?', x: r.x, y: r.y, w: r.width, h: r.height }] : []
+    }))
+    const overlaps: string[] = []
+    boxes.forEach((a, i) => boxes.slice(i + 1).forEach(b => {
+      const ix = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x), iy = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y)
+      if (ix > 1 && iy > 1) overlaps.push(`${a.name} / ${b.name}`)
+    }))
+    expect(overlaps).toEqual([])
+    expect(boxes.every(b => b.x >= -1 && b.x + b.w <= width + 1)).toBe(true)
+    expect(errors).toEqual([])
+  })
+}
