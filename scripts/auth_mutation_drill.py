@@ -102,7 +102,7 @@ def main() -> int:
         *CASES,
     ]:
         target = run / name
-        for directory in ("scripts", "tests"):
+        for directory in ("scripts", "tests", "deploy/install"):
             shutil.copytree(
                 ROOT / directory,
                 target / directory,

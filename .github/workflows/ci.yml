@@ -69,6 +69,7 @@ jobs:
         # someone else's machine.
         run: |
           bash -n install.sh
+          for part in deploy/install/*.sh; do bash -n "$part"; done
           bash -n conker
 
       - name: Release compatibility manifest
@@ -103,7 +104,8 @@ jobs:
       - name: ShellCheck
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
-          shellcheck --severity=warning install.sh conker
+          # -x follows install.sh into the parts it sources; each part is also checked on its own.
+          shellcheck -x --severity=warning install.sh conker deploy/install/*.sh
 
       - name: Line endings must be LF
         # A CRLF in a shell script is a "bad interpreter" failure that nothing

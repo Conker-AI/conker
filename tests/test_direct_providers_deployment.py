@@ -13,6 +13,7 @@ import yaml
 
 from scripts.compose_overlays import overlay_files
 from scripts.provider_records import FIRST_PROVIDERS, PROVIDERS
+from tests.installer_source import installer_text
 from tests.ubuntu_generator import prepare
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -51,8 +52,7 @@ def test_the_overlay_runs_only_when_released(tmp_path, state, runs):
 
 
 def test_the_shell_entry_points_add_the_overlay_by_the_same_line():
-    for script in ("conker", "install.sh"):
-        text = (ROOT / script).read_text(encoding="utf-8")
+    for text in ((ROOT / "conker").read_text(encoding="utf-8"), installer_text()):
         assert "grep -qx 'DIRECT_PROVIDERS_STATE=active' \"$ROOT/versions.env\"" in text
         assert f'files+=(-f "$ROOT/{OVERLAY}")' in text
 
