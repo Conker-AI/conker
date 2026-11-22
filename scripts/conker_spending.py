@@ -20,10 +20,7 @@ def _cap_changes(args) -> dict:
     if args.on or args.off:
         changes["enabled"] = bool(args.on)
     if args.dollars is not None:
-        if (
-            not math.isfinite(args.dollars)
-            or not 0 <= round(args.dollars * 100) <= MAX_CENTS
-        ):
+        if not math.isfinite(args.dollars) or not 0 <= round(args.dollars * 100) <= MAX_CENTS:
             raise ValueError("Use --dollars from 0 to 1000.")
         changes["cents"] = round(args.dollars * 100)
     if args.tokens is not None:
@@ -61,15 +58,7 @@ def add_parser(commands) -> None:
         help="Today's paid model calls against the daily cap; `spending cap` changes the cap",
     )
     spending.add_argument("operation", nargs="?", choices=["cap"])
-    spending.add_argument(
-        "--dollars", type=float, help="Money for the day, in US dollars"
-    )
-    spending.add_argument(
-        "--tokens", type=int, help="Tokens for the day, over every paid call"
-    )
-    spending.add_argument(
-        "--on", action="store_true", help="Stop paid calls at the cap"
-    )
-    spending.add_argument(
-        "--off", action="store_true", help="Count paid calls, never stop"
-    )
+    spending.add_argument("--dollars", type=float, help="Money for the day, in US dollars")
+    spending.add_argument("--tokens", type=int, help="Tokens for the day, over every paid call")
+    spending.add_argument("--on", action="store_true", help="Stop paid calls at the cap")
+    spending.add_argument("--off", action="store_true", help="Count paid calls, never stop")

@@ -88,17 +88,13 @@ def render() -> str:
             for entry in section["settings"]:
                 setting = next(item for item in settings if item["id"] == entry["id"])
                 choices = (
-                    " Choices: "
-                    + ", ".join(option["label"] for option in setting["options"])
-                    + "."
+                    " Choices: " + ", ".join(option["label"] for option in setting["options"]) + "."
                     if setting.get("options")
                     else ""
                 )
                 bounds = (
                     f" {setting['min']} to {setting['max']}{' ' + setting['unit'] if setting.get('unit') else ''}."
-                    if "min" in setting
-                    and "max" in setting
-                    and setting["type"] == "number"
+                    if "min" in setting and "max" in setting and setting["type"] == "number"
                     else ""
                 )
                 lines.append(
@@ -118,9 +114,7 @@ def counts() -> tuple[int, int]:
 
 def claimed(page: str, numbers: tuple[int, int]) -> str:
     """The page with its quoted counts set to the registry's."""
-    return CLAIM.sub(
-        f"{numbers[0]} settings that take effect ({numbers[1]} more planned)", page
-    )
+    return CLAIM.sub(f"{numbers[0]} settings that take effect ({numbers[1]} more planned)", page)
 
 
 def main() -> int:
@@ -131,24 +125,18 @@ def main() -> int:
         print(", ".join(missing) + " no longer quote the settings count")
         return 1
     if "--check" in sys.argv[1:]:
-        stale = [
-            name for name, page in pages.items() if claimed(page, numbers) != page
-        ]
+        stale = [name for name, page in pages.items() if claimed(page, numbers) != page]
         if not OUTPUT.exists() or OUTPUT.read_text(encoding="utf-8") != text:
             stale.insert(0, str(OUTPUT.relative_to(ROOT)))
         if not stale:
             return 0
-        print(
-            ", ".join(stale)
-            + " differ from the registry; run python scripts/settings_docs.py"
-        )
+        print(", ".join(stale) + " differ from the registry; run python scripts/settings_docs.py")
         return 1
     OUTPUT.write_text(text, encoding="utf-8", newline="\n")
     for name, page in pages.items():
         (ROOT / name).write_text(claimed(page, numbers), encoding="utf-8", newline="\n")
     print(
-        f"wrote {OUTPUT.relative_to(ROOT)}: {numbers[0]} settings take effect,"
-        f" {numbers[1]} planned"
+        f"wrote {OUTPUT.relative_to(ROOT)}: {numbers[0]} settings take effect, {numbers[1]} planned"
     )
     return 0
 

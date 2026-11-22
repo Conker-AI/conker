@@ -65,7 +65,11 @@ def test_a_call_runs_the_relay_in_the_pi_container(monkeypatch):
         ({"timeout": True}, OSError, "did not answer"),
         ({"returncode": 1, "stdout": b"200\n{}"}, OSError, "conker status"),
         ({"stdout": b"Traceback"}, OSError, "conker status"),
-        ({"stdout": b'404\n{"detail": "No such request."}'}, tool_draft_cli.Refused, r"HTTP 404\): No such"),
+        (
+            {"stdout": b'404\n{"detail": "No such request."}'},
+            tool_draft_cli.Refused,
+            r"HTTP 404\): No such",
+        ),
         ({"stdout": b"503\n"}, OSError, r"did not confirm it \(HTTP 503\)"),
         ({"stdout": b"200\nnot json"}, OSError, "other than JSON"),
     ],
@@ -108,14 +112,20 @@ class FakeConnection:
         pass
 
 
-def chatgpt(monkeypatch, tmp_path, *arguments, connection: Callable[[Path], FakeConnection] = FakeConnection):
+def chatgpt(
+    monkeypatch, tmp_path, *arguments, connection: Callable[[Path], FakeConnection] = FakeConnection
+):
     FakeConnection.opened = []
     monkeypatch.setattr(chatgpt_cli, "Connection", connection)
-    monkeypatch.setattr(sys, "argv", ["chatgpt", "--root", str(tmp_path), "--layout", "ubuntu", *arguments])
+    monkeypatch.setattr(
+        sys, "argv", ["chatgpt", "--root", str(tmp_path), "--layout", "ubuntu", *arguments]
+    )
     chatgpt_cli.main()
 
 
-@pytest.mark.parametrize("arguments", [["cancel"], ["logout"], ["status", "login_123"], ["login", "x"]])
+@pytest.mark.parametrize(
+    "arguments", [["cancel"], ["logout"], ["status", "login_123"], ["login", "x"]]
+)
 def test_an_identity_is_required_or_refused_before_the_socket(monkeypatch, tmp_path, arguments):
     with pytest.raises(SystemExit) as stopped:
         chatgpt(monkeypatch, tmp_path, *arguments)

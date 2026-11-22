@@ -19,9 +19,7 @@ import sys
 from pathlib import Path
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-REGISTRY = (
-    Path(__file__).resolve().parents[1] / "dashboard" / "src" / "settings" / "registry"
-)
+REGISTRY = Path(__file__).resolve().parents[1] / "dashboard" / "src" / "settings" / "registry"
 # Where a setting lives when its entry names no home of its own.
 OWNER_SETTINGS = {
     "service": "pi",
@@ -46,23 +44,17 @@ def register(commands):
     )
     operations = config.add_subparsers(dest="operation", required=True)
     listing = operations.add_parser("list", help="Settings with current values")
-    listing.add_argument(
-        "--search", help="Text to find in names, descriptions and keywords"
-    )
+    listing.add_argument("--search", help="Text to find in names, descriptions and keywords")
     listing.add_argument("--scope", choices=["global", "agent", "chat"])
     listing.add_argument("--group", help="Only one topic, such as appearance or inbox")
-    listing.add_argument(
-        "--modified", action="store_true", help="Only changed from default"
-    )
+    listing.add_argument("--modified", action="store_true", help="Only changed from default")
     listing.add_argument("--chat", help="Include this chat's settings")
     listing.add_argument(
         "--planned",
         action="store_true",
         help="Include planned settings: saved, but nothing reads them yet",
     )
-    get = operations.add_parser(
-        "get", help="One setting with its description and value"
-    )
+    get = operations.add_parser("get", help="One setting with its description and value")
     change = operations.add_parser("set", help="Change one setting")
     reset = operations.add_parser("reset", help="Put one setting back to its default")
     for parser in (get, change, reset):
@@ -74,9 +66,7 @@ def register(commands):
 
 def load_groups(path: Path = REGISTRY) -> list[dict]:
     """The topic files in their screen order."""
-    groups = [
-        json.loads(item.read_text(encoding="utf-8")) for item in path.glob("*.json")
-    ]
+    groups = [json.loads(item.read_text(encoding="utf-8")) for item in path.glob("*.json")]
     return sorted(groups, key=lambda group: (group["order"], group["id"]))
 
 
@@ -114,22 +104,16 @@ def on_server(setting: dict) -> bool:
 
 def server_only(setting: dict) -> None:
     if setting["type"] == "custom":
-        raise ValueError(
-            f"{setting['id']} has its own screen: open Settings to change it."
-        )
+        raise ValueError(f"{setting['id']} has its own screen: open Settings to change it.")
     if setting["home"]["service"] == "browser":
-        raise ValueError(
-            f"{setting['id']} is kept in each browser: change it in Settings there."
-        )
+        raise ValueError(f"{setting['id']} is kept in each browser: change it in Settings there.")
 
 
 def find(settings: list[dict], identity: str) -> dict:
     for setting in settings:
         if setting["id"] == identity:
             return setting
-    raise ValueError(
-        f"Unknown setting {identity!r}. List them with: conker config list"
-    )
+    raise ValueError(f"Unknown setting {identity!r}. List them with: conker config list")
 
 
 def value_at(document, field: str, flat: bool = False):
@@ -152,7 +136,9 @@ def with_value(document: dict, field: str, value, flat: bool = False) -> dict:
     *parents, leaf = field.split(".")
     for part in parents:
         if not isinstance(target.get(part), dict):
-            raise ValueError(f"The stored document has no {field!r}.")  # reported to the owner like every CLI input error
+            raise ValueError(
+                f"The stored document has no {field!r}."
+            )  # reported to the owner like every CLI input error
         target = target[part]
     target[leaf] = value
     return changed
@@ -193,17 +179,13 @@ def parse(setting: dict, raw: str):
         chosen = [item.strip() for item in text.split(",") if item.strip()]
         unknown = sorted(set(chosen) - set(values_of(setting)))
         if unknown or len(set(chosen)) != len(chosen):
-            raise ValueError(
-                "Use distinct values from: " + ", ".join(map(str, values_of(setting)))
-            )
+            raise ValueError("Use distinct values from: " + ", ".join(map(str, values_of(setting))))
         return chosen
     if kind in {"tags", "models"}:
         chosen = [item.strip() for item in text.split(",") if item.strip()]
         limit = setting.get("max_items", 50)
         if len(chosen) > limit or len(set(chosen)) != len(chosen):
-            raise ValueError(
-                f"Use at most {limit} distinct values, separated by commas."
-            )
+            raise ValueError(f"Use at most {limit} distinct values, separated by commas.")
         if kind == "models" and not all(MODEL_ID.fullmatch(item) for item in chosen):
             raise ValueError("Use model ids as conker models lists them.")
         if any(len(item) > 80 for item in chosen):
@@ -227,9 +209,7 @@ def parse(setting: dict, raw: str):
         return text
     if kind in {"text", "textarea"}:
         if len(text) > setting.get("max_length", 200):
-            raise ValueError(
-                f"Use at most {setting.get('max_length', 200)} characters."
-            )
+            raise ValueError(f"Use at most {setting.get('max_length', 200)} characters.")
         if "pattern" in setting and not re.fullmatch(setting["pattern"], text):
             raise ValueError("That value does not have the expected form.")
         return text
@@ -241,9 +221,7 @@ def home(setting: dict, chat: str | None) -> str:
     path = setting["home"]["path"]
     if "{chat}" in path:
         if not chat or not CHAT_ID.fullmatch(chat):
-            raise ValueError(
-                f"{setting['id']} belongs to one chat: add --chat CHAT_ID."
-            )
+            raise ValueError(f"{setting['id']} belongs to one chat: add --chat CHAT_ID.")
         return path.replace("{chat}", chat)
     if chat:
         raise ValueError(f"{setting['id']} is global: leave out --chat.")
@@ -253,9 +231,7 @@ def home(setting: dict, chat: str | None) -> str:
 def service(setting: dict) -> str:
     """The service the request goes to: ToolGate's owner documents take the owner key."""
     return (
-        "toolgate-owner"
-        if setting["home"]["service"] == "toolgate"
-        else setting["home"]["service"]
+        "toolgate-owner" if setting["home"]["service"] == "toolgate" else setting["home"]["service"]
     )
 
 
@@ -272,18 +248,14 @@ def at_rest(setting: dict, value):
     ToolGate's own when a release changes it."""
     toolgate = setting["home"]["service"] == "toolgate"
     return (
-        None
-        if toolgate and setting["type"] == "number" and value == setting["default"]
-        else value
+        None if toolgate and setting["type"] == "number" and value == setting["default"] else value
     )
 
 
 def shown(setting: dict, value):
     """A ToolGate number left null keeps today's limit, which is the registry default."""
     return (
-        setting["default"]
-        if value is None and setting["home"]["service"] == "toolgate"
-        else value
+        setting["default"] if value is None and setting["home"]["service"] == "toolgate" else value
     )
 
 
@@ -291,13 +263,9 @@ def row(setting: dict, document) -> dict:
     flat = setting["home"].get("flat", False)
     current = shown(
         setting,
-        value_at(document, setting["home"]["field"], flat)
-        if document is not None
-        else None,
+        value_at(document, setting["home"]["field"], flat) if document is not None else None,
     )
-    stored = (
-        flat and isinstance(document, dict) and setting["home"]["field"] in document
-    )
+    stored = flat and isinstance(document, dict) and setting["home"]["field"] in document
     return {
         "id": setting["id"],
         "title": setting["title"],
@@ -357,9 +325,7 @@ def config_operation(args, config, request) -> int:
         flat = setting["home"].get("flat", False)
         if args.operation == "reset":
             if setting["default"] is None and not flat:
-                raise ValueError(
-                    f"{setting['id']} has no default; set a value instead."
-                )
+                raise ValueError(f"{setting['id']} has no default; set a value instead.")
             new = setting["default"]
         else:
             new = parse(setting, args.value)
@@ -397,9 +363,7 @@ def config_operation(args, config, request) -> int:
                         if key != setting["home"]["field"]
                     }
                     if flat and args.operation == "reset"
-                    else with_value(
-                        document, setting["home"]["field"], at_rest(setting, new), flat
-                    )
+                    else with_value(document, setting["home"]["field"], at_rest(setting, new), flat)
                 ),
             },
             # ToolGate replaces its whole document with PUT; Pi's homes take POST.
@@ -411,9 +375,7 @@ def config_operation(args, config, request) -> int:
             if flat and args.operation == "reset"
             else shown(
                 setting,
-                value_at(
-                    saved.get(setting["home"]["key"]), setting["home"]["field"], flat
-                ),
+                value_at(saved.get(setting["home"]["key"]), setting["home"]["field"], flat),
             ),
             "revision": saved.get("revision"),
             "effect": setting["effect"],

@@ -1,4 +1,5 @@
 """Release acceptance pieces: the image plan, setup and compose checks, evidence and the command runner."""
+
 from __future__ import annotations
 
 import json
@@ -113,13 +114,19 @@ def build_image_plan(manifest: Mapping[str, Any]) -> dict[str, Any]:
     gates = manifest.get("gates")
     third_party = manifest.get("third_party_images")
     capabilities = manifest.get("capabilities")
-    if not isinstance(gates, dict) or not isinstance(third_party, dict) or not isinstance(capabilities, dict):
+    if (
+        not isinstance(gates, dict)
+        or not isinstance(third_party, dict)
+        or not isinstance(capabilities, dict)
+    ):
         raise AcceptanceError("normalized manifest lacks gates, third_party_images or capabilities")
     terminal = capabilities.get("owner-terminal")
     if not isinstance(terminal, dict) or terminal.get("state") not in {"deferred", "active"}:
         raise AcceptanceError("normalized manifest lacks an explicit owner-terminal state")
     missing_gates = sorted(set(OWN_COMPONENTS) - gates.keys())
-    missing_third_party = sorted(set(SERVICE_IMAGES.values()) - set(OWN_COMPONENTS) - third_party.keys())
+    missing_third_party = sorted(
+        set(SERVICE_IMAGES.values()) - set(OWN_COMPONENTS) - third_party.keys()
+    )
     if missing_gates or missing_third_party:
         raise AcceptanceError(
             f"normalized manifest matrix is incomplete: gates={missing_gates}, third_party={missing_third_party}"
@@ -172,11 +179,11 @@ def assert_complete_setup(status: Mapping[str, Any]) -> None:
         raise AcceptanceError("setup status did not contain a bounded step list")
     identities = [step.get("id") for step in steps]
     if len(identities) != len(set(identities)) or set(identities) != SETUP_STEP_IDS:
-        raise AcceptanceError(f"setup step inventory differs from the release contract: {identities}")
+        raise AcceptanceError(
+            f"setup step inventory differs from the release contract: {identities}"
+        )
     incomplete = {
-        str(step["id"]): step.get("state")
-        for step in steps
-        if step.get("state") != "complete"
+        str(step["id"]): step.get("state") for step in steps if step.get("state") != "complete"
     }
     if (
         status.get("schemaVersion") != 1
@@ -261,10 +268,22 @@ class CommandRunner:
                 check=False,
             )
         except subprocess.TimeoutExpired as exc:
-            stdout = exc.stdout.decode(errors="replace") if isinstance(exc.stdout, bytes) else exc.stdout or ""
-            stderr = exc.stderr.decode(errors="replace") if isinstance(exc.stderr, bytes) else exc.stderr or ""
-            (self.evidence.root / f"{stem}.stdout.log").write_text(redact_text(stdout), encoding="utf-8")
-            (self.evidence.root / f"{stem}.stderr.log").write_text(redact_text(stderr), encoding="utf-8")
+            stdout = (
+                exc.stdout.decode(errors="replace")
+                if isinstance(exc.stdout, bytes)
+                else exc.stdout or ""
+            )
+            stderr = (
+                exc.stderr.decode(errors="replace")
+                if isinstance(exc.stderr, bytes)
+                else exc.stderr or ""
+            )
+            (self.evidence.root / f"{stem}.stdout.log").write_text(
+                redact_text(stdout), encoding="utf-8"
+            )
+            (self.evidence.root / f"{stem}.stderr.log").write_text(
+                redact_text(stderr), encoding="utf-8"
+            )
             self.evidence.event(
                 phase,
                 "failed",
@@ -275,8 +294,12 @@ class CommandRunner:
                 stderr=f"{stem}.stderr.log",
             )
             raise AcceptanceError(f"{phase} exceeded {timeout} seconds") from exc
-        (self.evidence.root / f"{stem}.stdout.log").write_text(redact_text(result.stdout), encoding="utf-8")
-        (self.evidence.root / f"{stem}.stderr.log").write_text(redact_text(result.stderr), encoding="utf-8")
+        (self.evidence.root / f"{stem}.stdout.log").write_text(
+            redact_text(result.stdout), encoding="utf-8"
+        )
+        (self.evidence.root / f"{stem}.stderr.log").write_text(
+            redact_text(result.stderr), encoding="utf-8"
+        )
         self.evidence.event(
             phase,
             "passed" if result.returncode in set(expected) else "failed",
@@ -286,7 +309,5 @@ class CommandRunner:
             stderr=f"{stem}.stderr.log",
         )
         if result.returncode not in set(expected):
-            raise AcceptanceError(
-                f"{phase} exited {result.returncode}; see {stem}.stderr.log"
-            )
+            raise AcceptanceError(f"{phase} exited {result.returncode}; see {stem}.stderr.log")
         return Completed(command, result.returncode, result.stdout, result.stderr)

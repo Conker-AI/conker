@@ -98,8 +98,7 @@ def test_the_providers_answer_decides_verification(monkeypatch, answer, result):
 
 def test_each_provider_gets_its_own_header(monkeypatch):
     (_, openrouter), (_, anthropic) = (
-        checked(monkeypatch, name, Answer(200))
-        for name in ("openrouter", "anthropic")
+        checked(monkeypatch, name, Answer(200)) for name in ("openrouter", "anthropic")
     )
     assert openrouter["headers"]["Authorization"] == "Bearer sk-test"
     assert anthropic["headers"]["x-api-key"] == "sk-test"

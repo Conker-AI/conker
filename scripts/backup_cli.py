@@ -139,7 +139,9 @@ def describe_drill(receipt: dict | None) -> str:
     if receipt.get("reason"):
         lines.append("  " + receipt["reason"])
     if receipt.get("leftovers"):
-        lines.append(f"  Left behind: {receipt['leftovers']}. Remove them with docker rm/volume rm.")
+        lines.append(
+            f"  Left behind: {receipt['leftovers']}. Remove them with docker rm/volume rm."
+        )
     return "\n".join(lines)
 
 

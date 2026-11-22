@@ -17,8 +17,7 @@ class WindowsTerminal:
         from winpty import PtyProcess
 
         shell = shutil.which("pwsh.exe") or str(
-            Path(os.environ["SYSTEMROOT"])
-            / "System32/WindowsPowerShell/v1.0/powershell.exe"
+            Path(os.environ["SYSTEMROOT"]) / "System32/WindowsPowerShell/v1.0/powershell.exe"
         )
         keep = (
             "SYSTEMROOT",
@@ -95,9 +94,7 @@ class WindowsTerminal:
                     self.process.write(value)
                 return len(data)
             except (EOFError, OSError, UnicodeError):
-                raise TerminalError(
-                    "Terminal input was not confirmed; do not replay it."
-                ) from None
+                raise TerminalError("Terminal input was not confirmed; do not replay it.") from None
 
     def resize(self, rows, columns):
         if (

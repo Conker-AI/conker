@@ -3,6 +3,7 @@
 Uses the real Gateway, Pi, ToolGate, MemoryGate and Ollama. Does not import any
 existing owner databases, provider credentials or execution grants.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -24,20 +25,40 @@ ROOT = Path(__file__).resolve().parents[1]
 STATE = ROOT / ".local-run"
 CONFIG = STATE / "configuration.json"
 ORDER = ("postgres", "memorygate", "toolgate", "pi", "gateway")
-PORTS = {"memorygate": 18520, "toolgate": 18510, "pi": 18551,
-         "gateway": 18550, "decisions": 18560, "providers": 18570, "postgres": 55542,
-         "embeddings": 18530, "qdrant": 16333}
+PORTS = {
+    "memorygate": 18520,
+    "toolgate": 18510,
+    "pi": 18551,
+    "gateway": 18550,
+    "decisions": 18560,
+    "providers": 18570,
+    "postgres": 55542,
+    "embeddings": 18530,
+    "qdrant": 16333,
+}
 # Docker-run services: config keys for the container and volume, the published port, the data mount.
 CONTAINERS = {
-    "postgres": ("PostgreSQL", "postgres_container", "postgres_volume", "5432/tcp", "/var/lib/postgresql/data"),
+    "postgres": (
+        "PostgreSQL",
+        "postgres_container",
+        "postgres_volume",
+        "5432/tcp",
+        "/var/lib/postgresql/data",
+    ),
     "qdrant": ("Qdrant", "qdrant_container", "qdrant_volume", "6333/tcp", "/qdrant/storage"),
 }
 ORIGIN = "https://localhost:18550"
 
 
 def run(*args, cwd=ROOT, capture=False, timeout=None):
-    result = subprocess.run([str(arg) for arg in args], cwd=cwd, check=True,
-                            text=True, capture_output=capture, timeout=timeout)
+    result = subprocess.run(
+        [str(arg) for arg in args],
+        cwd=cwd,
+        check=True,
+        text=True,
+        capture_output=capture,
+        timeout=timeout,
+    )
     return result.stdout.strip() if capture else None
 
 
@@ -50,7 +71,9 @@ def read_config():
         raise SystemExit("Run python scripts/workspace.py install first.")
     config = json.loads(CONFIG.read_text(encoding="utf-8"))
     if config.get("workspace_schema") != 1:
-        raise SystemExit("This directory already holds a different local stack. It was not changed.")
+        raise SystemExit(
+            "This directory already holds a different local stack. It was not changed."
+        )
     return config
 
 
@@ -68,15 +91,27 @@ def install(model):
     pythons = {name: prepare_source(name, revision) for name, revision in pins.items()}
     # Reuse the established scoped-key configuration and service launcher.
     from scripts import local_stack
+
     local_stack.initialize()
     config = json.loads(CONFIG.read_text())
-    config.update(workspace_schema=1, ports=PORTS, python=pythons["pi"],
-                  python_by_service={**pythons, "gateway": pythons["pi"]},
-                  repositories={name: str(STATE / "sources" / name) for name in pins})
+    config.update(
+        workspace_schema=1,
+        ports=PORTS,
+        python=pythons["pi"],
+        python_by_service={**pythons, "gateway": pythons["pi"]},
+        repositories={name: str(STATE / "sources" / name) for name in pins},
+    )
     instance = "conker-workspace-" + hashlib.sha256(str(ROOT).encode()).hexdigest()[:10]
     config.update(postgres_container=instance, postgres_volume=instance)
     envs = config["environments"]
-    replacements = {"8020": "18520", "8010": "18510", "8051": "18551", "8050": "18550", "8060": "18560", "55432": "55542"}
+    replacements = {
+        "8020": "18520",
+        "8010": "18510",
+        "8051": "18551",
+        "8050": "18550",
+        "8060": "18560",
+        "55432": "55542",
+    }
     for values in envs.values():
         for key, value in values.items():
             for old, new in replacements.items():
@@ -97,8 +132,12 @@ def install(model):
     print(f"Installed. Start with: python scripts/workspace.py up\nOpen {ORIGIN}")
 
 
-REQUIREMENTS = {"pi": "requirements.txt", "toolgate": "toolgate/requirements.txt",
-                "memorygate": "services/api/requirements.txt", "embeddings": "requirements.txt"}
+REQUIREMENTS = {
+    "pi": "requirements.txt",
+    "toolgate": "toolgate/requirements.txt",
+    "memorygate": "services/api/requirements.txt",
+    "embeddings": "requirements.txt",
+}
 
 
 def prepare_source(name, revision):
@@ -123,10 +162,23 @@ def prepare_source(name, revision):
         run(sys.executable, "-m", "venv", env)
     requirements = source / REQUIREMENTS[name]
     # uvloop intentionally has no Windows wheel; uvicorn uses its asyncio backend.
-    lines = [line for line in requirements.read_text().splitlines() if not (os.name == "nt" and line.startswith("uvloop=="))]
+    lines = [
+        line
+        for line in requirements.read_text().splitlines()
+        if not (os.name == "nt" and line.startswith("uvloop=="))
+    ]
     platform_requirements = STATE / f"{name}-requirements.txt"
     platform_requirements.write_text("\n".join(lines) + "\n")
-    run(interpreter(env), "-m", "pip", "install", "--disable-pip-version-check", "-r", platform_requirements, "psutil==7.2.0")
+    run(
+        interpreter(env),
+        "-m",
+        "pip",
+        "install",
+        "--disable-pip-version-check",
+        "-r",
+        platform_requirements,
+        "psutil==7.2.0",
+    )
     return str(interpreter(env))
 
 
@@ -158,7 +210,9 @@ def build():
 
     def require_stopped():
         if CONFIG.exists() and owned_process(read_config(), "gateway"):
-            raise SystemExit("Stop Gateway before rebuilding its assets. The current build was retained.")
+            raise SystemExit(
+                "Stop Gateway before rebuilding its assets. The current build was retained."
+            )
 
     build_dashboard(ROOT, STATE, run, require_stopped)
 
@@ -171,39 +225,78 @@ def wait_health(service, seconds=50):
     if service == "postgres":
         config = read_config()
         for _ in range(seconds):
-            result = subprocess.run(["docker", "exec", config["postgres_container"], "pg_isready", "-U", "conker_local"], capture_output=True, check=False)
+            result = subprocess.run(
+                [
+                    "docker",
+                    "exec",
+                    config["postgres_container"],
+                    "pg_isready",
+                    "-U",
+                    "conker_local",
+                ],
+                capture_output=True,
+                check=False,
+            )
             if result.returncode == 0:
                 return
             time.sleep(1)
     else:
         import ssl
+
         def context():
-            return ssl.create_default_context(cafile=str(STATE / "gateway/tls.crt")) if service == "gateway" else None
+            return (
+                ssl.create_default_context(cafile=str(STATE / "gateway/tls.crt"))
+                if service == "gateway"
+                else None
+            )
+
         path = "/readyz" if service == "qdrant" else "/health"
-        url = ORIGIN + "/health" if service == "gateway" else f"http://127.0.0.1:{PORTS[service]}{path}"
+        url = (
+            ORIGIN + "/health"
+            if service == "gateway"
+            else f"http://127.0.0.1:{PORTS[service]}{path}"
+        )
+
         class NoRedirect(urllib.request.HTTPRedirectHandler):
             def redirect_request(self, req, fp, code, msg, headers, newurl):
                 return None
+
         for _ in range(seconds):
             try:
                 # The gateway writes its certificate at startup; until then context() raises OSError.
-                opener = urllib.request.build_opener(urllib.request.ProxyHandler({}),
-                            urllib.request.HTTPSHandler(context=context()), NoRedirect())
-                headers = {"X-Decision-Key": read_config()["environments"]["decisions"]["DECISION_API_KEY"]} if service == "decisions" else {}
-                with opener.open(urllib.request.Request(url, headers=headers), timeout=4) as response:
+                opener = urllib.request.build_opener(
+                    urllib.request.ProxyHandler({}),
+                    urllib.request.HTTPSHandler(context=context()),
+                    NoRedirect(),
+                )
+                headers = (
+                    {
+                        "X-Decision-Key": read_config()["environments"]["decisions"][
+                            "DECISION_API_KEY"
+                        ]
+                    }
+                    if service == "decisions"
+                    else {}
+                )
+                with opener.open(
+                    urllib.request.Request(url, headers=headers), timeout=4
+                ) as response:
                     if response.status == 200:
                         return
             except (OSError, urllib.error.URLError):
                 pass
             time.sleep(1)
-    raise SystemExit(f"{service} did not become ready. Inspect .local-run/{service}/service.log. Data and other processes retained.")
+    raise SystemExit(
+        f"{service} did not become ready. Inspect .local-run/{service}/service.log. Data and other processes retained."
+    )
 
 
 def port_listening(service):
     """A TCP connection proves a listener exists, not ownership or readiness."""
     import socket
+
     with socket.socket() as sock:
-        sock.settimeout(.3)
+        sock.settimeout(0.3)
         return sock.connect_ex(("127.0.0.1", PORTS[service])) == 0
 
 
@@ -212,18 +305,34 @@ def container_state(config, listening, service):
     label, container, volume, port, mount = CONTAINERS[service]
     try:
         name = config[container]
-        names = run("docker", "container", "ls", "--all", "--filter", f"name={name}",
-                    "--format", "{{.Names}}", capture=True, timeout=15)
+        names = run(
+            "docker",
+            "container",
+            "ls",
+            "--all",
+            "--filter",
+            f"name={name}",
+            "--format",
+            "{{.Names}}",
+            capture=True,
+            timeout=15,
+        )
         if name not in names.splitlines():
             if listening:
                 raise SystemExit(f"{label} port is occupied by an unrelated process.")
             return "stopped"
         details = json.loads(run("docker", "inspect", name, capture=True, timeout=15))[0]
         ports = details.get("HostConfig", {}).get("PortBindings", {}).get(port, [])
-        volumes = [item.get("Name") for item in details.get("Mounts", []) if item.get("Destination") == mount]
-        if not (details["Config"].get("Labels", {}).get("conker.local-integration") == "true"
-                and ports == [{"HostIp": "127.0.0.1", "HostPort": str(PORTS[service])}]
-                and volumes == [config[volume]]):
+        volumes = [
+            item.get("Name")
+            for item in details.get("Mounts", [])
+            if item.get("Destination") == mount
+        ]
+        if not (
+            details["Config"].get("Labels", {}).get("conker.local-integration") == "true"
+            and ports == [{"HostIp": "127.0.0.1", "HostPort": str(PORTS[service])}]
+            and volumes == [config[volume]]
+        ):
             raise SystemExit(f"{label} container does not belong to this workspace.")
         running = details["State"]["Running"]
         restarting = details["State"].get("Restarting", False)
@@ -233,7 +342,9 @@ def container_state(config, listening, service):
             raise SystemExit(f"{label} port is not owned by the stopped workspace container.")
         return "listening" if listening else "starting" if running or restarting else "stopped"
     except (KeyError, IndexError, TypeError, ValueError, OSError, subprocess.SubprocessError):
-        raise SystemExit(f"Could not inspect the workspace {label} container; nothing changed.") from None
+        raise SystemExit(
+            f"Could not inspect the workspace {label} container; nothing changed."
+        ) from None
 
 
 PROCESS_INSPECTION = """
@@ -286,18 +397,38 @@ def service_state(config, service):
         identity = pid_file.read_text().strip()
         if not identity.isascii() or not identity.isdecimal() or not 0 < int(identity) <= 2**32 - 1:
             raise ValueError("Invalid process identity")
-        result = json.loads(run(config["python"], "-c", PROCESS_INSPECTION, identity,
-                                ROOT / "scripts/local_stack.py", service, PORTS[service],
-                                capture=True, timeout=15))
-        if not isinstance(result, dict) or set(result) != {"running", "listening"} or any(type(value) is not bool for value in result.values()):
+        result = json.loads(
+            run(
+                config["python"],
+                "-c",
+                PROCESS_INSPECTION,
+                identity,
+                ROOT / "scripts/local_stack.py",
+                service,
+                PORTS[service],
+                capture=True,
+                timeout=15,
+            )
+        )
+        if (
+            not isinstance(result, dict)
+            or set(result) != {"running", "listening"}
+            or any(type(value) is not bool for value in result.values())
+        ):
             raise ValueError("Invalid process state")
     except (KeyError, TypeError, ValueError, OSError, subprocess.SubprocessError):
-        raise SystemExit(f"Recorded {service} process is not owned by this workspace or could not be inspected; nothing changed.") from None
+        raise SystemExit(
+            f"Recorded {service} process is not owned by this workspace or could not be inspected; nothing changed."
+        ) from None
     if listening and not (result["running"] and result["listening"]):
-        raise SystemExit(f"Port {PORTS[service]} is not owned by this workspace's {service} process.")
+        raise SystemExit(
+            f"Port {PORTS[service]} is not owned by this workspace's {service} process."
+        )
     if not result["running"]:
         if result["listening"]:
-            raise SystemExit(f"Recorded {service} parent exited while a child still owns the port; inspect before retrying.")
+            raise SystemExit(
+                f"Recorded {service} parent exited while a child still owns the port; inspect before retrying."
+            )
         return "stopped"
     return "listening" if result["listening"] else "starting"
 
@@ -312,11 +443,30 @@ def owned_listener(config, service):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=["install", "enhance", "memory-corrections", "meaning-search", "up", "down", "status", "build", "password"])
+    parser.add_argument(
+        "command",
+        choices=[
+            "install",
+            "enhance",
+            "memory-corrections",
+            "meaning-search",
+            "up",
+            "down",
+            "status",
+            "build",
+            "password",
+        ],
+    )
     parser.add_argument("--pi-source", type=Path, help="Explicit Pi checkout for local development")
-    parser.add_argument("--toolgate-source", type=Path, help="Explicit ToolGate checkout for local development")
-    parser.add_argument("--memorygate-source", type=Path, help="Explicit MemoryGate checkout for local development")
-    parser.add_argument("--model", default="qwen2.5:3b", help="Installed local Ollama answer model; install only")
+    parser.add_argument(
+        "--toolgate-source", type=Path, help="Explicit ToolGate checkout for local development"
+    )
+    parser.add_argument(
+        "--memorygate-source", type=Path, help="Explicit MemoryGate checkout for local development"
+    )
+    parser.add_argument(
+        "--model", default="qwen2.5:3b", help="Installed local Ollama answer model; install only"
+    )
     args = parser.parse_args()
     if args.command == "install":
         install(args.model)
@@ -327,14 +477,17 @@ def main():
     config = read_config()
     if args.command == "memory-corrections":
         from scripts.workspace_setup import configure_memory_corrections
+
         configure_memory_corrections(config)
         return
     if args.command == "meaning-search":
         from scripts.workspace_search import enable
+
         enable(config)
         return
     if args.command == "enhance":
         from scripts.workspace_setup import enhance
+
         enhance(config, args.pi_source, args.toolgate_source, args.memorygate_source)
         return
     # Computed per call, never stored: a second call in one process must not add services twice.
@@ -347,13 +500,25 @@ def main():
     if args.command == "password":
         # Owner-interactive recovery; no password travels in process arguments.
         env = {**os.environ, "PYTHONPATH": config["repositories"]["pi"]}
-        subprocess.run([config["python"], "-m", "gateway", "reset-password", "--db", config["environments"]["gateway"]["GATEWAY_DB_PATH"]], env=env, check=True)
+        subprocess.run(
+            [
+                config["python"],
+                "-m",
+                "gateway",
+                "reset-password",
+                "--db",
+                config["environments"]["gateway"]["GATEWAY_DB_PATH"],
+            ],
+            env=env,
+            check=True,
+        )
     elif args.command == "up":
         if not (ROOT / "dashboard/dist/index.html").is_file():
             raise SystemExit("Build the dashboard first: python scripts/workspace.py build")
         import import_listener
 
         from scripts.service_keys import ensure
+
         # A workspace made before MemoryGate and ToolGate asked Pi for model text, or before Pi
         # offered imported chats to memory, gets those keys here; a service already running picks
         # its key up when it next starts.
@@ -368,10 +533,12 @@ def main():
                 for _ in range(20):
                     if (STATE / "gateway/tls.crt").is_file():
                         break
-                    time.sleep(.5)
+                    time.sleep(0.5)
             wait_health(service)
             if not owned_listener(config, service):
-                raise SystemExit(f"{service} responded without a verified workspace listener; inspect before continuing.")
+                raise SystemExit(
+                    f"{service} responded without a verified workspace listener; inspect before continuing."
+                )
             print(f"{service}: responding")
             if service == "memorygate":
                 # MemoryGate creates a listener only through its admin API, so once it answers.
@@ -386,19 +553,31 @@ def main():
             if owned_process(config, service):
                 launch(config, "stop", service)
                 if owned_process(config, service):
-                    raise SystemExit(f"{service} did not stop; inspect its process before changing runtimes. Data retained.")
+                    raise SystemExit(
+                        f"{service} did not stop; inspect its process before changing runtimes. Data retained."
+                    )
         print("Workspace stopped. All data retained.")
     else:
         for service in order:
             state = service_state(config, service)
-            label = {"stopped": "stopped", "starting": "running; port not listening (starting or unhealthy)",
-                     "listening": "running; listening (inspect System for health)"}[state]
+            label = {
+                "stopped": "stopped",
+                "starting": "running; port not listening (starting or unhealthy)",
+                "listening": "running; listening (inspect System for health)",
+            }[state]
             print(f"{service}: {label}")
         from scripts.workspace_memory import status as memory_correction_status
+
         print("memory corrections: " + memory_correction_status(config))
         search = config.get("meaning_search")
-        print("meaning search: " + (f"configured ({search['model']})" if search else
-                                     "not configured; python scripts/workspace.py meaning-search"))
+        print(
+            "meaning search: "
+            + (
+                f"configured ({search['model']})"
+                if search
+                else "not configured; python scripts/workspace.py meaning-search"
+            )
+        )
 
 
 if __name__ == "__main__":

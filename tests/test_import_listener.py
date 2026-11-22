@@ -64,9 +64,7 @@ class FakeMemoryGate:
 
             def do_POST(self):
                 if self.allowed():
-                    body = json.loads(
-                        self.rfile.read(int(self.headers["Content-Length"]))
-                    )
+                    body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
                     gate.posted.append(body)
                     gate.sources[body["source_key"]] = body
                     self.answer(200, {"source_key": body["source_key"]})
@@ -169,12 +167,7 @@ class Captured:
 def test_conker_setup_runs_it_inside_memorygate_with_the_key_on_stdin(tmp_path, capsys):
     (tmp_path / ".env").write_text(f"CONKER_PORT=8050\nMEMORYGATE_IMPORT_KEY={KEY}\n")
     run = Captured()
-    assert (
-        import_listener.main(
-            ["--root", str(tmp_path), "--layout", "repository"], run=run
-        )
-        == 0
-    )
+    assert import_listener.main(["--root", str(tmp_path), "--layout", "repository"], run=run) == 0
     assert "is set up" in capsys.readouterr().out
     ((argv, options),) = run.calls
     assert argv[:2] == ["docker", "compose"] and str(tmp_path / ".env") in argv
@@ -194,36 +187,22 @@ def test_conker_setup_runs_it_inside_memorygate_with_the_key_on_stdin(tmp_path, 
         f"PI_MEMORYGATE_IMPORT_SOURCE=assistant-imports\nPI_MEMORYGATE_IMPORT_KEY={KEY}\n"
     )
     run = Captured("updated\n")
-    assert (
-        import_listener.main(["--root", str(deployment), "--layout", "ubuntu"], run=run)
-        == 0
-    )
+    assert import_listener.main(["--root", str(deployment), "--layout", "ubuntu"], run=run) == 0
     assert "is up to date" in capsys.readouterr().out
     ((argv, options),) = run.calls
     assert str(deployment / "compose.json") in argv and options["input"] == KEY
 
     run = Captured("refused 401\n", returncode=1)
-    assert (
-        import_listener.main(["--root", str(deployment), "--layout", "ubuntu"], run=run)
-        == 1
-    )
+    assert import_listener.main(["--root", str(deployment), "--layout", "ubuntu"], run=run) == 1
     assert "HTTP 401" in capsys.readouterr().err
 
 
 def test_without_a_key_it_says_how_to_get_one_and_calls_nothing(tmp_path, capsys):
     run = Captured()
     (tmp_path / ".env").write_text("CONKER_PORT=8050\n")
+    assert import_listener.main(["--root", str(tmp_path), "--layout", "repository"], run=run) == 1
     assert (
-        import_listener.main(
-            ["--root", str(tmp_path), "--layout", "repository"], run=run
-        )
-        == 1
-    )
-    assert (
-        import_listener.main(
-            ["--root", str(tmp_path / "none"), "--layout", "ubuntu"], run=run
-        )
-        == 1
+        import_listener.main(["--root", str(tmp_path / "none"), "--layout", "ubuntu"], run=run) == 1
     )
     assert "Run ./install.sh again" in capsys.readouterr().err
     assert run.calls == []
@@ -250,21 +229,14 @@ def test_the_ubuntu_layout_gives_pi_the_key_and_keeps_it(tmp_path):
 
 
 def test_the_repository_layout_wires_the_key_to_pi_and_creates_the_listener():
-    services = yaml.safe_load(
-        (ROOT / "docker-compose.yml").read_text(encoding="utf-8")
-    )["services"]
+    services = yaml.safe_load((ROOT / "docker-compose.yml").read_text(encoding="utf-8"))["services"]
     pi = services["pi"]["environment"]
     # Both or neither: Pi stops at startup on one without the other.
-    assert (
-        pi["PI_MEMORYGATE_IMPORT_SOURCE"]
-        == "${MEMORYGATE_IMPORT_KEY:+assistant-imports}"
-    )
+    assert pi["PI_MEMORYGATE_IMPORT_SOURCE"] == "${MEMORYGATE_IMPORT_KEY:+assistant-imports}"
     assert pi["PI_MEMORYGATE_IMPORT_KEY"] == "${MEMORYGATE_IMPORT_KEY:-}"
     assert "MEMORYGATE_IMPORT_KEY" not in json.dumps(services["memorygate"])
     installer = (ROOT / "install.sh").read_text(encoding="utf-8")
-    assert (
-        "MEMORYGATE_IMPORT_KEY=$(keep_or_make_long MEMORYGATE_IMPORT_KEY)" in installer
-    )
+    assert "MEMORYGATE_IMPORT_KEY=$(keep_or_make_long MEMORYGATE_IMPORT_KEY)" in installer
     assert "\nMEMORYGATE_IMPORT_KEY=$MEMORYGATE_IMPORT_KEY\n" in installer
     assert "    wait_for_health\n    create_import_listener\n" in installer
     assert 'scripts/import_listener.py" --root "$ROOT" --layout repository' in installer

@@ -80,10 +80,7 @@ def test_fact_check_posts_with_generated_request_id(invoke, capsys):
     assert run("message", "fact-check", "ses_a", "msg_b") == 0
     assert len(calls) == 1
     check_headers(0)
-    assert (
-        calls[0][0].full_url
-        == "http://127.0.0.1:18551/sessions/ses_a/messages/msg_b/fact-check"
-    )
+    assert calls[0][0].full_url == "http://127.0.0.1:18551/sessions/ses_a/messages/msg_b/fact-check"
     body = json.loads(calls[0][0].data)
     assert body["request_id"].startswith("check_")
     assert "model_id" not in body
@@ -151,8 +148,7 @@ def test_fact_checks_gets_results(invoke):
     assert len(calls) == 1
     check_headers(0)
     assert (
-        calls[0][0].full_url
-        == "http://127.0.0.1:18551/sessions/ses_a/messages/msg_b/fact-checks"
+        calls[0][0].full_url == "http://127.0.0.1:18551/sessions/ses_a/messages/msg_b/fact-checks"
     )
     assert calls[0][0].data is None
 
@@ -317,9 +313,7 @@ def test_items_gets_items(invoke):
     state["responses"] = [
         {
             "revision": 1,
-            "items": [
-                {"id": "dec_abcdef0123456789", "kind": "decision", "text": "Decided"}
-            ],
+            "items": [{"id": "dec_abcdef0123456789", "kind": "decision", "text": "Decided"}],
         }
     ]
     assert run("context", "items", "ses_a") == 0
@@ -338,9 +332,7 @@ def test_item_state_posts_state_change(invoke):
         {"revision": 2, "items": []},
         {"revision": 3, "items": []},
     ]
-    assert (
-        run("context", "item-state", "ses_a", "dec_0123456789abcdef", "resolved") == 0
-    )
+    assert run("context", "item-state", "ses_a", "dec_0123456789abcdef", "resolved") == 0
     assert len(calls) == 2
     check_headers(0)
     check_headers(1)

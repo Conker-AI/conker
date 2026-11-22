@@ -74,9 +74,7 @@ class MatrixError(ValueError):
 
 
 def _strings(value: object, field: str, identity: str) -> list[str]:
-    if not isinstance(value, list) or any(
-        not isinstance(item, str) or not item for item in value
-    ):
+    if not isinstance(value, list) or any(not isinstance(item, str) or not item for item in value):
         raise MatrixError(f"{identity}.{field} must be a list of non-empty strings")
     if len(value) != len(set(value)):
         raise MatrixError(f"{identity}.{field} contains duplicates")
@@ -95,11 +93,7 @@ def validate(data: object, root: Path = ROOT) -> dict[str, object]:
         if not isinstance(row, dict):
             raise MatrixError(f"capability {index} must be an object")
         identity = row.get("id")
-        if (
-            not isinstance(identity, str)
-            or not ID.fullmatch(identity)
-            or identity in seen
-        ):
+        if not isinstance(identity, str) or not ID.fullmatch(identity) or identity in seen:
             raise MatrixError(f"capability {index} has an invalid or duplicate id")
         seen.add(identity)
         state = row.get("state")
@@ -114,14 +108,11 @@ def validate(data: object, root: Path = ROOT) -> dict[str, object]:
         routes = _strings(row["gatewayRoutes"], "gatewayRoutes", identity)
         ui = _strings(row["uiRoutes"], "uiRoutes", identity)
         commands = _strings(row["cliCommands"], "cliCommands", identity)
-        requirements = _strings(
-            row["deploymentRequirements"], "deploymentRequirements", identity
-        )
+        requirements = _strings(row["deploymentRequirements"], "deploymentRequirements", identity)
         if any(not route.startswith("/") for route in routes + ui):
             raise MatrixError(f"{identity} routes must be absolute")
         if any(
-            not command.startswith(("conker ", "python scripts/conker.py "))
-            for command in commands
+            not command.startswith(("conker ", "python scripts/conker.py ")) for command in commands
         ):
             raise MatrixError(f"{identity} CLI commands must use a Conker launcher")
         if not requirements:
@@ -133,9 +124,7 @@ def validate(data: object, root: Path = ROOT) -> dict[str, object]:
         else:
             deferred += 1
             if routes or ui or commands:
-                raise MatrixError(
-                    f"{identity} is deferred but claims a product surface"
-                )
+                raise MatrixError(f"{identity} is deferred but claims a product surface")
             if not isinstance(row.get("gap"), str) or len(row["gap"].strip()) < 20:
                 raise MatrixError(f"{identity}.gap must explain the deferral")
 
@@ -154,25 +143,17 @@ def validate(data: object, root: Path = ROOT) -> dict[str, object]:
             if not isinstance(item, dict) or set(item) != {"path", "contains"}:
                 raise MatrixError(f"{identity} has malformed evidence")
             relative, needle = item["path"], item["contains"]
-            if (
-                not isinstance(relative, str)
-                or not isinstance(needle, str)
-                or not needle
-            ):
+            if not isinstance(relative, str) or not isinstance(needle, str) or not needle:
                 raise MatrixError(f"{identity} has malformed evidence values")
             candidate = (root / relative).resolve()
             try:
                 candidate.relative_to(root.resolve())
             except ValueError as exc:
-                raise MatrixError(
-                    f"{identity} evidence escapes the repository"
-                ) from exc
+                raise MatrixError(f"{identity} evidence escapes the repository") from exc
             if not candidate.is_file():
                 raise MatrixError(f"{identity} evidence file is missing: {relative}")
             if needle not in candidate.read_text(encoding="utf-8"):
-                raise MatrixError(
-                    f"{identity} evidence is stale: {relative} lacks {needle!r}"
-                )
+                raise MatrixError(f"{identity} evidence is stale: {relative} lacks {needle!r}")
 
     missing, unexpected = REQUIRED_CAPABILITIES - seen, seen - REQUIRED_CAPABILITIES
     if missing or unexpected:
@@ -189,7 +170,9 @@ def validate(data: object, root: Path = ROOT) -> dict[str, object]:
 
 STATUS_CLAIMS = {
     "README.md": re.compile(r"has (\d+) of (\d+) tracked capability families active"),
-    "docs/status.md": re.compile(r"\*\*(\d+) tracked\s+capability families: (\d+) active and (\d+) deferred\*\*"),
+    "docs/status.md": re.compile(
+        r"\*\*(\d+) tracked\s+capability families: (\d+) active and (\d+) deferred\*\*"
+    ),
 }
 
 
@@ -202,7 +185,9 @@ def check_status_claims(summary: dict[str, object], root: Path = ROOT) -> None:
     for relative, pattern in STATUS_CLAIMS.items():
         match = pattern.search((root / relative).read_text(encoding="utf-8"))
         if match is None:
-            raise MatrixError(f"{relative} no longer states the capability counts; restore the sentence")
+            raise MatrixError(
+                f"{relative} no longer states the capability counts; restore the sentence"
+            )
         if tuple(map(int, match.groups())) != expected[relative]:
             raise MatrixError(
                 f"{relative} claims {match.group(0)!r}; capabilities.json says {expected[relative]}"
@@ -220,9 +205,7 @@ def load(path: Path = DEFAULT_MATRIX, root: Path = ROOT) -> dict[str, object]:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--matrix", type=Path, default=DEFAULT_MATRIX)
-    parser.add_argument(
-        "--json", action="store_true", help="print validation summary as JSON"
-    )
+    parser.add_argument("--json", action="store_true", help="print validation summary as JSON")
     args = parser.parse_args()
     try:
         result = load(args.matrix)
@@ -230,11 +213,7 @@ def main() -> int:
             check_status_claims(result)
     except MatrixError as exc:
         parser.error(str(exc))
-    print(
-        json.dumps(result, sort_keys=True)
-        if args.json
-        else "Capability matrix is valid."
-    )
+    print(json.dumps(result, sort_keys=True) if args.json else "Capability matrix is valid.")
     return 0
 
 

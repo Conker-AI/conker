@@ -2,7 +2,9 @@ import pytest
 
 from scripts.release_bump import BumpError, bump_changelog, set_env
 
-PINS = {f"{k}_VERSION": "1.0.0" for k in ("PI", "TOOLGATE", "MEMORYGATE", "SYSTEMGATE", "EMBEDDINGS")}
+PINS = {
+    f"{k}_VERSION": "1.0.0" for k in ("PI", "TOOLGATE", "MEMORYGATE", "SYSTEMGATE", "EMBEDDINGS")
+}
 
 
 def test_unreleased_entries_move_under_the_version_with_a_pin_table():

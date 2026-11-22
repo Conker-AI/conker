@@ -78,10 +78,7 @@ def test_real_observer_exact_readonly_protocol_isolated_env_and_owned_cleanup(
     for _arguments, options in commands:
         assert options["cwd"] == sessions.home
         assert options["env"]["CODEX_HOME"] == str(sessions.home)
-        assert (
-            "OPENAI_API_KEY" not in options["env"]
-            and "CODEX_AUTH_TOKEN" not in options["env"]
-        )
+        assert "OPENAI_API_KEY" not in options["env"] and "CODEX_AUTH_TOKEN" not in options["env"]
     assert not any(
         "daemon" in argument or "proxy" in argument
         for arguments, _ in commands
@@ -126,9 +123,7 @@ def test_empty_success_version_mismatch_and_missing_runtime_are_distinct(
         ),
     ],
 )
-def test_read_errors_are_static_without_native_error_details(
-    process_server, error, status, code
-):
+def test_read_errors_are_static_without_native_error_details(process_server, error, status, code):
     sessions, state, _commands, _record = process_server
     state["error"] = error
     with pytest.raises(native.SessionError) as caught:
@@ -140,9 +135,7 @@ def test_expired_native_cursor_never_restarts_first_page(process_server):
     sessions, state, _commands, record = process_server
     cursor = sessions._cursor("expired", native.list_query({}))
     state["error"] = {"code": -32600, "message": "invalid cursor: PRIVATE"}
-    with pytest.raises(
-        native.SessionError, match="invalid_native_session_request"
-    ) as caught:
+    with pytest.raises(native.SessionError, match="invalid_native_session_request") as caught:
         sessions.list({"cursor": cursor})
     assert caught.value.status == 422
     requests = [json.loads(line) for line in record.read_text().splitlines()]
@@ -159,9 +152,7 @@ def test_expired_native_cursor_never_restarts_first_page(process_server):
         {"id": 2, "result": []},
     ],
 )
-def test_protocol_confusion_and_server_requests_receive_no_reply(
-    process_server, response
-):
+def test_protocol_confusion_and_server_requests_receive_no_reply(process_server, response):
     sessions, state, _commands, record = process_server
     state["response"] = response
     with pytest.raises(native.SessionError, match="native_sessions_unavailable"):
@@ -190,9 +181,7 @@ def test_real_pipe_deadline_stdout_stderr_overflow_and_invalid_json_are_static(
 
 def test_forbidden_rpc_is_rejected_before_writing(tmp_path):
     sessions = native.Sessions(sys._base_executable, tmp_path)
-    with sessions._command(
-        ["-c", "import time;time.sleep(60)"], time.monotonic() + 3
-    ) as command:
+    with sessions._command(["-c", "import time;time.sleep(60)"], time.monotonic() + 3) as command:
         with pytest.raises(native.SessionError):
             command.call("thread/resume", {"threadId": ID})
         assert command.sequence == 0

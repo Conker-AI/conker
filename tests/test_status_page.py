@@ -47,8 +47,14 @@ def test_status_page_pins_match_the_manifest():
     for name, key in ROWS.items():
         shown = table.get(name)
         assert shown == pinned[key], (
-            "row '" + name + "' in docs/status.md says " + repr(shown)
-            + " but versions.env pins " + key + "=" + pinned[key]
+            "row '"
+            + name
+            + "' in docs/status.md says "
+            + repr(shown)
+            + " but versions.env pins "
+            + key
+            + "="
+            + pinned[key]
         )
 
 
@@ -68,7 +74,10 @@ def test_a_new_pin_and_a_deferred_family_change_the_page():
     items = [*capabilities(), {**capabilities()[0], "name": "Shelved thing", "state": "deferred"}]
     page = status_page.render(text, items, pins)
     assert "| Pi and the Gateway | 9.9.9 |" in page
-    assert f"**{len(items)} tracked\ncapability families: {len(items) - 2} active and 2 deferred**" in page
+    assert (
+        f"**{len(items)} tracked\ncapability families: {len(items) - 2} active and 2 deferred**"
+        in page
+    )
     assert "| Shelved thing | No gap recorded in capabilities.json. |" in page
     assert page.count("<!-- /generated:") == 4  # hand-written text around the blocks is kept
 

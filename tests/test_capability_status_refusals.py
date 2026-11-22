@@ -199,7 +199,10 @@ def test_evidence_outside_the_root_is_refused_even_when_it_exists(tmp_path):
     row(data, "agents")["evidence"] = outside
     with pytest.raises(MatrixError, match="agents evidence escapes the repository"):
         validate(data, root)
-    row(data, "agents")["evidence"] = [{"path": str(tmp_path / "secret.txt"), "contains": "alpha"}, *EVIDENCE]
+    row(data, "agents")["evidence"] = [
+        {"path": str(tmp_path / "secret.txt"), "contains": "alpha"},
+        *EVIDENCE,
+    ]
     with pytest.raises(MatrixError, match="agents evidence escapes the repository"):
         validate(data, root)
 
@@ -291,7 +294,9 @@ def test_main_refuses_a_stale_status_claim_on_the_default_matrix(matrix_home, mo
     assert "README.md claims 'has 38 of 41" in capsys.readouterr().err
 
 
-def test_main_skips_status_claims_for_another_matrix_and_prints_json(matrix_home, monkeypatch, capsys):
+def test_main_skips_status_claims_for_another_matrix_and_prints_json(
+    matrix_home, monkeypatch, capsys
+):
     other = matrix_home.parent / "other.json"
     other.write_bytes(matrix_home.read_bytes())
     # No README or status page exists here: a non-default matrix must not read them.
@@ -416,10 +421,15 @@ def test_main_writes_the_page_with_lf_endings_then_reports_it_up_to_date(status_
 
 def test_main_refuses_a_missing_pin_without_writing(status_home, capsys):
     env = status_page.MANIFEST
-    env.write_text("".join(f"{k}={v}\n" for k, v in PINS.items() if k != "EMBEDDINGS_VERSION"), encoding="utf-8")
+    env.write_text(
+        "".join(f"{k}={v}\n" for k, v in PINS.items() if k != "EMBEDDINGS_VERSION"),
+        encoding="utf-8",
+    )
     before = status_home.read_bytes()
     assert status_page.main([]) == 1
-    assert "versions.env has no EMBEDDINGS_VERSION for the row 'Embeddings'" in capsys.readouterr().err
+    assert (
+        "versions.env has no EMBEDDINGS_VERSION for the row 'Embeddings'" in capsys.readouterr().err
+    )
     assert status_home.read_bytes() == before
 
 

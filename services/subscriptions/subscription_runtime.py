@@ -43,8 +43,11 @@ def watch_namespace(net=Path("/sys/class/net"), every=2.0, stop=os._exit):
     def run():
         while links():
             time.sleep(every)
-        print("Pi's network namespace is gone; exiting so Docker starts this service in the new one.",
-              file=sys.stderr, flush=True)
+        print(
+            "Pi's network namespace is gone; exiting so Docker starts this service in the new one.",
+            file=sys.stderr,
+            flush=True,
+        )
         stop(1)
 
     thread = threading.Thread(target=run, name="namespace-watch", daemon=True)
@@ -92,9 +95,7 @@ def serve():
     watch_namespace()
     app = create_app(
         configuration(),
-        chatgpt_relay=ChatGPTRelay(
-            os.environ.get("SUBSCRIPTIONS_CHATGPT_SOCKET", SOCKET)
-        ),
+        chatgpt_relay=ChatGPTRelay(os.environ.get("SUBSCRIPTIONS_CHATGPT_SOCKET", SOCKET)),
     )
     uvicorn.run(app, host="127.0.0.1", port=PORT, proxy_headers=False, access_log=False)
 
@@ -117,11 +118,7 @@ def account(operation: str) -> dict:
     home = prepare()
     _, claude = paths()
     runtime = Claude(claude, home)
-    value = (
-        runtime.apply({"operation": "logout"})
-        if operation == "logout"
-        else runtime.status()
-    )
+    value = runtime.apply({"operation": "logout"}) if operation == "logout" else runtime.status()
     shown = ("available", "connected", "runtime", "models", "credentialsIncluded")
     return {key: value[key] for key in shown}
 

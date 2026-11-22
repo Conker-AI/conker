@@ -53,18 +53,10 @@ def toolgate_store(path: Path) -> None:
             (json.dumps(record),),
         )
     secret, salt = "original-install-secret", "ab" * 16
-    key = hashlib.scrypt(
-        secret.encode(), salt=bytes.fromhex(salt), n=2**14, r=8, p=1, dklen=32
-    )
-    token = (
-        Fernet(base64.urlsafe_b64encode(key))
-        .encrypt(b"credential-must-survive")
-        .decode()
-    )
+    key = hashlib.scrypt(secret.encode(), salt=bytes.fromhex(salt), n=2**14, r=8, p=1, dklen=32)
+    token = Fernet(base64.urlsafe_b64encode(key)).encrypt(b"credential-must-survive").decode()
     (path / "vault.key").write_text(secret)
-    (path / ".env").write_text(
-        f"TOOLGATE_VAULT_SALT={salt}\nPROVIDER_KEY=enc:v1:{token}\n"
-    )
+    (path / ".env").write_text(f"TOOLGATE_VAULT_SALT={salt}\nPROVIDER_KEY=enc:v1:{token}\n")
 
 
 class Engine:
@@ -141,14 +133,17 @@ class Engine:
             ]
         toolgate_store(self.volumes["original-toolgate"])
         if "original-gateway" in self.volumes:
-            database(self.volumes["original-gateway"] / "auth.db", """
+            database(
+                self.volumes["original-gateway"] / "auth.db",
+                """
                 CREATE TABLE owner(id INTEGER PRIMARY KEY, salt TEXT, verifier TEXT, generation INTEGER);
                 INSERT INTO owner VALUES(1,'salt','password-verifier',1);
                 CREATE TABLE sessions(token_hash TEXT PRIMARY KEY, id TEXT, csrf TEXT, authenticated INTEGER,
                     generation INTEGER, created REAL, touched REAL, expires REAL);
                 INSERT INTO sessions VALUES('old-token','browser','csrf',1,1,1,1,99999999999);
                 CREATE TABLE login_attempts(at REAL, source TEXT);
-            """)
+            """,
+            )
             (self.volumes["original-gateway"] / "tls.key").write_text("local-tls-private-key")
         database(
             self.volumes["original-pi"] / "pi.db",
@@ -158,12 +153,8 @@ class Engine:
             INSERT INTO turns VALUES ('turn-acted','acted_no_reply',1,'approval',2);
         """,
         )
-        (self.volumes["original-ollama"] / "custom-model").write_bytes(
-            b"not-redownloadable"
-        )
-        (self.volumes["original-systemgate"] / "admin-key.pbkdf2").write_text(
-            "owner-key-hash"
-        )
+        (self.volumes["original-ollama"] / "custom-model").write_bytes(b"not-redownloadable")
+        (self.volumes["original-systemgate"] / "admin-key.pbkdf2").write_text("owner-key-hash")
         self.memory_key = Fernet.generate_key()
         self.memory_token = Fernet(self.memory_key).encrypt(b"memory-provider-secret")
         memorygate = self.volumes.get("original-memorygate", tmp / "original-memorygate")
@@ -189,9 +180,7 @@ class Engine:
         returncode = 0
         if args[0] == "compose":
             if "config" in args:
-                data = json.dumps(
-                    {"services": {service: {} for service in self.services}}
-                ).encode()
+                data = json.dumps({"services": {service: {} for service in self.services}}).encode()
             else:
                 data = ("source-" + args[-1]).encode()
         elif args[0] == "inspect":
@@ -256,30 +245,22 @@ class Engine:
                 elif "status NOT IN" in args[-1]:
                     data = b"0\n"
                 else:
-                    data = (
-                        self.memory_token if "api_key_encrypted" in args[-1] else b"[]"
-                    )
+                    data = self.memory_token if "api_key_encrypted" in args[-1] else b"[]"
         elif args[0] == "run" and "--entrypoint" in args:
             mounts = [
-                dict(
-                    part.split("=", 1) for part in args[i + 1].split(",") if "=" in part
-                )
+                dict(part.split("=", 1) for part in args[i + 1].split(",") if "=" in part)
                 for i, arg in enumerate(args)
                 if arg == "--mount"
             ]
             source = next(mount for mount in mounts if mount["dst"] == "/store")
             path = (
-                self.volumes[source["src"]]
-                if source["type"] == "volume"
-                else Path(source["src"])
+                self.volumes[source["src"]] if source["type"] == "volume" else Path(source["src"])
             )
             operation = args[args.index("/recovery/recovery_data.py") + 1]
             if operation == "snapshot-tree":
                 buffer = io.BytesIO()
                 required = (
-                    args[args.index("--require-sqlite") + 1]
-                    if "--require-sqlite" in args
-                    else None
+                    args[args.index("--require-sqlite") + 1] if "--require-sqlite" in args else None
                 )
                 recovery_data.snapshot_tree(path, buffer, required)
                 data = buffer.getvalue()
@@ -287,15 +268,13 @@ class Engine:
                 assert input is not None
                 recovery_data.restore_tree(input, path)
             elif operation == "hold-toolgate":
-                data = json.dumps(
-                    recovery_data.invalidate_approvals(path / "toolgate.db")
-                ).encode()
+                data = json.dumps(recovery_data.invalidate_approvals(path / "toolgate.db")).encode()
             elif operation == "hold-gateway":
-                data = json.dumps(recovery_data.invalidate_browser_sessions(path / "auth.db")).encode()
-            elif operation == "inspect-pi":
                 data = json.dumps(
-                    recovery_data.unfinished_turns(path / "pi.db")
+                    recovery_data.invalidate_browser_sessions(path / "auth.db")
                 ).encode()
+            elif operation == "inspect-pi":
+                data = json.dumps(recovery_data.unfinished_turns(path / "pi.db")).encode()
             elif operation == "verify-vault":
                 data = json.dumps(
                     {"vault_values_verified": recovery_data.verify_vault(path, {})}

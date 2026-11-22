@@ -31,7 +31,15 @@ def runner(fail=None):
     def run(*args, **kwargs):
         values = [str(value) for value in args]
         calls.append((values, kwargs))
-        phase = "design" if "design:check" in values else "types" if "-b" in values else "vite" if "--outDir" in values else "bundle"
+        phase = (
+            "design"
+            if "design:check" in values
+            else "types"
+            if "-b" in values
+            else "vite"
+            if "--outDir" in values
+            else "bundle"
+        )
         if phase == "vite":
             output = Path(values[values.index("--outDir") + 1])
             (output / "assets").mkdir(parents=True)
@@ -61,12 +69,14 @@ def test_build_verifies_isolated_assets_and_retains_previous_files(project, monk
     original_rename = Path.rename
 
     def rename(path, target):
-        assert path.name != "staged", "A Windows stage-directory handle must not prevent publication"
+        assert path.name != "staged", (
+            "A Windows stage-directory handle must not prevent publication"
+        )
         return original_rename(path, target)
 
     monkeypatch.setattr(Path, "rename", rename)
     build.build_dashboard(root, state, run, lambda: guarded.append(True))
-    checkpoint, = list((state / "builds").iterdir())
+    (checkpoint,) = list((state / "builds").iterdir())
     assert build.manifest(checkpoint / "previous") == before
     assert build.manifest(dashboard / "dist") == build.manifest(checkpoint / "staged")
     assert not (dashboard / "dist/assets/previous.js").exists()
@@ -110,7 +120,7 @@ def test_failed_publication_restores_previous_build(project, monkeypatch, failur
     with pytest.raises((PermissionError, RuntimeError)):
         build.build_dashboard(root, state, run, lambda: None)
     assert build.manifest(dashboard / "dist") == before
-    checkpoint, = list((state / "builds").iterdir())
+    (checkpoint,) = list((state / "builds").iterdir())
     assert (checkpoint / "ready/index.html").exists()
     assert not (checkpoint / "previous").exists(), "A copy failure must not move the working assets"
 
@@ -147,7 +157,7 @@ def test_failed_restoration_never_leaves_a_partial_tree_at_the_serving_path(proj
     with pytest.raises(PermissionError):
         build.build_dashboard(root, state, run, lambda: None)
     assert not (dashboard / "dist").exists()
-    checkpoint, = list((state / "builds").iterdir())
+    (checkpoint,) = list((state / "builds").iterdir())
     assert build.manifest(checkpoint / "previous") == before
 
 
@@ -159,7 +169,11 @@ def test_real_bundle_guard_keeps_limits_for_an_isolated_stage(tmp_path):
     assets.mkdir(parents=True)
     entry = assets / "gateway-entry-test.js"
     entry.write_bytes(b"x")
-    command = [node, str(SCRIPTS.parent / "dashboard/scripts/check-production-bundle.cjs"), str(assets)]
+    command = [
+        node,
+        str(SCRIPTS.parent / "dashboard/scripts/check-production-bundle.cjs"),
+        str(assets),
+    ]
     assert subprocess.run(command, capture_output=True, check=False).returncode == 0
     entry.write_bytes(b"x" * 700001)
     assert subprocess.run(command, capture_output=True, check=False).returncode != 0
@@ -193,7 +207,9 @@ def test_publish_refuses_missing_index_or_outside_destination(project, tmp_path)
 
 def test_build_command_refuses_running_gateway_before_installing_or_compiling(project, monkeypatch):
     root, dashboard, state = project
-    spec = importlib.util.spec_from_file_location("workspace_build_launcher", SCRIPTS / "workspace.py")
+    spec = importlib.util.spec_from_file_location(
+        "workspace_build_launcher", SCRIPTS / "workspace.py"
+    )
     workspace = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(workspace)
     state.mkdir(parents=True)
@@ -203,7 +219,9 @@ def test_build_command_refuses_running_gateway_before_installing_or_compiling(pr
     monkeypatch.setattr(workspace, "STATE", state)
     monkeypatch.setattr(workspace, "CONFIG", configuration)
     monkeypatch.setattr(workspace, "owned_process", lambda config, service: service == "gateway")
-    monkeypatch.setattr(workspace, "run", lambda *args, **kwargs: pytest.fail("Gateway owns the build"))
+    monkeypatch.setattr(
+        workspace, "run", lambda *args, **kwargs: pytest.fail("Gateway owns the build")
+    )
     before = build.manifest(dashboard / "dist")
     with pytest.raises(SystemExit, match="Stop Gateway"):
         workspace.build()

@@ -57,8 +57,9 @@ def test_post_backup_deletions_receipts_and_revocation(tmp_path, monkeypatch):
         db.commit()
     for name in ("pi.db", "toolgate.db", "memory.db"):
         backup(current / name, restored / name)
-    forgetting.forget(current / "pi.db", deleted,
-        forgetting.preview(current / "pi.db", deleted)["confirmation"])
+    forgetting.forget(
+        current / "pi.db", deleted, forgetting.preview(current / "pi.db", deleted)["confirmation"]
+    )
     journal.finish("external-post", {"ok": True, "receipt": "already-posted"})
     with sessions() as db:
         db.delete(db.get(Memory, memory_id))
@@ -68,8 +69,13 @@ def test_post_backup_deletions_receipts_and_revocation(tmp_path, monkeypatch):
     engine.dispose()
 
     plan = recovery_deletions.preview(current / "pi.db", restored / "pi.db")
-    assert recovery_deletions.replay(current / "pi.db", restored / "pi.db", plan["confirmation"])["recoveryHeld"]
-    assert recovery_journal.reconcile(current / "toolgate.db", restored / "toolgate.db")["unresolved"] == []
+    assert recovery_deletions.replay(current / "pi.db", restored / "pi.db", plan["confirmation"])[
+        "recoveryHeld"
+    ]
+    assert (
+        recovery_journal.reconcile(current / "toolgate.db", restored / "toolgate.db")["unresolved"]
+        == []
+    )
     recovery_data.invalidate_approvals(restored / "toolgate.db")
     engine = create_engine(f"sqlite:///{restored / 'memory.db'}")
     sessions = sessionmaker(engine)
@@ -77,10 +83,14 @@ def test_post_backup_deletions_receipts_and_revocation(tmp_path, monkeypatch):
     client = QdrantClient(":memory:")
     try:
         for name in collections.values():
-            client.create_collection(name, vectors_config=models.VectorParams(size=2, distance=models.Distance.COSINE))
+            client.create_collection(
+                name, vectors_config=models.VectorParams(size=2, distance=models.Distance.COSINE)
+            )
         client.upsert("memory", points=[models.PointStruct(id=memory_id, vector=[1.0, 0.0])])
         deletion_recovery.replay(evidence, sessions)
-        assert deletion_recovery.reconcile_indexes(sessions, client, collections)["indexCleanupVerified"]
+        assert deletion_recovery.reconcile_indexes(sessions, client, collections)[
+            "indexCleanupVerified"
+        ]
         with sessions() as db:
             assert db.get(Memory, memory_id) is None
             with pytest.raises(RuntimeError, match="held"):
@@ -96,6 +106,14 @@ def test_post_backup_deletions_receipts_and_revocation(tmp_path, monkeypatch):
     with pytest.raises(journal.ExecutionConflict, match="held"):
         journal.begin("new-effect", "tool", "post", {}, "agent", 1)
     with closing(sqlite3.connect(restored / "pi.db")) as db:
-        assert db.execute("SELECT title FROM sessions WHERE id=?", (kept,)).fetchone()[0] == "retained history"
-        assert db.execute("SELECT count(*) FROM forgotten_sessions WHERE session_id=?", (deleted,)).fetchone()[0] == 1
+        assert (
+            db.execute("SELECT title FROM sessions WHERE id=?", (kept,)).fetchone()[0]
+            == "retained history"
+        )
+        assert (
+            db.execute(
+                "SELECT count(*) FROM forgotten_sessions WHERE session_id=?", (deleted,)
+            ).fetchone()[0]
+            == 1
+        )
     assert b"erase this content" not in (restored / "pi.db").read_bytes()

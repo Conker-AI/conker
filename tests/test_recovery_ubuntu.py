@@ -29,9 +29,7 @@ def ubuntu_installed(tmp_path):
     (root / "compose.json").write_text('{"name":"conker","services":{}}\n')
     (source / "versions.env").write_text("CONKER_RELEASE=test\n")
     (state / "credentials.json").write_text('{"fixture":"secret"}\n')
-    (provider / "state.json").write_text(
-        '{"schemaVersion":1,"providers":{}}\n'
-    )
+    (provider / "state.json").write_text('{"schemaVersion":1,"providers":{}}\n')
     for name in recovery_layout.UBUNTU_ENV_FILES:
         (state / name).write_text("FIXTURE_VALUE=test\n")
     engine = Engine(tmp_path, recovery_layout.UBUNTU_PROFILE, bind_stores=True)
@@ -82,15 +80,10 @@ def test_ubuntu_snapshot_verifies_and_restores_held(ubuntu_installed, tmp_path):
     assert state["status"] == "held"
     assert state["source_layout"] == "ubuntu"
     restored_decisions = engine.volumes[state["volumes"]["decisions"]]
-    assert (restored_decisions / "model.bin").read_bytes() == (
-        b"owner-selected-decision-model"
-    )
-    assert "POSTGRES_USER=conker" in (
-        tmp_path / "ubuntu-recovered" / "postgres.env"
-    ).read_text()
+    assert (restored_decisions / "model.bin").read_bytes() == (b"owner-selected-decision-model")
+    assert "POSTGRES_USER=conker" in (tmp_path / "ubuntu-recovered" / "postgres.env").read_text()
     assert any(
-        call[0] == "exec" and "pg_dump" in call and "conker" in call
-        for call in engine.calls
+        call[0] == "exec" and "pg_dump" in call and "conker" in call for call in engine.calls
     )
 
 
@@ -106,9 +99,7 @@ def test_ubuntu_unknown_bind_fails_before_stopping_writers(ubuntu_installed, tmp
     assert not any(call[0] == "stop" for call in engine.calls)
 
 
-def test_optional_owner_terminal_has_no_recovery_store_or_archive(
-    ubuntu_installed, tmp_path
-):
+def test_optional_owner_terminal_has_no_recovery_store_or_archive(ubuntu_installed, tmp_path):
     root, engine = ubuntu_installed
     workspace = tmp_path / "owner-workspace"
     control = tmp_path / "terminal-control"
@@ -140,14 +131,10 @@ def test_optional_owner_terminal_has_no_recovery_store_or_archive(
     assert "owner-terminal" not in manifest["stores"]
     assert not any("terminal" in name for name in manifest["files"] if name.endswith(".tar"))
     assert "owner-terminal" not in restored["volumes"]
-    assert any(
-        call[0] == "stop" and "source-owner-terminal" in call for call in engine.calls
-    )
+    assert any(call[0] == "stop" and "source-owner-terminal" in call for call in engine.calls)
 
 
-def test_ubuntu_missing_runtime_contract_fails_before_stopping_writers(
-    ubuntu_installed, tmp_path
-):
+def test_ubuntu_missing_runtime_contract_fails_before_stopping_writers(ubuntu_installed, tmp_path):
     root, engine = ubuntu_installed
     engine.containers["source-memorygate"]["Config"]["Env"] = [
         value

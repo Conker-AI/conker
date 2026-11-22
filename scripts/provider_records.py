@@ -42,12 +42,8 @@ PROVIDERS = {
             "Authorization",
             "Bearer ",
         ),
-        Provider(
-            "openai", "api.openai.com", "/v1/models?limit=1", "Authorization", "Bearer "
-        ),
-        Provider(
-            "anthropic", "api.anthropic.com", "/v1/models?limit=1", "x-api-key", ""
-        ),
+        Provider("openai", "api.openai.com", "/v1/models?limit=1", "Authorization", "Bearer "),
+        Provider("anthropic", "api.anthropic.com", "/v1/models?limit=1", "x-api-key", ""),
         # Direct API keys for the other frontier labs: Pi releases after 0.16.0 read them.
         Provider(
             "gemini",
@@ -121,9 +117,7 @@ def validate_timestamp(value: object, *, optional: bool = True) -> None:
     try:
         parsed = datetime.fromisoformat(value)
     except ValueError as exc:
-        raise ProviderSecretError(
-            "Provider credential state has an invalid timestamp."
-        ) from exc
+        raise ProviderSecretError("Provider credential state has an invalid timestamp.") from exc
     if parsed.tzinfo is None:
         raise ProviderSecretError("Provider credential state has an invalid timestamp.")
 
@@ -136,13 +130,9 @@ def validate_record(record: dict) -> None:
     validate_timestamp(record["stagedAt"])
     validate_timestamp(record["verifiedAt"])
     if bool(active) != bool(record["activeAt"]):
-        raise ProviderSecretError(
-            "Provider credential active metadata is inconsistent."
-        )
+        raise ProviderSecretError("Provider credential active metadata is inconsistent.")
     if bool(staged) != bool(record["stagedAt"]):
-        raise ProviderSecretError(
-            "Provider credential staged metadata is inconsistent."
-        )
+        raise ProviderSecretError("Provider credential staged metadata is inconsistent.")
 
     status, basis = record["verificationStatus"], record["verificationBasis"]
     if status is not None and status not in VERIFICATION_STATUSES:
@@ -151,22 +141,14 @@ def validate_record(record: dict) -> None:
         raise ProviderSecretError("Provider credential verification basis is invalid.")
     if staged is None:
         if status is not None or basis is not None or record["verifiedAt"] is not None:
-            raise ProviderSecretError(
-                "Provider credential verification metadata is stale."
-            )
+            raise ProviderSecretError("Provider credential verification metadata is stale.")
     elif status is None:
-        raise ProviderSecretError(
-            "Provider credential verification metadata is missing."
-        )
+        raise ProviderSecretError("Provider credential verification metadata is missing.")
     elif status == "unverified":
         if basis is not None or record["verifiedAt"] is not None:
-            raise ProviderSecretError(
-                "Provider credential verification metadata is invalid."
-            )
+            raise ProviderSecretError("Provider credential verification metadata is invalid.")
     elif basis is None or record["verifiedAt"] is None:
-        raise ProviderSecretError(
-            "Provider credential verification metadata is missing."
-        )
+        raise ProviderSecretError("Provider credential verification metadata is missing.")
 
     pending = record["pendingActivation"]
     if pending is not None:
@@ -175,9 +157,7 @@ def validate_record(record: dict) -> None:
             "previousRevision",
             "preparedAt",
         }:
-            raise ProviderSecretError(
-                "Provider credential activation state is invalid."
-            )
+            raise ProviderSecretError("Provider credential activation state is invalid.")
         validate_revision(pending["revision"], optional=False)
         validate_revision(pending["previousRevision"])
         validate_timestamp(pending["preparedAt"], optional=False)
@@ -186,16 +166,10 @@ def validate_record(record: dict) -> None:
             or pending["previousRevision"] != active
             or status != "verified"
         ):
-            raise ProviderSecretError(
-                "Provider credential activation state is inconsistent."
-            )
+            raise ProviderSecretError("Provider credential activation state is inconsistent.")
 
     revoked = record["revokedRevisions"]
-    if (
-        not isinstance(revoked, list)
-        or len(revoked) > 100
-        or len(revoked) != len(set(revoked))
-    ):
+    if not isinstance(revoked, list) or len(revoked) > 100 or len(revoked) != len(set(revoked)):
         raise ProviderSecretError("Provider credential revocation state is invalid.")
     for revision in revoked:
         validate_revision(revision, optional=False)

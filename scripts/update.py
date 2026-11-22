@@ -1,4 +1,5 @@
 """Fail-closed, resumable updates for repository-layout Conker installs."""
+
 from __future__ import annotations
 
 import argparse
@@ -57,9 +58,7 @@ class HostTransport:
         self.compose_file = self.root / "docker-compose.yml"
         self.override_file = self._git_private_dir() / "resolved-images.json"
 
-    def _run(
-        self, command: list[str], *, cwd: Path | None = None, timeout: int = 300
-    ) -> str:
+    def _run(self, command: list[str], *, cwd: Path | None = None, timeout: int = 300) -> str:
         result = subprocess.run(
             command,
             cwd=cwd or self.root,
@@ -154,9 +153,7 @@ class HostTransport:
         services = sorted(model.get("services", {}))
         branch = self._git("symbolic-ref", "--quiet", "--short", "HEAD")
         manifest = json.loads(
-            self._run(
-                [sys.executable, str(self.root / "scripts/release_manifest.py"), "--json"]
-            )
+            self._run([sys.executable, str(self.root / "scripts/release_manifest.py"), "--json"])
         )
         return {
             "revision": self._git("rev-parse", "HEAD"),
@@ -256,7 +253,9 @@ class HostTransport:
     def pull_exact_images(self, candidate: dict[str, Any]) -> dict[str, str]:
         resolved_by_reference: dict[str, str] = {}
         for reference in sorted(set(candidate["service_images"].values())):
-            if not (self.DIGEST_RE.fullmatch(reference) or self.OWNER_IMAGE_RE.fullmatch(reference)):
+            if not (
+                self.DIGEST_RE.fullmatch(reference) or self.OWNER_IMAGE_RE.fullmatch(reference)
+            ):
                 raise UpdateError("candidate contains an unpinned or mutable image reference")
             self._run(["docker", "pull", reference], timeout=900)
             resolved_by_reference[reference] = self._resolved_digest(reference)
@@ -281,7 +280,15 @@ class HostTransport:
         override = self._write_override(candidate["resolved_images"])
         # Every provider's key file exists before Compose mounts it; else Docker makes a directory.
         store = self.root / ".conker" / "provider-secrets"
-        self._run([sys.executable, str(self.root / "scripts/provider_secrets.py"), "--directory", str(store), "initialize"])
+        self._run(
+            [
+                sys.executable,
+                str(self.root / "scripts/provider_secrets.py"),
+                "--directory",
+                str(store),
+                "initialize",
+            ]
+        )
         self._run(
             self._compose_command("up", "-d", "--remove-orphans", override=override), timeout=900
         )
@@ -311,7 +318,14 @@ class HostTransport:
                         raise UpdateError(f"service did not reach running state: {service}")
                 gateway = self._run(
                     self._compose_command(
-                        "exec", "-T", "gateway", "python", "-m", "gateway", "health", override=override
+                        "exec",
+                        "-T",
+                        "gateway",
+                        "python",
+                        "-m",
+                        "gateway",
+                        "health",
+                        override=override,
                     ),
                     timeout=30,
                 )
@@ -343,9 +357,7 @@ class HostTransport:
             raise UpdateError("Git index moved outside the recorded update transaction")
 
         if index_tree == candidate_tree:
-            self._git(
-                "restore", "--source", prior["revision"], "--staged", "--worktree", "--", "."
-            )
+            self._git("restore", "--source", prior["revision"], "--staged", "--worktree", "--", ".")
         if current != prior["revision"]:
             branch_ref = f"refs/heads/{prior['branch']}"
             self._git("update-ref", branch_ref, prior["revision"], current)

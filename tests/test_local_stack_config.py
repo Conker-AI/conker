@@ -33,7 +33,11 @@ def test_local_configuration_matches_service_bootstrap_contracts_and_is_not_repl
     assert "PI_MEMORY_RERANK_ENABLED" not in env["pi"]  # ranking is opt-in via the model catalogue
     owner = env["gateway"]["GATEWAY_PI_OWNER_KEY"]
     assert env["pi"]["PI_OWNER_KEY_SHA256"] == hashlib.sha256(owner.encode()).hexdigest()
-    assert owner not in {env["pi"]["PI_ADMIN_KEY"], env["gateway"]["PI_GATEWAY_KEY"], env["gateway"]["GATEWAY_TOOLGATE_OWNER_KEY"]}
+    assert owner not in {
+        env["pi"]["PI_ADMIN_KEY"],
+        env["gateway"]["PI_GATEWAY_KEY"],
+        env["gateway"]["GATEWAY_TOOLGATE_OWNER_KEY"],
+    }
     module.initialize()
     assert module.CONFIG.read_bytes() == first
 

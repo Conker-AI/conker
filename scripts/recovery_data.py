@@ -39,9 +39,7 @@ def sqlite_backup(source: Path, destination: Path) -> None:
         with closing(sqlite3.connect(copied)) as src, closing(sqlite3.connect(destination)) as dst:
             src.backup(dst)
             if dst.execute("PRAGMA integrity_check").fetchall() != [("ok",)]:
-                raise RecoveryError(
-                    "SQLite integrity check failed; retain the source store."
-                )
+                raise RecoveryError("SQLite integrity check failed; retain the source store.")
 
 
 def safe_member(member: tarfile.TarInfo) -> Path:
@@ -66,17 +64,12 @@ def validate_archive(path: Path, required_database: str | None = None) -> None:
         for member in archive:
             safe_member(member)
             if member.name in seen:
-                raise RecoveryError(
-                    "Duplicate archive member; retain the original snapshot."
-                )
+                raise RecoveryError("Duplicate archive member; retain the original snapshot.")
             seen.add(member.name)
             if member.isfile():
                 stream = archive.extractfile(member)
                 assert stream is not None
-                if (
-                    member.name == required_database
-                    and stream.read(16) != b"SQLite format 3\x00"
-                ):
+                if member.name == required_database and stream.read(16) != b"SQLite format 3\x00":
                     raise RecoveryError(
                         "Required SQLite archive member is invalid; obtain an intact snapshot."
                     )
@@ -88,9 +81,7 @@ def validate_archive(path: Path, required_database: str | None = None) -> None:
         )
 
 
-def snapshot_tree(
-    source: Path, output: BinaryIO, required_database: str | None = None
-) -> None:
+def snapshot_tree(source: Path, output: BinaryIO, required_database: str | None = None) -> None:
     files = sorted(source.rglob("*"))
     resolved_files: dict[Path, Path] = {}
     databases: set[Path] = set()
@@ -105,9 +96,7 @@ def snapshot_tree(
                 raise RecoveryError("Only links to regular files inside the store can be captured.")
             resolved_files[path] = target
         elif not (path.is_file() or path.is_dir()):
-            raise RecoveryError(
-                "Unsupported special file in store; inventory it before backup."
-            )
+            raise RecoveryError("Unsupported special file in store; inventory it before backup.")
         if path.is_file():
             with path.open("rb") as stream:
                 if stream.read(16) == b"SQLite format 3\x00":
@@ -117,9 +106,7 @@ def snapshot_tree(
             f"Required SQLite store {required_database} is missing or invalid; recover the original store before backup."
         )
     sidecars = {
-        Path(str(db) + suffix)
-        for db in databases
-        for suffix in ("-wal", "-shm", "-journal")
+        Path(str(db) + suffix) for db in databases for suffix in ("-wal", "-shm", "-journal")
     }
     with (
         tempfile.TemporaryDirectory() as scratch,
@@ -148,22 +135,16 @@ def snapshot_tree(
                 archive.addfile(member)
 
 
-def restore_tree(
-    source: BinaryIO, destination: Path, *, preserve_owner: bool = False
-) -> None:
+def restore_tree(source: BinaryIO, destination: Path, *, preserve_owner: bool = False) -> None:
     if any(destination.iterdir()):
-        raise RecoveryError(
-            "Recovery volume is not empty; choose a fresh recovery destination."
-        )
+        raise RecoveryError("Recovery volume is not empty; choose a fresh recovery destination.")
     seen: set[str] = set()
     directories: list[tuple[Path, tarfile.TarInfo]] = []
     with tarfile.open(fileobj=source, mode="r|*") as archive:
         for member in archive:
             relative = safe_member(member)
             if member.name in seen:
-                raise RecoveryError(
-                    "Duplicate archive member; abandon this recovery destination."
-                )
+                raise RecoveryError("Duplicate archive member; abandon this recovery destination.")
             seen.add(member.name)
             target = destination / relative
             target.parent.mkdir(parents=True, exist_ok=True)
@@ -211,9 +192,7 @@ def invalidate_approvals(database: Path) -> dict:
                 (datetime.now(UTC).timestamp(),),
             ).rowcount
         # Reject an unknown schema rather than quietly invalidating zero tokens.
-        rows = db.execute(
-            "SELECT id, body FROM v2_objects WHERE kind='request'"
-        ).fetchall()
+        rows = db.execute("SELECT id, body FROM v2_objects WHERE kind='request'").fetchall()
         invalidated = []
         for request_id, body in rows:
             record = json.loads(body)
@@ -246,9 +225,13 @@ def invalidate_approvals(database: Path) -> dict:
             "ON CONFLICT(kind,id) DO UPDATE SET body=excluded.body,updated_at=excluded.updated_at",
             ("settings", "control-plane", json.dumps(settings), now, now),
         )
-    return {"invalidated_requests": invalidated, "lockdown": True,
-            "revoked_execution_keys": revoked_keys, "spending_disabled": spending_disabled,
-            "revoked_spending_allowances": revoked_allowances}
+    return {
+        "invalidated_requests": invalidated,
+        "lockdown": True,
+        "revoked_execution_keys": revoked_keys,
+        "spending_disabled": spending_disabled,
+        "revoked_spending_allowances": revoked_allowances,
+    }
 
 
 def invalidate_browser_sessions(database: Path) -> dict:
@@ -263,9 +246,7 @@ def invalidate_browser_sessions(database: Path) -> dict:
 
 
 def unfinished_turns(database: Path) -> list[dict]:
-    with closing(
-        sqlite3.connect(database.resolve().as_uri() + "?mode=ro", uri=True)
-    ) as db:
+    with closing(sqlite3.connect(database.resolve().as_uri() + "?mode=ro", uri=True)) as db:
         db.row_factory = sqlite3.Row
         rows = db.execute(
             "SELECT id,status,acted,approval_request_id FROM turns "
@@ -295,9 +276,7 @@ def verify_vault(directory: Path, runtime: dict[str, str]) -> int:
             )
         secret = key_file.read_text().strip()
     salt = values.get("TOOLGATE_VAULT_SALT") or runtime.get("TOOLGATE_VAULT_SALT", "")
-    derived = hashlib.scrypt(
-        secret.encode(), salt=bytes.fromhex(salt), n=2**14, r=8, p=1, dklen=32
-    )
+    derived = hashlib.scrypt(secret.encode(), salt=bytes.fromhex(salt), n=2**14, r=8, p=1, dklen=32)
     fernet = Fernet(base64.urlsafe_b64encode(derived))
     for token in encrypted:
         fernet.decrypt(token.encode())
@@ -340,9 +319,7 @@ def main() -> None:
 
         token = (args.path / "runtime-token").read_text().strip()
         if token:
-            Fernet((args.path / "runtime-fernet.key").read_bytes().strip()).decrypt(
-                token.encode()
-            )
+            Fernet((args.path / "runtime-fernet.key").read_bytes().strip()).decrypt(token.encode())
         print(json.dumps({"memory_provider_key_verified": bool(token)}))
 
 

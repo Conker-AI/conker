@@ -6,12 +6,8 @@ and refuses credentials on publish. A shape change on either side fails here fir
 
 import pytest
 
-pytest.importorskip(
-    "pi.agents.workflow_drafts", reason="Add the Pi checkout to PYTHONPATH"
-)
-pytest.importorskip(
-    "toolgate.core.editor_drafts", reason="Add the ToolGate checkout to PYTHONPATH"
-)
+pytest.importorskip("pi.agents.workflow_drafts", reason="Add the Pi checkout to PYTHONPATH")
+pytest.importorskip("toolgate.core.editor_drafts", reason="Add the ToolGate checkout to PYTHONPATH")
 from pi.agents import workflow_drafts
 from toolgate.core.editor_drafts import EditorDocument, SaveDraft
 from toolgate.core.editor_graph import validate_graph
@@ -19,17 +15,13 @@ from toolgate.core.editor_publication import document_from_block
 
 CAPABILITIES = [
     workflow_drafts.Capability(id="weather-now", kind="tool", name="Weather now"),
-    workflow_drafts.Capability(
-        id="editor-0123abcd", kind="workflow", name="Brief", version=4
-    ),
+    workflow_drafts.Capability(id="editor-0123abcd", kind="workflow", name="Brief", version=4),
 ]
 # What a model might return: every step type, both condition branches, and fields Pi overrides.
 MODEL_DRAFT = {
     "name": "Rain alert",
     "description": "Warns when rain is likely.",
-    "inputs": [
-        {"name": "city", "type": "string", "required": True, "description": "Where"}
-    ],
+    "inputs": [{"name": "city", "type": "string", "required": True, "description": "Where"}],
     "outputs": [{"name": "message", "type": "string", "required": True}],
     "nodes": [
         {"id": "start", "type": "input", "label": "Start", "config": {}},
@@ -112,9 +104,7 @@ def test_a_drafted_workflow_is_a_valid_editor_document_toolgate_can_publish():
 
 @pytest.mark.parametrize("name", ["Rain alert", "7 day plan", "???", "x" * 200])
 def test_draft_ids_made_from_names_are_editor_identities(name):
-    document, _ = workflow_drafts.normalize(
-        {**MODEL_DRAFT, "name": name[:100]}, CAPABILITIES, None
-    )
+    document, _ = workflow_drafts.normalize({**MODEL_DRAFT, "name": name[:100]}, CAPABILITIES, None)
     EditorDocument.model_validate(document)
 
 
@@ -124,8 +114,6 @@ def test_the_builders_example_is_a_valid_editor_document():
     text = workflow_drafts.INSTRUCTIONS
     example = json.loads(text[text.rindex('{"reply"') : text.index('\nWhen "issues"')])
     capability = workflow_drafts.Capability(id="web.lookup", kind="tool", name="Lookup")
-    document, issues = workflow_drafts.normalize(
-        example["document"], [capability], "example"
-    )
+    document, issues = workflow_drafts.normalize(example["document"], [capability], "example")
     assert issues == []
     assert validate_graph(EditorDocument.model_validate(document)) == []

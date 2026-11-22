@@ -145,9 +145,7 @@ def test_rule_clear_removes_message_rule_and_clear_exits_without_post(invoke, ca
     check_headers(1)
     body = json.loads(calls[1][0].data)
     assert "msg_b" not in body["policy"]["messagePolicies"]
-    assert (
-        policy_response["policy"]["messagePolicies"]["msg_b"] == "keep-exact"
-    )  # Not mutated
+    assert policy_response["policy"]["messagePolicies"]["msg_b"] == "keep-exact"  # Not mutated
 
     # Test clear on non-existent rule
     calls.clear()
@@ -212,10 +210,7 @@ def test_budget_creates_policy_on_null_and_updates_existing(invoke, capsys):
         },
     }
     state["responses"] = [policy_response, {"revision": 2}]
-    assert (
-        run("budget", "ses_a", "--window", "4000", "--reserve", "500", "--other", "0")
-        == 0
-    )
+    assert run("budget", "ses_a", "--window", "4000", "--reserve", "500", "--other", "0") == 0
     body = json.loads(calls[1][0].data)
     assert body["policy"]["sessionInstructions"] == "test"  # Kept
     assert body["policy"]["messagePolicies"]["msg_x"] == "exclude"  # Kept
@@ -367,9 +362,7 @@ def test_summary_restore_posts_to_restore_endpoint(invoke, capsys):
     assert len(calls) == 2
     check_headers(0)
     check_headers(1)
-    assert (
-        calls[1][0].full_url == "http://127.0.0.1:18551/context/ses_a/summary/restore"
-    )
+    assert calls[1][0].full_url == "http://127.0.0.1:18551/context/ses_a/summary/restore"
     body = json.loads(calls[1][0].data)
     assert body["expected_revision"] == 3
     assert body["revision"] == 1
@@ -556,9 +549,7 @@ def test_refusals_various_formats(invoke, capsys):
 
     # Test 409 with non-JSON body
     calls.clear()
-    state["responses"] = [
-        HTTPError("http://private", 409, "Conflict", {}, io.BytesIO(b"not json"))
-    ]
+    state["responses"] = [HTTPError("http://private", 409, "Conflict", {}, io.BytesIO(b"not json"))]
     assert run("show", "ses_a") == 1
     assert len(calls) == 1
     check_headers(0)

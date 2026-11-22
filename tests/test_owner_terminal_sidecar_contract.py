@@ -35,9 +35,7 @@ def ubuntu_manifest(tmp_path: Path) -> tuple[dict, dict[str, str]]:
     manifest = json.loads((tmp_path / "compose.json").read_text(encoding="utf-8"))
     gateway_env = dict(
         line.split("=", 1)
-        for line in (tmp_path / "state" / "gateway.env")
-        .read_text(encoding="utf-8")
-        .splitlines()
+        for line in (tmp_path / "state" / "gateway.env").read_text(encoding="utf-8").splitlines()
     )
     return manifest, gateway_env
 
@@ -150,15 +148,15 @@ def test_repository_terminal_overlay_matches_the_isolated_boundary():
 
     assert "GATEWAY_TERMINAL_SOCKET: /run/conker-terminal/control.sock" in gateway
     assert "terminal_control:/run/conker-terminal" in gateway
-    assert "group_add: [\"65532\"]" in gateway
+    assert 'group_add: ["65532"]' in gateway
     assert "/workspace" not in gateway
     assert "image: ${OWNER_TERMINAL_IMAGE:?" in terminal
     assert 'user: "65532:65532"' in terminal
-    assert 'network_mode: none' in terminal
-    assert 'read_only: true' in terminal
-    assert 'cap_drop: [ALL]' in terminal
-    assert 'security_opt: [no-new-privileges:true]' in terminal
-    assert "--gateway-uid\n      - \"${CONKER_UID:-1000}\"" in terminal
+    assert "network_mode: none" in terminal
+    assert "read_only: true" in terminal
+    assert "cap_drop: [ALL]" in terminal
+    assert "security_opt: [no-new-privileges:true]" in terminal
+    assert '--gateway-uid\n      - "${CONKER_UID:-1000}"' in terminal
     assert terminal.count("type: volume") == 1
     assert terminal.count("type: bind") == 1
     assert "env_file:" not in terminal
@@ -169,7 +167,7 @@ def test_repository_terminal_overlay_matches_the_isolated_boundary():
     launcher = (ROOT / "conker").read_text(encoding="utf-8")
     for source in (installer, launcher):
         assert "OWNER_TERMINAL_STATE=active" in source
-        assert 'docker-compose.terminal.yml' in source
+        assert "docker-compose.terminal.yml" in source
     assert "scripts/terminal_workspace.py" in installer
 
 
@@ -184,11 +182,15 @@ def test_ubuntu_generator_keeps_terminal_absent_until_linux_acceptance(tmp_path)
 
 
 def active_terminal_versions() -> str:
-    return (ROOT / "versions.env").read_text(encoding="utf-8").replace(
-        "OWNER_TERMINAL_STATE=deferred",
-        "OWNER_TERMINAL_STATE=active\n"
-        "OWNER_TERMINAL_IMAGE=ghcr.io/conker-ai/pi-owner-terminal@sha256:" + "a" * 64 + "\n"
-        "OWNER_TERMINAL_ACCEPTANCE_SHA256=" + "b" * 64,
+    return (
+        (ROOT / "versions.env")
+        .read_text(encoding="utf-8")
+        .replace(
+            "OWNER_TERMINAL_STATE=deferred",
+            "OWNER_TERMINAL_STATE=active\n"
+            "OWNER_TERMINAL_IMAGE=ghcr.io/conker-ai/pi-owner-terminal@sha256:" + "a" * 64 + "\n"
+            "OWNER_TERMINAL_ACCEPTANCE_SHA256=" + "b" * 64,
+        )
     )
 
 
@@ -221,9 +223,7 @@ def test_ubuntu_generator_emits_exact_active_terminal_boundary(tmp_path):
     terminal = manifest["services"]["owner-terminal"]
     gateway_env = dict(
         line.split("=", 1)
-        for line in (tmp_path / "state" / "gateway.env")
-        .read_text(encoding="utf-8")
-        .splitlines()
+        for line in (tmp_path / "state" / "gateway.env").read_text(encoding="utf-8").splitlines()
     )
 
     assert gateway_env["GATEWAY_TERMINAL_SOCKET"] == "/run/conker-terminal/control.sock"
@@ -239,10 +239,17 @@ def test_ubuntu_generator_emits_exact_active_terminal_boundary(tmp_path):
         "image": "ghcr.io/conker-ai/pi-owner-terminal@sha256:" + "a" * 64,
         "restart": "unless-stopped",
         "command": [
-            "serve", "--socket", "/run/conker-terminal/control.sock",
-            "--health", "/run/conker-terminal/health.json",
-            "--shell", "/bin/bash", "--workspace", "/workspace",
-            "--gateway-uid", "1000",
+            "serve",
+            "--socket",
+            "/run/conker-terminal/control.sock",
+            "--health",
+            "/run/conker-terminal/health.json",
+            "--shell",
+            "/bin/bash",
+            "--workspace",
+            "/workspace",
+            "--gateway-uid",
+            "1000",
         ],
         "user": "65532:65532",
         "network_mode": "none",
@@ -257,12 +264,25 @@ def test_ubuntu_generator_emits_exact_active_terminal_boundary(tmp_path):
         "environment": {"CONKER_TERMINAL_ISOLATED": "1"},
         "volumes": [
             {"type": "volume", "source": "terminal_control", "target": "/run/conker-terminal"},
-            {"type": "bind", "source": str(workspace.resolve()), "target": "/workspace", "read_only": False},
+            {
+                "type": "bind",
+                "source": str(workspace.resolve()),
+                "target": "/workspace",
+                "read_only": False,
+            },
         ],
         "tmpfs": ["/tmp:rw,noexec,nosuid,nodev,size=32m"],
         "healthcheck": {
-            "test": ["CMD", "conker-terminal", "health", "--health", "/run/conker-terminal/health.json"],
-            "interval": "10s", "timeout": "2s", "retries": 3,
+            "test": [
+                "CMD",
+                "conker-terminal",
+                "health",
+                "--health",
+                "/run/conker-terminal/health.json",
+            ],
+            "interval": "10s",
+            "timeout": "2s",
+            "retries": 3,
         },
         "logging": {"driver": "json-file", "options": {"max-size": "10m", "max-file": "3"}},
     }

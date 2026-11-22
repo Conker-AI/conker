@@ -37,9 +37,7 @@ from recovery_snapshot import (
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        "--root", type=Path, default=Path(__file__).resolve().parents[1]
-    )
+    parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[1])
     commands = parser.add_subparsers(dest="command", required=True)
     backup_parser = commands.add_parser("backup")
     backup_parser.add_argument("--destination", type=Path)
@@ -89,7 +87,9 @@ def main() -> int:
                 return 0
             if args.abort:
                 state = abort_recovery(args.directory, args.abort, Docker())
-                print("Recovery aborted; isolated resources were removed and the hold report was retained.")
+                print(
+                    "Recovery aborted; isolated resources were removed and the hold report was retained."
+                )
                 return 3
             state = read_json_file(args.directory / HOLD_FILE, "Recovery hold")
             if state.get("format") == RECOVERY_FORMAT:
