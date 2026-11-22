@@ -80,6 +80,7 @@ scripts/settings_docs.py - Write docs/reference/settings.md from the settings re
 scripts/setup.py - Prepare evidence-backed first-run setup receipts without handling owner credentials. [uses: recovery]
 scripts/setup_wizard.py - conker setup: a guided first run, one plain question at a time.
 scripts/speech_config.py - Host-owned speech configuration. Secret values never enter browser state or argv.
+scripts/stack_smoke.py - Smoke-test a running local workspace through the Gateway, as the browser d... [uses: workspace]
 scripts/status_page.py - Write the generated parts of docs/status.md from capabilities.json... [uses: release_manifest]
 scripts/terminal_workspace.py - Validate one host workspace for the isolated owner-terminal sidecar.
 scripts/tool_draft_cli.py - conker tool draft on an installed stack: scripts/tool_drafts.py, with... [uses: config_cli]
