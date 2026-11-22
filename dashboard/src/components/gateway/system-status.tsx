@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { plainWords } from '@/lib/plain-words'
 import { Link } from 'react-router-dom'
 import { AlertCircle, Check, CircleMinus, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -43,7 +44,7 @@ export function GatewaySystemStatus({ client }: { client: GatewayControlClient }
       {report && <>
         <WorkspaceSection title={report.status === 'ok' ? 'Core checks passed' : `${report.summary.attention} ${report.summary.attention === 1 ? 'check needs' : 'checks need'} attention`} description={`${report.summary.ok} passed · ${report.summary.optional} optional`} />
         {(['access', 'services', 'models'] as const).map(area => <CollectionSection key={area} title={areaLabels[area]}><ul>{report.findings.filter(item => item.area === area).map(item => <li key={item.id} className="flex min-h-(--collection-row-height) min-w-0 items-start gap-3 px-4 py-3">
-          <div className="min-w-0 flex-1"><p className="text-sm font-medium">{item.label}</p>{item.status !== 'ok' && <p className="mt-1 text-xs leading-5 text-muted-foreground">{item.detail}</p>}
+          <div className="min-w-0 flex-1"><p className="text-sm font-medium">{plainWords(item.label)}</p>{item.status !== 'ok' && <p className="mt-1 text-xs leading-5 text-muted-foreground">{plainWords(item.detail)}</p>}
             {item.recovery && <div className="mt-3 flex flex-wrap items-center gap-2">{item.recovery.uiRoute && item.recovery.uiRoute !== '/system' && <Button variant="outline" size="sm" render={<Link to={item.recovery.uiRoute} />}>{item.recovery.label}</Button>}{item.recovery.command && <code className="rounded-md border bg-background px-2.5 py-1.5 text-xs">{item.recovery.command}</code>}</div>}
           </div>
           <Badge variant={item.status === 'attention' ? 'destructive' : 'outline'} className="shrink-0"><StatusIcon status={item.status} />{statusLabels[item.status]}</Badge>
