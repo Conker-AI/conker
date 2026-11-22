@@ -9,17 +9,19 @@ const engineerWords = /\bRevision \d|records? loaded|recorded relationships|\ben
 // Words the sweep of 2026-11-15 found on live screens (words.md), each now replaced by a plain word: cron (Jobs),
 // ToolGate, gateway, opaque target, immutable, "Model ID" / "Tool IDs", "chip" for a setting, Incognito (Private
 // chat), "Take snapshot" (Check now), British "summarised", "Prompt improved", router ids such as jev-preview.
-const sweepWords = /\bcron\b|\b(?:Tool|Memory|System)Gate\b|\bgateway\b|\bopaque\b|\bimmutable\b|\bModel IDs?\b|\bTool IDs\b|\bchips?\b|\bIncognito\b|Take snapshot|\bsummari[sz]ed\b|Prompt improved|execution policy|verified receipt|Conker runtime|chat runtime|AI runtime|\bjev-[a-z]+/i
+const sweepWords =
+  /\bcron\b|\b(?:Tool|Memory|System)Gate\b|\bgateway\b|\bopaque\b|\bimmutable\b|\bModel IDs?\b|\bTool IDs\b|\bchips?\b|\bIncognito\b|Take snapshot|\bsummari[sz]ed\b|Prompt improved|execution policy|verified receipt|Conker runtime|chat runtime|AI runtime|\bjev-[a-z]+/i
 
-for (const place of places) test(`plain words: ${place}`, async ({ page }) => {
-  const errors = await open(page, place)
-  await page.waitForFunction(() => !document.querySelector('[aria-busy="true"]'), null, { timeout: 15_000 }).catch(() => {})
-  await page.waitForTimeout(1500)
-  const text = await page.locator('body').innerText()
-  expect(text.match(engineerWords)?.[0] ?? null, `engineer word on ${place}`).toBeNull()
-  expect(text.match(sweepWords)?.[0] ?? null, `word from the 2026-11-15 sweep on ${place}`).toBeNull()
-  expect(errors).toEqual([])
-})
+for (const place of places)
+  test(`plain words: ${place}`, async ({ page }) => {
+    const errors = await open(page, place)
+    await page.waitForFunction(() => !document.querySelector('[aria-busy="true"]'), null, { timeout: 15_000 }).catch(() => {})
+    await page.waitForTimeout(1500)
+    const text = await page.locator('body').innerText()
+    expect(text.match(engineerWords)?.[0] ?? null, `engineer word on ${place}`).toBeNull()
+    expect(text.match(sweepWords)?.[0] ?? null, `word from the 2026-11-15 sweep on ${place}`).toBeNull()
+    expect(errors).toEqual([])
+  })
 
 test('Home counts what needs him like the sidebar does', async ({ page }) => {
   await open(page, '/overview')

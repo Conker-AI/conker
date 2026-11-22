@@ -12,7 +12,8 @@ const checks = (page: Page) => page.evaluate(() => (globalThis as { __conkerFake
 /** Lets a test move the page's clock, as if the owner had been away. */
 async function skewableClock(page: Page) {
   await page.addInitScript(() => {
-    const real = Date.now.bind(Date), view = window as unknown as { __skew: number }
+    const real = Date.now.bind(Date),
+      view = window as unknown as { __skew: number }
     view.__skew = 0
     Date.now = () => real() + view.__skew
   })
@@ -20,25 +21,38 @@ async function skewableClock(page: Page) {
 async function away(page: Page, minutes: number) {
   await page.evaluate(minutes => {
     const view = window as unknown as { __skew: number }
-    const set = (value: string) => { Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => value }); document.dispatchEvent(new Event('visibilitychange')) }
-    set('hidden'); view.__skew += minutes * 60_000; set('visible')
+    const set = (value: string) => {
+      Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => value })
+      document.dispatchEvent(new Event('visibilitychange'))
+    }
+    set('hidden')
+    view.__skew += minutes * 60_000
+    set('visible')
   }, minutes)
 }
 /** The busy state lasts well under a second: record it instead of racing it. */
-const watchBusy = (page: Page) => refreshButton(page).evaluate(button => {
-  const seen: string[] = [], view = window as unknown as { __busy: string[] }
-  view.__busy = seen
-  new MutationObserver(() => { if (button.getAttribute('aria-busy') === 'true') seen.push(getComputedStyle(button.querySelector('svg')!).animationName) })
-    .observe(button, { attributes: true, subtree: true, attributeFilter: ['aria-busy', 'class'] })
-})
+const watchBusy = (page: Page) =>
+  refreshButton(page).evaluate(button => {
+    const seen: string[] = [],
+      view = window as unknown as { __busy: string[] }
+    view.__busy = seen
+    new MutationObserver(() => {
+      if (button.getAttribute('aria-busy') === 'true') seen.push(getComputedStyle(button.querySelector('svg')!).animationName)
+    }).observe(button, { attributes: true, subtree: true, attributeFilter: ['aria-busy', 'class'] })
+  })
 const busySeen = (page: Page) => page.evaluate(() => (window as unknown as { __busy: string[] }).__busy)
 /** Marks the Inbox card's element: a remount replaces it and the mark is gone. */
-const mark = (page: Page, title: string) => card(page, title).evaluate(element => { (element as Marked).__kept = true })
+const mark = (page: Page, title: string) =>
+  card(page, title).evaluate(element => {
+    ;(element as Marked).__kept = true
+  })
 const kept = (page: Page, title: string) => card(page, title).evaluate(element => (element as Marked).__kept === true)
 
 test('refresh: the click shows work, reads the screen again and finds a release without a reload', async ({ page }) => {
   const errors = await open(page, '/inbox?preview-updates=on-check')
-  await page.evaluate(() => { (window as unknown as { __page: boolean }).__page = true })
+  await page.evaluate(() => {
+    ;(window as unknown as { __page: boolean }).__page = true
+  })
   await mark(page, CARD)
   await watchBusy(page)
   await refreshButton(page).click()
@@ -65,7 +79,9 @@ test('refresh: the chat panel and typed text survive', async ({ page }) => {
   const errors = await open(page, '/chat')
   const composer = page.getByRole('textbox', { name: /Ask Conker anything|Message Conker/ })
   await composer.fill('A question I have not sent yet')
-  await composer.evaluate(element => { (element as Marked).__kept = true })
+  await composer.evaluate(element => {
+    ;(element as Marked).__kept = true
+  })
   await page.waitForTimeout(1_200) // the draft saves after a moment
   await refreshButton(page).click()
   const anyway = page.getByRole('button', { name: 'Refresh anyway' })
@@ -82,7 +98,9 @@ test('refresh: unsaved work asks first; Cancel keeps it, Refresh anyway goes on'
   await page.evaluate(() => {
     const view = window as unknown as { __unsaved: boolean }
     view.__unsaved = true
-    window.addEventListener('beforeunload', event => { if (view.__unsaved) event.preventDefault() })
+    window.addEventListener('beforeunload', event => {
+      if (view.__unsaved) event.preventDefault()
+    })
   })
   await mark(page, CARD)
   await refreshButton(page).click()
@@ -144,7 +162,10 @@ test('refresh: the spinner stops for people who ask for less motion', async ({ p
   await expect(status(page, /^Refreshed\./)).toBeVisible()
   const seen = await busySeen(page)
   expect(seen.length).toBeGreaterThan(0)
-  expect(seen.every(name => name === 'none'), 'Reduced motion: the icon does not spin').toBe(true)
+  expect(
+    seen.every(name => name === 'none'),
+    'Reduced motion: the icon does not spin',
+  ).toBe(true)
 })
 
 test('refresh: a server that does not answer is an error, not "up to date"', async ({ page }) => {

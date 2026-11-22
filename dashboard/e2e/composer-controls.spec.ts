@@ -50,7 +50,8 @@ test('the model menu lists the Claude models with their numbers, a tick on the c
   await expect(page.getByRole('menuitemradio', { name: 'Sonnet 5.5' })).toBeChecked()
   await expect(page.getByRole('menuitem', { name: /^Effort/ })).toBeVisible()
   await page.getByRole('menuitem', { name: 'More models' }).click()
-  for (const name of ['Fable 5.1', 'Haiku 4.5', 'Sonnet 5', 'Opus 5', 'Fable 5', 'Opus 4.8', 'Opus 4.7', 'Opus 4.6', 'Sonnet 4.6', 'Qwen 2.5 3B', 'Qwen 3 4B']) await expect(page.getByRole('menuitemradio', { name, exact: true })).toBeVisible()
+  for (const name of ['Fable 5.1', 'Haiku 4.5', 'Sonnet 5', 'Opus 5', 'Fable 5', 'Opus 4.8', 'Opus 4.7', 'Opus 4.6', 'Sonnet 4.6', 'Qwen 2.5 3B', 'Qwen 3 4B'])
+    await expect(page.getByRole('menuitemradio', { name, exact: true })).toBeVisible()
   // The provider joins no row, and no Effort chip stands in the toolbar.
   await expect(page.getByRole('menuitemradio', { name: /Claude Code subscription/ })).toHaveCount(0)
   await page.keyboard.press('Escape')
@@ -91,7 +92,8 @@ test('Effort is a submenu of the model button: it is set there, shown beside the
 test('a new chat has voice and video call buttons in the toolbar, disabled, with the reason as their tooltip', async ({ page }) => {
   await page.addInitScript(() => sessionStorage.setItem('conker-fake-resume', 'empty'))
   const errors = await open(page, '/chat')
-  const voice = page.getByRole('button', { name: /^Voice call/ }), video = page.getByRole('button', { name: /^Video call/ })
+  const voice = page.getByRole('button', { name: /^Voice call/ }),
+    video = page.getByRole('button', { name: /^Video call/ })
   await expect(voice).toBeVisible()
   await expect(voice).toHaveAttribute('aria-disabled', 'true')
   await expect(voice).toHaveAttribute('title', 'Send a message first, then call from the chat header')
@@ -162,12 +164,16 @@ for (const width of [320, 390]) {
     await expect(page.getByRole('button', { name: /^Voice call/ })).toBeVisible()
     await expect(page.getByRole('button', { name: /^Video call/ })).toBeVisible()
     // On touch, a toolbar button's tap area is 44 px: the point 4 px above a 32 px button still lands on it.
-    const reachable = await page.getByRole('button', { name: /^Voice call/ }).evaluate(button => { const box = button.getBoundingClientRect(); return document.elementFromPoint(box.x + box.width / 2, box.y - 4)?.closest('button') === button })
+    const reachable = await page.getByRole('button', { name: /^Voice call/ }).evaluate(button => {
+      const box = button.getBoundingClientRect()
+      return document.elementFromPoint(box.x + box.width / 2, box.y - 4)?.closest('button') === button
+    })
     expect(reachable).toBe(true)
     const heightsOf = (role: 'menuitem' | 'menuitemradio') => page.getByRole(role).evaluateAll(rows => rows.map(row => Math.round(row.getBoundingClientRect().height)))
     await modelButton(page).click()
     await expect(page.getByRole('menuitemradio').nth(3)).toBeVisible()
-    const models = await heightsOf('menuitemradio'), submenus = await heightsOf('menuitem')
+    const models = await heightsOf('menuitemradio'),
+      submenus = await heightsOf('menuitem')
     expect(models).toHaveLength(4)
     expect(submenus).toHaveLength(2)
     await page.getByRole('menuitem', { name: /^Effort/ }).click()
@@ -187,15 +193,20 @@ for (const width of [320, 390, 1280]) {
     const errors = await open(page, '/chat?session=ses_1111111111111111')
     const form = page.getByRole('form', { name: 'Message composer' })
     await expect(form.getByRole('button', { name: /^Send/ })).toBeVisible()
-    const boxes = await form.locator('button, [role="button"], a').evaluateAll(nodes => nodes.flatMap(node => {
-      const r = node.getBoundingClientRect()
-      return r.width > 0 && r.height > 0 ? [{ name: node.getAttribute('aria-label') || node.textContent?.trim() || '?', x: r.x, y: r.y, w: r.width, h: r.height }] : []
-    }))
+    const boxes = await form.locator('button, [role="button"], a').evaluateAll(nodes =>
+      nodes.flatMap(node => {
+        const r = node.getBoundingClientRect()
+        return r.width > 0 && r.height > 0 ? [{ name: node.getAttribute('aria-label') || node.textContent?.trim() || '?', x: r.x, y: r.y, w: r.width, h: r.height }] : []
+      }),
+    )
     const overlaps: string[] = []
-    boxes.forEach((a, i) => boxes.slice(i + 1).forEach(b => {
-      const ix = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x), iy = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y)
-      if (ix > 1 && iy > 1) overlaps.push(`${a.name} / ${b.name}`)
-    }))
+    boxes.forEach((a, i) =>
+      boxes.slice(i + 1).forEach(b => {
+        const ix = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x),
+          iy = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y)
+        if (ix > 1 && iy > 1) overlaps.push(`${a.name} / ${b.name}`)
+      }),
+    )
     expect(overlaps).toEqual([])
     expect(boxes.every(b => b.x >= -1 && b.x + b.w <= width + 1)).toBe(true)
     expect(errors).toEqual([])

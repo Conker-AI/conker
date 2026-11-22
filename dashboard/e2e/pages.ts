@@ -20,7 +20,12 @@ export function card(page: Page, title: string) {
 // Screens reached from a link on another page are listed by hand.
 const linked = ['/memory?view=care', '/memory?view=beliefs', '/chat?session=ses_1111111111111111']
 /** Every place and tab in the navigation table, plus the linked screens. */
-export const allPlaces = [...new Set([...linked, ...gatewayDestinations.flatMap(item => {
-  const path = item.path.split('?')[0]
-  return [path, ...gatewayPageNavigation(path, '').sections.map(section => section.to)]
-})])]
+export const allPlaces = [
+  ...new Set([
+    ...linked,
+    ...gatewayDestinations.flatMap(item => {
+      const path = item.path.split('?')[0]
+      return [path, ...gatewayPageNavigation(path, '').sections.map(section => section.to)]
+    }),
+  ]),
+]

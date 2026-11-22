@@ -9,7 +9,10 @@ test('Memory care lists what is worth tidying and opens the memory to fix or for
   await expect(page.getByRole('heading', { name: 'Memories that disagree' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Past their date' })).toBeVisible()
   await expect(page.getByText(/Checked \d+ memories/)).toBeVisible()
-  await page.getByRole('link', { name: /Open this memory to fix or forget it: .*physics/i }).first().click()
+  await page
+    .getByRole('link', { name: /Open this memory to fix or forget it: .*physics/i })
+    .first()
+    .click()
   await expect(page).toHaveURL(/record=mem_physics/)
   expect(errors).toEqual([])
 })
