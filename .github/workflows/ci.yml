@@ -126,7 +126,7 @@ jobs:
         # The coverage floor is CI's Linux coverage after the acceptance-script and workspace refusal
         # tests (2026-11-23), rounded down, so it only stops coverage from falling (.coveragerc
         # names what is measured).
-        run: python -m pytest tests/ -q --cov --cov-report=term --cov-fail-under=85 --junitxml=junit.xml
+        run: python -m pytest tests/ -q --cov --cov-report=term --cov-fail-under=86 --junitxml=junit.xml
 
       - name: Test report (reruns, skips, slowest)
         # No test is retried here. This lists any test that ran more than once, every skip and the
