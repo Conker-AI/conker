@@ -6,6 +6,17 @@ which module versions a release pins.
 
 ## Unreleased
 
+## 0.5.1
+
+Beta build from main. Changes since the last tag:
+
+- Beta fast lane: sharded dashboard e2e, one-step release prep (#379)
+- Beta lane: path-filtered CI, code map, parallel pre-push, warm worktrees (#380)
+- style: adopt ruff format (CI + pre-commit) (#381)
+- tests: poll instead of sleeping in two flaky tests (#382)
+- Beta channel: green main becomes a pre-release a beta server is offered (#383)
+- style: format 3 files that landed after ruff format (#388)
+
 ## 0.5.0
 
 - **Refresh everything, and a release check when you enter.** A refresh button beside Ask Conker reads every screen again and asks the server to look for a new Conker release now (not only once a day); a found release shows as a notice with a View button and as the card in the Inbox. Opening the app, or coming back after five minutes, does the quiet part by itself and never reloads or remounts anything while you have unsaved work or a chat is sending. A window left open across an update reloads once when its files are gone. (#377)
