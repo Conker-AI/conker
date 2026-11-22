@@ -158,4 +158,4 @@ jobs:
           else
             range=""
           fi
-          docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/repo" "$GITLEAKS" git /repo --config /repo/.gitleaks.toml --log-level debug --no-banner --redact --verbose --exit-code 1 $range
+          docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/repo" "$GITLEAKS" git /repo --config /repo/.gitleaks.toml --no-banner --redact --verbose --exit-code 1 $range

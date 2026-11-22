@@ -8,7 +8,6 @@ useDefault = true
 # are made-up strings ("private-<name>-retained-123456", "owner-existing-key-1234567890123456"),
 # not keys any service ever issued. Only these values, only in these two files.
 description = "Fake keys in the workspace test fixtures"
-targetRules = ["generic-api-key"]
 condition = "AND"
 paths = ['''^tests/test_workspace_(memory|search)\.py$''']
 regexes = [
