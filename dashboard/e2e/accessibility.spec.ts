@@ -4,7 +4,7 @@ import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page } from '@playwright/test'
 import { allPlaces, card, open } from './pages'
 
-const PLACES = ['/overview', '/inbox', '/chats', '/projects', '/memory', '/agents', '/tools', '/jobs', '/system', '/settings', '/chat', '/activity', '/artifacts', '/setup', '/memory?view=care', '/memory?view=beliefs', '/agents?tab=templates']
+const PLACES = ['/overview', '/inbox', '/chats', '/projects', '/memory', '/agents', '/tools', '/jobs', '/system', '/settings', '/chat', '/activity', '/artifacts', '/setup', '/memory?view=care', '/memory?view=beliefs', '/agents?tab=templates', '/loops']
 
 async function violations(page: Page, include?: string) {
   // Skeletons mark themselves busy; check the loaded screen, not the placeholder.
@@ -75,6 +75,38 @@ for (const theme of ['light', 'dark'] as const) test.describe(theme, () => {
     await page.getByRole('button', { name: 'Improve my prompt' }).click()
     await expect(page.getByRole('button', { name: /^Research/ })).toBeVisible()
     expect(await violations(page, '[role="dialog"]')).toEqual([])
+  })
+
+  test('axe: connection banner, toast and inline error announce themselves', async ({ page, context }) => {
+    // Toast: a model change saves with a "Saved" toast that is announced politely.
+    const errors = await open(page, '/settings?tab=models')
+    const thinking = page.getByRole('region', { name: 'Talking' }).getByRole('combobox').nth(1)
+    await thinking.click()
+    await page.getByRole('option').filter({ hasNotText: 'Off' }).first().click()
+    const toast = page.getByText('Saved', { exact: true }).first()
+    await expect(toast).toBeVisible()
+    await expect(toast.locator('xpath=ancestor-or-self::*[@aria-live or @role="status" or @role="alert"]').first()).toBeAttached()
+    const live = toast.locator('xpath=ancestor-or-self::*[@aria-live or @role="status" or @role="alert"]').first()
+    await live.evaluate(element => element.setAttribute('data-axe-toast', ''))
+    expect(await violations(page, '[data-axe-toast]')).toEqual([])
+    // Connection banner: offline says so in a polite live region.
+    await context.setOffline(true)
+    await page.evaluate(() => window.dispatchEvent(new Event('offline')))
+    const banner = page.locator('[data-slot="connection-banner"]')
+    await expect(banner).toContainText('offline')
+    await expect(banner).toHaveAttribute('aria-live', 'polite')
+    await expect(banner).toHaveAttribute('role', 'status')
+    expect(await violations(page, '[data-slot="connection-banner"]')).toEqual([])
+    await context.setOffline(false)
+    expect(errors).toEqual([])
+  })
+
+  test('axe: an inline error is an alert and passes the rules', async ({ page }) => {
+    await page.addInitScript(() => sessionStorage.setItem('conker-fake-fail', 'history'))
+    await open(page, '/chats')
+    const alert = page.getByRole('alert').first()
+    await expect(alert).toBeVisible()
+    expect(await violations(page, '[role="alert"]')).toEqual([])
   })
 
   test('axe: forget confirmation', async ({ page }) => {
