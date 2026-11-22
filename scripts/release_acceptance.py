@@ -22,7 +22,7 @@ from typing import Any
 if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from scripts.release_checks import (
+from scripts.release.release_checks import (
     FIXED_CONTAINER_NAMES,
     HEALTH_ENDPOINTS,
     ROOT,
@@ -33,7 +33,7 @@ from scripts.release_checks import (
     assert_compose_matrix,
     build_image_plan,
 )
-from scripts.release_first_run import FirstRunSteps
+from scripts.release.release_first_run import FirstRunSteps
 
 
 class AcceptanceGate(FirstRunSteps):

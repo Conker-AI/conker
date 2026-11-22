@@ -36,7 +36,7 @@ def enhance(config, pi_source, toolgate_source=None, memorygate_source=None):
             "Stop this workspace before changing its runtimes: python scripts/workspace.py down"
         )
     _require_memory_ports(config)
-    from scripts.workspace_memory import prepare, require_sources
+    from scripts.devstack.workspace_memory import prepare, require_sources
 
     try:
         config, _ = prepare(config)
@@ -182,7 +182,7 @@ def enhance(config, pi_source, toolgate_source=None, memorygate_source=None):
             GATEWAY_TERMINAL_SOCKET=str(Path(private["codex"])),
             GATEWAY_TERMINAL_WORKSPACE_LABEL="Windows owner workspace · Conker",
         )
-    from scripts.workspace_memory import write_config
+    from scripts.devstack.workspace_memory import write_config
 
     try:
         write_config(CONFIG, config, original)
@@ -196,7 +196,7 @@ def enhance(config, pi_source, toolgate_source=None, memorygate_source=None):
 
 def configure_memory_corrections(config):
     """Targeted stopped-service repair; no packages, provider settings or grants change."""
-    from scripts.workspace_memory import prepare, require_sources, write_config
+    from scripts.devstack.workspace_memory import prepare, require_sources, write_config
 
     if any(owned_process(config, service) for service in ("pi", "memorygate")):
         raise SystemExit("Stop Pi and MemoryGate before preparing memory corrections.")

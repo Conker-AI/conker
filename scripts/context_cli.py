@@ -21,7 +21,7 @@ import config_cli
 if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from scripts import conker_context
+from scripts.cli import conker_context
 
 CONTEXT = re.compile(r"/context/[A-Za-z0-9_-]{1,128}")
 

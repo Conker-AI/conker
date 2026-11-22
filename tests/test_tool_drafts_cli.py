@@ -13,7 +13,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 from scripts import conker as cli
-from scripts import tool_drafts
+from scripts.cli import tool_drafts
 
 IDENTITY = "creq_" + "a" * 32
 
