@@ -15,6 +15,30 @@ permissions:
   contents: read
 
 jobs:
+  changes:
+    # Beta fast lane: a pull request runs only the jobs its files can affect. The installer job
+    # (lint, types, manifest, tests) always runs; pushes, schedules and manual runs run everything.
+    runs-on: ubuntu-latest
+    outputs:
+      recovery: ${{ steps.f.outputs.recovery }}
+      subscriptions: ${{ steps.f.outputs.subscriptions }}
+      crossgate: ${{ steps.f.outputs.crossgate }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - id: f
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          files=""
+          if [ "$EVENT" = pull_request ]; then files=$(git diff --name-only "$BASE"...HEAD); fi
+          hit() { [ "$EVENT" != pull_request ] || echo "$files" | grep -Eq "$1"; }
+          echo "recovery=$(hit '^(scripts/(recovery|backup)|tests/test_recovery|deploy/|docker-compose|\.github/workflows/ci\.yml)' && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          echo "subscriptions=$(hit '^(services/subscriptions/|scripts/(plan_limits|chatgpt_provider)\.py|\.github/workflows/ci\.yml)' && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          echo "crossgate=$(hit '^(scripts/|tests/|versions\.env|\.github/workflows/ci\.yml)' && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
   installer:
     runs-on: ubuntu-latest
     steps:
@@ -57,6 +81,10 @@ jobs:
         # 600 lines per source file; files that were already larger may only shrink.
         run: python scripts/check_file_sizes.py
 
+      - name: Code map
+        # docs/reference/codemap.md is generated (one line per file); a stale map fails here.
+        run: python scripts/codemap.py --check
+
       - name: Python lint
         # Pi's policy (ruff.toml); findings that predate it are listed per file there.
         run: python -m ruff check .
@@ -95,6 +123,8 @@ jobs:
         run: python scripts/auth_mutation_drill.py
 
   recovery-drill:
+    needs: changes
+    if: needs.changes.outputs.recovery == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -109,6 +139,8 @@ jobs:
         run: python -m pytest tests/test_recovery_docker.py -q
 
   subscription-runtime:
+    needs: changes
+    if: needs.changes.outputs.subscriptions == 'true'
     # The Claude plan runtime (services/subscriptions), which the source-built server layout builds
     # and the repository install pulls as a published image: the image builds, the pinned Claude
     # Code binary passes its checksum and runs read-only, signed out, the bridge answers only with
@@ -169,6 +201,8 @@ jobs:
         run: docker logs subscriptions || true
 
   cross-gate:
+    needs: changes
+    if: needs.changes.outputs.crossgate == 'true'
     # The tests that import Pi, ToolGate and MemoryGate together, run against the gate commits
     # Conker pins (scripts/workspace-sources.json). Run only by hand, they once rotted for weeks
     # because every one of them skips when a gate is missing; here a skip fails the job.

@@ -1,0 +1,4 @@
+#!/bin/sh
+# Opt in once: git config core.hooksPath .githooks
+# Runs the CI checks your change can break, in parallel (scripts/prepush.py). Skip once: git push --no-verify
+exec python scripts/prepush.py
