@@ -210,6 +210,7 @@ def test_build_command_refuses_running_gateway_before_installing_or_compiling(pr
     spec = importlib.util.spec_from_file_location(
         "workspace_build_launcher", SCRIPTS / "workspace.py"
     )
+    assert spec is not None and spec.loader is not None
     workspace = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(workspace)
     state.mkdir(parents=True)

@@ -4,6 +4,7 @@ import io
 import json
 import sys
 from pathlib import Path
+from typing import Any, cast
 from urllib.error import HTTPError
 
 import pytest
@@ -298,7 +299,7 @@ def test_compare_stops_at_first_refusal(invoke, capsys):
             "http://private",
             409,
             "Conflict",
-            {},
+            cast(Any, {}),
             io.BytesIO(b'{"detail": "model refused"}'),
         ),
     ]

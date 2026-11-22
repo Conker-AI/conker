@@ -4,6 +4,7 @@ import io
 import json
 import sys
 from pathlib import Path
+from typing import Any, cast
 from urllib.error import HTTPError
 
 import pytest
@@ -291,7 +292,7 @@ def test_compact_pi_pinned_refusal_prints_details(invoke, capsys, tmp_path):
             "url",
             409,
             "Pinned messages",
-            {},
+            cast(Any, {}),
             io.BytesIO(
                 b'{"detail": {"code": "pinned", "message": "Cannot compact pinned messages"}}'
             ),
