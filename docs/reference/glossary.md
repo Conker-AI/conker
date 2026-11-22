@@ -130,6 +130,8 @@ While Pi works on a message, the message is in one of these states:
 | Approval | request, verification | ToolGate API `/v2/requests`, AgentGate |
 | Helper models | harness | the Harness tab in companion settings |
 
+In code and in Pi's API, **collaboration = teams**: the `collaboration` module, route and tables are the Team feature. The code name stays as an alias; only the product word is Team.
+
 ## Words with two meanings
 
 | Word | Meanings | Say instead |
