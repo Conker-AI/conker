@@ -11,6 +11,7 @@ import queue
 import threading
 from contextlib import asynccontextmanager, closing, suppress
 from pathlib import Path
+from typing import Any
 
 from chatgpt_provider import (
     ChatGPTControl,
@@ -37,7 +38,9 @@ def create_app(config, *, chatgpt_relay=None):
             "Provision separate private credentials for provider control and inference."
         )
     relay = chatgpt_relay
-    chatgpt = None if relay else ChatGPTControl(Path(settings["state"]), Path(settings["codex"]))
+    chatgpt: Any = (
+        None if relay else ChatGPTControl(Path(settings["state"]), Path(settings["codex"]))
+    )
     claude = Claude(settings["claude"], Path(settings["state"]) / "claude-auth")
     native_sessions = Sessions(settings["claude"], Path(settings["state"]) / "claude-auth")
     codex_sessions = (

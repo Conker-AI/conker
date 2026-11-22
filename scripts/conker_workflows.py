@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import re
+from collections.abc import Set as AbstractSet
 from types import SimpleNamespace
 from urllib.error import HTTPError
 
@@ -134,7 +135,7 @@ def capabilities(request, config) -> list[dict]:
     return found
 
 
-def steps(document: dict, asks: set[str] = frozenset()) -> list[str]:
+def steps(document: dict, asks: AbstractSet[str] = frozenset()) -> list[str]:
     lines = []
     for node in document["nodes"]:
         config = node["config"]

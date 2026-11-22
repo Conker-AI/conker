@@ -14,6 +14,7 @@ import time
 import unicodedata
 from contextlib import contextmanager, suppress
 from pathlib import Path
+from typing import IO, cast
 
 from native_claude import environment
 
@@ -128,7 +129,7 @@ class Sessions:
                     **({"creationflags": subprocess.CREATE_NO_WINDOW} if os.name == "nt" else {}),
                 )
                 self.process = process
-            streams = [process.stdout, process.stderr]
+            streams = cast("list[IO[bytes]]", [process.stdout, process.stderr])
             for stream in streams:
                 # Python 3.12 supports nonblocking pipe descriptors on Windows.
                 # No reader thread can be stranded by a supervisor inheriting a pipe.

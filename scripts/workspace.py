@@ -17,6 +17,7 @@ import time
 import urllib.error
 import urllib.request
 from pathlib import Path
+from typing import Any
 
 if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -50,7 +51,7 @@ CONTAINERS = {
 ORIGIN = "https://localhost:18550"
 
 
-def run(*args, cwd=ROOT, capture=False, timeout=None):
+def run(*args, cwd=ROOT, capture=False, timeout=None) -> Any:
     result = subprocess.run(
         [str(arg) for arg in args],
         cwd=cwd,

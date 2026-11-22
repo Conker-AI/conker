@@ -7,6 +7,7 @@ import subprocess
 import sys
 import uuid
 from pathlib import Path
+from typing import Any
 from urllib.error import HTTPError
 from urllib.parse import urlencode
 from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_opener
@@ -373,7 +374,7 @@ def main():
     elif args.command == "memory-forget-pending":
         value = request(config, "pi-owner", "/memory/forget-pending")
     elif args.command == "memory-edit":
-        path, body = memory_edit_request
+        path, body = memory_edit_request  # pyright: ignore[reportGeneralTypeIssues] -- set above when this command runs
         try:
             value = request(
                 config,
@@ -509,7 +510,7 @@ def main():
             read_json(args.body) if args.body else None,
         )
     elif args.command == "auth":
-        body = (
+        body: dict[str, Any] | None = (
             None
             if args.action == "status" or (args.provider == "claude" and args.action == "models")
             else {"operation": args.action}
@@ -519,13 +520,13 @@ def main():
             key = "loginId" if args.action == "cancel" else "connectionId"
             if not status.get(key):
                 raise ValueError("There is no matching active sign-in or connection.")
-            body[key] = (
+            body[key] = (  # pyright: ignore[reportOptionalSubscript] -- body is a dict for cancel/logout
                 identity(status[key], r"login_[0-9a-f]{32}", "Claude sign-in identity")
                 if args.provider == "claude"
                 else status[key]
             )
         if args.provider == "claude" and args.action == "login":
-            body["billing"] = args.billing
+            body["billing"] = args.billing  # pyright: ignore[reportOptionalSubscript] -- body is a dict for login
         value = request(config, "providers", "/" + args.provider, body)
     print(
         json.dumps(
