@@ -5,6 +5,7 @@ import json
 import sys
 from argparse import Namespace
 from pathlib import Path
+from typing import Any, cast
 from urllib.error import HTTPError
 from urllib.parse import parse_qs, urlsplit
 
@@ -102,7 +103,7 @@ class Services:
         if path.endswith("/publications"):
             return {"items": self.publications}
         if path.endswith("/publish"):
-            return {"draft_id": path.split("/")[4], "toolId": TOOL_ID, **body}
+            return {"draft_id": path.split("/")[4], "toolId": TOOL_ID, **cast(dict[str, Any], body)}
         return {"id": "morning-weather", "revision": 2, "document": DOCUMENT}
 
     def to(self, path):
@@ -252,7 +253,7 @@ def test_a_failed_publish_keeps_the_unconfirmed_error():
     def request(config, service, path, body=None, **options):
         if path.endswith("/publications"):
             return {"items": []}
-        raise HTTPError("http://x", 502, "bad gateway", {}, io.BytesIO(b"{}"))
+        raise HTTPError("http://x", 502, "bad gateway", cast(Any, {}), io.BytesIO(b"{}"))
 
     with pytest.raises(HTTPError):
         publish(request)
@@ -307,7 +308,9 @@ def test_validation_issues_name_their_step():
 def test_refusals_show_the_services_message():
     def refuse(config, service, path, body=None, **options):
         detail = {"detail": {"code": "decided", "message": "Already decided."}}
-        raise HTTPError("http://pi", 409, "x", {}, io.BytesIO(json.dumps(detail).encode()))
+        raise HTTPError(
+            "http://pi", 409, "x", cast(Any, {}), io.BytesIO(json.dumps(detail).encode())
+        )
 
     with pytest.raises(ValueError, match=r"Pi refused this \(decided\): Already decided."):
         workflows.workflow_operation(Namespace(operation="dismiss", request=REQUEST), {}, refuse)

@@ -4,6 +4,7 @@ import io
 import json
 import sys
 from pathlib import Path
+from typing import Any, cast
 from urllib.error import HTTPError
 from urllib.parse import parse_qs, urlsplit
 
@@ -135,7 +136,7 @@ def test_failed_read_is_not_retried_or_misreported_as_a_mutation(
 
     def request(*args, **kwargs):
         attempts.append((args, kwargs))
-        raise HTTPError("http://private", status, "PRIVATE", {}, None)
+        raise HTTPError("http://private", status, "PRIVATE", cast(Any, {}), None)
 
     monkeypatch.setattr(cli, "request", request)
     assert run("codex", "list") == 1

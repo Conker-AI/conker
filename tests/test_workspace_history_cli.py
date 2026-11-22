@@ -4,6 +4,7 @@ import io
 import json
 import sys
 from pathlib import Path
+from typing import Any, cast
 from urllib.error import HTTPError
 from urllib.parse import parse_qs, urlsplit
 
@@ -130,7 +131,7 @@ def test_history_error_is_read_specific_safe_and_never_retried(invoke, monkeypat
             "http://synthetic/history",
             status,
             "Private server detail",
-            {},
+            cast(Any, {}),
             io.BytesIO(b"Private body"),
         )
 

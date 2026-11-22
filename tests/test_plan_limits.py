@@ -6,6 +6,7 @@ import sys
 import threading
 from pathlib import Path
 from types import SimpleNamespace
+from typing import Any, cast
 
 from fastapi.testclient import TestClient
 
@@ -244,7 +245,7 @@ def test_cli_lists_both_plans_and_marks_a_missing_runtime(monkeypatch, capsys):
     def request(config, service, path, body=None, **_):
         asked.append((service, path, body))
         if path == "/claude/limits":
-            raise HTTPError(path, 404, "missing", {}, None)
+            raise HTTPError(path, 404, "missing", cast(Any, {}), None)
         return plan_limits.chatgpt(CODEX)
 
     monkeypatch.setattr(cli, "read_config", lambda: {"native_providers": {}})

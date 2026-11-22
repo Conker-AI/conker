@@ -10,6 +10,7 @@ import os
 from contextlib import closing
 from email.message import Message
 from pathlib import Path
+from typing import Any
 
 import httpx
 import pytest
@@ -62,7 +63,7 @@ def test_approved_action_narrates_and_later_turn_preserves_recorded_result(
 ):
     Provider, ActedWithoutReply, Loop, Router, Store, Approval, Tool, Result = runtime
     requests, projected = [], []
-    replies = ['{"tool":"test.echo","args":{"text":"hello"}}']
+    replies: list[Any] = ['{"tool":"test.echo","args":{"text":"hello"}}']
     if fail_narration:
         replies.append(None)
     replies.extend(["The saved action returned hello.", "It was the same recorded result."])

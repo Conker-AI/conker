@@ -5,6 +5,7 @@ import io
 import json
 import sys
 from pathlib import Path
+from typing import Any, cast
 from urllib.error import HTTPError
 
 import pytest
@@ -85,7 +86,7 @@ def test_claude_cancel_cli_uses_exact_observed_identity_and_never_retries(
         calls.append((service, path, body))
         if body is None:
             return {"loginState": "pending", "loginId": login_id}
-        raise HTTPError("http://synthetic/claude", 503, "unconfirmed", {}, None)
+        raise HTTPError("http://synthetic/claude", 503, "unconfirmed", cast(Any, {}), None)
 
     monkeypatch.setattr(cli, "request", request)
     assert run("auth", "claude", "cancel") == 1

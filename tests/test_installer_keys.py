@@ -7,6 +7,7 @@ import hashlib
 import json
 import re
 import subprocess
+from typing import cast
 
 from tests.test_installer import (  # noqa: F401
     ROOT,
@@ -22,10 +23,13 @@ def test_generated_secrets_are_always_32_characters():
     '=' made most keys shorter; the gateway refuses any key under 32 and
     stopped a fresh install from starting."""
     script = (
-        re.search(
-            r"^random_secret\(\) \{.*?^\}\n",
-            (ROOT / "install.sh").read_text(),
-            re.MULTILINE | re.DOTALL,
+        cast(
+            re.Match[str],
+            re.search(
+                r"^random_secret\(\) \{.*?^\}\n",
+                (ROOT / "install.sh").read_text(),
+                re.MULTILINE | re.DOTALL,
+            ),
         )[0]
         + 'for _ in $(seq 200); do s=$(random_secret); [ "${#s}" -eq 32 ] || { echo "short:${#s}"; exit 1; }; done'
     )

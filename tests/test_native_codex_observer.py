@@ -5,6 +5,7 @@ import sys
 import threading
 import time
 from pathlib import Path
+from typing import Any, cast
 
 import pytest
 
@@ -18,7 +19,7 @@ from tests.test_native_codex_sessions import ID, row
 @pytest.fixture
 def process_server(tmp_path, monkeypatch):
     """Run real owned Python pipes, substitute only the installed native executable."""
-    sessions = native.Sessions(sys._base_executable, tmp_path)
+    sessions = native.Sessions(cast(Any, sys)._base_executable, tmp_path)
     record = tmp_path / "requests.jsonl"
     state = {
         "result": {"data": [row()], "nextCursor": None},
@@ -50,7 +51,7 @@ def process_server(tmp_path, monkeypatch):
             if "response" in state:
                 code += f" if request['method']!='initialize': response={state['response']!r}\n"
             code += " sys.stdout.write(json.dumps(response)+'\\n');sys.stdout.flush()\n"
-        return popen([sys._base_executable, "-c", code], **options)
+        return popen([cast(Any, sys)._base_executable, "-c", code], **options)
 
     monkeypatch.setattr(native.subprocess, "Popen", start)
     return sessions, state, commands, record
@@ -163,7 +164,7 @@ def test_protocol_confusion_and_server_requests_receive_no_reply(process_server,
 def test_real_pipe_deadline_stdout_stderr_overflow_and_invalid_json_are_static(
     tmp_path,
 ):
-    sessions = native.Sessions(sys._base_executable, tmp_path)
+    sessions = native.Sessions(cast(Any, sys)._base_executable, tmp_path)
     cases = [
         ("import time;time.sleep(60)", 0.15),
         ("import sys;sys.stdout.write('x'*4194305)", 5),
@@ -180,7 +181,7 @@ def test_real_pipe_deadline_stdout_stderr_overflow_and_invalid_json_are_static(
 
 
 def test_forbidden_rpc_is_rejected_before_writing(tmp_path):
-    sessions = native.Sessions(sys._base_executable, tmp_path)
+    sessions = native.Sessions(cast(Any, sys)._base_executable, tmp_path)
     with sessions._command(["-c", "import time;time.sleep(60)"], time.monotonic() + 3) as command:
         with pytest.raises(native.SessionError):
             command.call("thread/resume", {"threadId": ID})
@@ -205,7 +206,7 @@ def test_continuous_notifications_cannot_extend_whole_operation_deadline(
 def test_observer_timeout_never_kills_an_independent_child(tmp_path):
     import psutil
 
-    sessions = native.Sessions(sys._base_executable, tmp_path)
+    sessions = native.Sessions(cast(Any, sys)._base_executable, tmp_path)
     marker = tmp_path / "owned-synthetic-child.json"
     code = (
         "import subprocess,sys,pathlib,json,time; "

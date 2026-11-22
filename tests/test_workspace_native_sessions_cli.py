@@ -4,6 +4,7 @@ import io
 import json
 import sys
 from pathlib import Path
+from typing import Any, cast
 from urllib.error import HTTPError
 
 import pytest
@@ -107,7 +108,7 @@ def test_uncertain_stop_is_never_replayed(invoke, monkeypatch, capsys):
 
     def request(*args, **kwargs):
         attempts.append((args, kwargs))
-        raise HTTPError("http://private", 503, "PRIVATE", {}, None)
+        raise HTTPError("http://private", 503, "PRIVATE", cast(Any, {}), None)
 
     monkeypatch.setattr(cli, "request", request)
     assert (

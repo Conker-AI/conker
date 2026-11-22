@@ -4,6 +4,7 @@ import io
 import json
 import sys
 from pathlib import Path
+from typing import Any, cast
 from urllib.error import HTTPError
 
 import pytest
@@ -127,7 +128,7 @@ def test_uncertain_writes_are_not_replayed_or_echoed(invoke, tmp_path, capsys, o
     run, calls, _, state = invoke
     if failure == "http":
         state["failure"] = HTTPError(
-            "http://private", 503, "PRIVATE_DIAGNOSTIC", {}, io.BytesIO(b"PRIVATE_BODY")
+            "http://private", 503, "PRIVATE_DIAGNOSTIC", cast(Any, {}), io.BytesIO(b"PRIVATE_BODY")
         )
     elif failure == "timeout":
         state["failure"] = TimeoutError("PRIVATE_DIAGNOSTIC")
@@ -149,7 +150,7 @@ def test_uncertain_writes_are_not_replayed_or_echoed(invoke, tmp_path, capsys, o
 
 def test_failed_status_never_dispatches_a_retry(invoke, capsys):
     run, calls, _, state = invoke
-    state["failure"] = HTTPError("http://private", 404, "PRIVATE", {}, None)
+    state["failure"] = HTTPError("http://private", 404, "PRIVATE", cast(Any, {}), None)
     assert run("status", REQUEST_ID) == 1
     assert len(calls) == 1 and calls[0][0].get_method() == "GET"
     assert "could not be read" in capsys.readouterr().err
