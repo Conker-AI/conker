@@ -9238,7 +9238,7 @@ export interface components {
             messagePolicies: {
                 [key: string]: "keep-exact" | "allow-summary" | "retrieve" | "exclude";
             };
-            budget: components["schemas"]["pi__context__controls__Budget"];
+            budget: components["schemas"]["pi__core__context_policy__Budget"];
         };
         /** Policy */
         "Policy-Output": {
@@ -11249,15 +11249,6 @@ export interface components {
             /** Version */
             version: number;
         };
-        /** Budget */
-        pi__context__controls__Budget: {
-            /** Contextwindowtokens */
-            contextWindowTokens: number;
-            /** Outputreservetokens */
-            outputReserveTokens: number;
-            /** Otherinputtokens */
-            otherInputTokens: number;
-        };
         /** Update */
         pi__context__controls__Update: {
             /** Expected Revision */
@@ -11412,6 +11403,24 @@ export interface components {
             /** Expected Revision */
             expected_revision: number;
         };
+        /** Budget */
+        pi__core__context_policy__Budget: {
+            /** Contextwindowtokens */
+            contextWindowTokens: number;
+            /** Outputreservetokens */
+            outputReserveTokens: number;
+            /** Otherinputtokens */
+            otherInputTokens: number;
+        };
+        /** Update */
+        pi__core__owner_settings__Update: {
+            /** Expected Revision */
+            expected_revision: number;
+            /** Values */
+            values: {
+                [key: string]: unknown;
+            };
+        };
         /** Request */
         pi__host__actions__Request: {
             /** Request Id */
@@ -11502,15 +11511,6 @@ export interface components {
             /** Expected Revision */
             expected_revision: number;
             configuration: components["schemas"]["Configuration"];
-        };
-        /** Update */
-        pi__owner__settings__Update: {
-            /** Expected Revision */
-            expected_revision: number;
-            /** Values */
-            values: {
-                [key: string]: unknown;
-            };
         };
         /** Update */
         pi__schedule__job_models__Update: {
@@ -20083,7 +20083,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["pi__owner__settings__Update"];
+                "application/json": components["schemas"]["pi__core__owner_settings__Update"];
             };
         };
         responses: {

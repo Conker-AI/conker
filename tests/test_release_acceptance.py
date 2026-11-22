@@ -6,8 +6,7 @@ from typing import cast
 
 import pytest
 
-from scripts.release_acceptance import AcceptanceGate
-from scripts.release_checks import (
+from scripts.release.release_checks import (
     EVIDENCE_SCHEMA,
     SETUP_STEP_IDS,
     AcceptanceError,
@@ -18,6 +17,7 @@ from scripts.release_checks import (
     assert_compose_matrix,
     build_image_plan,
 )
+from scripts.release_acceptance import AcceptanceGate
 
 
 def manifest() -> dict:

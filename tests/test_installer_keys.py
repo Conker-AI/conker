@@ -9,6 +9,7 @@ import re
 import subprocess
 from typing import cast
 
+from tests.installer_source import installer_text
 from tests.test_installer import (  # noqa: F401
     ROOT,
     env_values,
@@ -27,7 +28,7 @@ def test_generated_secrets_are_always_32_characters():
             re.Match[str],
             re.search(
                 r"^random_secret\(\) \{.*?^\}\n",
-                (ROOT / "install.sh").read_text(),
+                installer_text(),
                 re.MULTILINE | re.DOTALL,
             ),
         )[0]

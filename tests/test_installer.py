@@ -23,6 +23,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.installer_source import installer_text
+
 ROOT = Path(__file__).resolve().parent.parent
 INSTALL = ROOT / "install.sh"
 
@@ -64,6 +66,23 @@ pytestmark = pytest.mark.skipif(
 )
 
 
+def test_a_checkout_without_its_parts_stops_before_checking_anything(tmp_path):
+    for name in ("install.sh", "docker-compose.yml"):
+        shutil.copy(ROOT / name, tmp_path / name)
+    result = subprocess.run(
+        ["bash", str(tmp_path / "install.sh"), "--check"],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+        env={**os.environ, "NO_COLOR": "1"},
+        cwd=tmp_path,
+    )
+    assert result.returncode == 1
+    assert "deploy/install/machine.sh is missing" in result.stderr
+    assert "Checking this machine" not in result.stdout
+
+
 def has_docker() -> bool:
     if not shutil.which("docker"):
         return False
@@ -85,6 +104,7 @@ def install(tmp_path):
                  "versions.env"):
         shutil.copy(ROOT / name, work / name)
     shutil.copytree(ROOT / "scripts", work / "scripts", ignore=shutil.ignore_patterns("__pycache__"))
+    shutil.copytree(ROOT / "deploy" / "install", work / "deploy" / "install")
     (work / "install.sh").chmod(0o755)
 
     def run(*args, expect_ok=True, path=None):
@@ -488,14 +508,14 @@ def test_the_backup_directory_is_named_twice(install):
     result = install("--yes", "--dry-run")
     # The dry run stops before the closing summary, so assert on the source of
     # the summary itself rather than on a run that never reaches it.
-    finish = (ROOT / "install.sh").read_text().split("finish()")[1].split("\n}")[0]
+    finish = installer_text().split("finish()")[1].split("\n}")[0]
     assert finish.count("CONKER_BACKUP_DIR") >= 2
     assert "only copy" in finish
     assert result.returncode == 0
 
 
 def test_the_guided_setup_is_offered_only_to_a_person_at_a_terminal():
-    finish = (ROOT / "install.sh").read_text().split("finish()")[1].split("\n}")[0]
+    finish = installer_text().split("finish()")[1].split("\n}")[0]
     offer = finish.split('[ "$ASSUME_YES" -eq 0 ] && [ -t 0 ] && [ -t 1 ]')
     assert len(offer) == 2 and 'bash "$ROOT/conker" setup' in offer[1]
     assert "./conker setup" in offer[0]  # unattended installs still learn the command
@@ -531,8 +551,7 @@ def test_the_status_parser_reads_the_service_not_its_last_check():
                 '"local_provider":{"status":"unavailable"},'
                 '"action_boundary":{"status":"ok"}}}')
 
-    for script in ("conker", "install.sh"):
-        body = (ROOT / script).read_text()
+    for script, body in (("conker", (ROOT / "conker").read_text()), ("install.sh", installer_text())):
         # Both halves matter: the helper must exist AND be what the status
         # line actually calls. An earlier version of this test asserted only
         # that the helper existed, and stayed green when the call site was
@@ -560,7 +579,7 @@ def test_the_status_parser_reads_the_service_not_its_last_check():
 def test_installer_selects_sandbox_overlay_only_when_active():
     """The installer must include docker-compose.sandbox.yml only when
     AGENT_SANDBOX_STATE=active, matching the owner-terminal precedent."""
-    installer = (ROOT / "install.sh").read_text()
+    installer = installer_text()
     launcher = (ROOT / "conker").read_text()
 
     for source, name in ((installer, "install.sh"), (launcher, "conker")):

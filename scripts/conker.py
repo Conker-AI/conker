@@ -18,14 +18,14 @@ if __package__ in {None, ""}:
 from conker_config import config_operation
 from plan_limits import limits_operation
 
-from scripts import assistant_imports, conker_models, conker_toolgate, tool_drafts
-from scripts.conker_agents import operation as agents_operation
-from scripts.conker_chat import operation as chat_operation
-from scripts.conker_context import MEMORY_USES, PI_QUERY_KEYS, pi_call
-from scripts.conker_context import operation as context_operation
-from scripts.conker_files import operation as files_operation
-from scripts.conker_inbox import operation as inbox_operation
-from scripts.conker_inputs import (
+from scripts.cli import assistant_imports, conker_models, conker_toolgate, tool_drafts
+from scripts.cli.conker_agents import operation as agents_operation
+from scripts.cli.conker_chat import operation as chat_operation
+from scripts.cli.conker_context import MEMORY_USES, PI_QUERY_KEYS, pi_call
+from scripts.cli.conker_context import operation as context_operation
+from scripts.cli.conker_files import operation as files_operation
+from scripts.cli.conker_inbox import operation as inbox_operation
+from scripts.cli.conker_inputs import (
     SKILL_ID,
     codex_sessions,
     draft_path,
@@ -36,12 +36,12 @@ from scripts.conker_inputs import (
     read_json,
     read_text,
 )
-from scripts.conker_loops import operation as loops_operation
-from scripts.conker_messages import operation as message_operation
-from scripts.conker_parser import build_parser
-from scripts.conker_prompt import operation as prompt_operation
-from scripts.conker_spending import spending_operation
-from scripts.conker_workflows import TOOL_REQUESTS, tool_request, workflow_operation
+from scripts.cli.conker_loops import operation as loops_operation
+from scripts.cli.conker_messages import operation as message_operation
+from scripts.cli.conker_parser import build_parser
+from scripts.cli.conker_prompt import operation as prompt_operation
+from scripts.cli.conker_spending import spending_operation
+from scripts.cli.conker_workflows import TOOL_REQUESTS, tool_request, workflow_operation
 from scripts.workspace import read_config
 
 

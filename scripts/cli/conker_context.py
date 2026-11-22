@@ -1,0 +1,408 @@
+"""Chat context settings from the CLI: rules, instructions, budget, summary and fork."""
+
+import copy
+import json
+import re
+import uuid
+from pathlib import Path
+from urllib.error import HTTPError
+
+from scripts.cli.conker_inputs import identity, read_text
+
+SESSION = r"[A-Za-z0-9_-]{1,128}"
+MESSAGE = r"[A-Za-z0-9_-]{1,200}"
+RULES = {
+    "pin": "keep-exact",
+    "exclude": "exclude",
+    "retrieve": "retrieve",
+    "summarize": "allow-summary",
+}
+BUDGET_RULE = (
+    "Use a window of 2-10000000 tokens, a reserve of at least 1 that is smaller "
+    "than the window, and other input of 0 or more."
+)
+# The installed launcher runs `conker context budget` too (scripts/context_cli.py).
+START = "conker context budget {session} --window TOKENS --reserve TOKENS"
+NO_SETTINGS = "This chat has no context settings yet. Start them with: " + START
+ITEM_TEXT_ERROR = "Use 1-500 characters of text."
+# The query keys each Pi read route may carry; conker.py's request() drops the rest.
+_MEMORY_LIST_KEYS = ("search", "limit", "origin", "state", "memory_type", "after")
+# GET /memory/{id}/uses: one memory's uses (R-U3); the id is part of the path, so no exact key.
+MEMORY_USES = re.compile(r"/memory/[A-Za-z0-9][A-Za-z0-9_.:-]{0,199}/uses")
+PI_QUERY_KEYS = {
+    "/definitions": ("kind", "search", "archived"),
+    "/memory/objects": _MEMORY_LIST_KEYS,
+    "/memory/beliefs": _MEMORY_LIST_KEYS,
+    "/memory/upkeep": ("unused_days", "limit"),
+    "/open-loops": ("state", "due_before", "limit", "after"),
+}
+
+
+def register(commands):
+    """Register the context parser and its subcommands."""
+    context = commands.add_parser("context", help="Read and change one chat's context settings")
+    subparsers = context.add_subparsers(dest="operation", required=True)
+
+    show = subparsers.add_parser("show", help="Show current context settings and summary")
+    show.add_argument("session")
+
+    rule = subparsers.add_parser("rule", help="Set or clear a message's context rule")
+    rule.add_argument("session")
+    rule.add_argument("message")
+    rule.add_argument("rule", choices=["pin", "exclude", "retrieve", "summarize", "clear"])
+
+    instructions = subparsers.add_parser("instructions", help="Set session instructions")
+    instructions.add_argument("session")
+    instructions.add_argument("file", nargs="?", type=Path)
+    instructions.add_argument("--clear", action="store_true")
+
+    add_budget(subparsers)
+
+    summary_edit = subparsers.add_parser("summary-edit", help="Edit the chat summary")
+    summary_edit.add_argument("session")
+    summary_edit.add_argument("file", type=Path)
+
+    summary_restore = subparsers.add_parser(
+        "summary-restore", help="Restore a previous summary version"
+    )
+    summary_restore.add_argument("session")
+    summary_restore.add_argument("revision", type=int)
+
+    fork = subparsers.add_parser("fork", help="Create a new chat from a summary")
+    fork.add_argument("session")
+    fork.add_argument("file", type=Path)
+    fork.add_argument("--request-id")
+
+    summary_draft = subparsers.add_parser(
+        "summary-draft", help="Create a draft summary without saving it"
+    )
+    summary_draft.add_argument("session")
+    summary_draft.add_argument("--focus")
+
+    decide = subparsers.add_parser("decide", help="Add a decision to the chat context")
+    decide.add_argument("session")
+    decide.add_argument("text")
+    decide.add_argument("--cite", action="append", default=[], help="Message identity (repeatable)")
+    decide.add_argument("--replaces", help="Decision item to replace")
+
+    thread = subparsers.add_parser("thread", help="Add a thread to the chat context")
+    thread.add_argument("session")
+    thread.add_argument("text")
+    thread.add_argument("--cite", action="append", default=[], help="Message identity (repeatable)")
+
+    items = subparsers.add_parser("items", help="List context items for a chat")
+    items.add_argument("session")
+
+    item_state = subparsers.add_parser("item-state", help="Change a context item's state")
+    item_state.add_argument("session")
+    item_state.add_argument("item")
+    item_state.add_argument("state", choices=["active", "open", "resolved", "withdrawn"])
+
+    compact = subparsers.add_parser(
+        "compact", help="Fold reviewed messages into a reviewed summary"
+    )
+    compact.add_argument("session")
+    compact.add_argument("summary_file", type=Path)
+    cover_group = compact.add_mutually_exclusive_group(required=True)
+    cover_group.add_argument(
+        "--cover", action="append", help="Message identity to cover (repeatable)"
+    )
+    cover_group.add_argument(
+        "--cover-file", type=Path, help="File with message identities, one per line"
+    )
+
+    compaction = subparsers.add_parser(
+        "compaction", help="Show which messages the summary covers and which are folded"
+    )
+    compaction.add_argument("session")
+
+
+def add_budget(subparsers):
+    """The budget subcommand, shared with the installed launcher's `conker context budget`."""
+    budget = subparsers.add_parser(
+        "budget", help="Start a chat's context settings, or change its budget"
+    )
+    budget.add_argument("session")
+    budget.add_argument(
+        "--window", type=int, required=True, help="The model's context size, in tokens"
+    )
+    budget.add_argument(
+        "--reserve", type=int, required=True, help="Tokens kept free for the answer"
+    )
+    budget.add_argument(
+        "--other", type=int, default=None, help="Tokens of other input, such as tools"
+    )
+
+
+def pi_call(request, config, path, body=None, *, query=None, **kwargs):
+    """Make a Pi service call with consistent error handling."""
+    try:
+        return request(config, "pi", path, body, query=query, timeout=660, **kwargs)
+    except HTTPError as exc:
+        if 400 <= exc.code <= 499:
+            try:
+                raw = exc.read(8192)
+                exc.close()
+                body = json.loads(raw.decode("utf-8", errors="replace"))
+            except (json.JSONDecodeError, UnicodeDecodeError, OSError):
+                raise ValueError(f"Pi refused this (HTTP {exc.code}).") from None
+
+            detail = body.get("detail") if isinstance(body, dict) else None
+            if detail is not None:
+                if isinstance(detail, dict):
+                    code = detail.get("code")
+                    message = detail.get("message")
+                    if isinstance(code, str) and isinstance(message, str) and code and message:
+                        raise ValueError(f"Pi refused this ({code}): {message}") from None
+                elif isinstance(detail, str) and detail and len(detail) <= 300:
+                    raise ValueError(f"Pi refused this: {detail}") from None
+
+            raise ValueError(f"Pi refused this (HTTP {exc.code}).") from None
+        raise
+
+
+def _file_text(path, label, limit_message, limit=16000):
+    """Read file text with size limit and strip exactly one trailing line ending."""
+    text = read_text(path, 64000, label)
+    if text.endswith("\r\n"):
+        text = text[:-2]
+    elif text.endswith("\n"):
+        text = text[:-1]
+    if len(text) > limit:
+        raise ValueError(limit_message)
+    return text
+
+
+def operation(args, config, request):
+    """Run one context subcommand and return the value to print."""
+    if args.operation == "show":
+        policy = pi_call(request, config, f"/context/{args.session}")
+        summary = pi_call(request, config, f"/context/{args.session}/summary")
+        return {"context": policy, "summary": summary}
+
+    elif args.operation == "rule":
+        identity(args.message, MESSAGE, "message identity")
+        policy_response = pi_call(request, config, f"/context/{args.session}")
+        if policy_response.get("policy") is None:
+            raise ValueError(NO_SETTINGS.format(session=args.session))
+
+        policy = copy.deepcopy(policy_response["policy"])
+        revision = policy_response["revision"]
+        message_policies = policy.get("messagePolicies", {})
+
+        if args.rule == "clear":
+            if args.message not in message_policies:
+                raise ValueError("That message has no context rule.")
+            del message_policies[args.message]
+        else:
+            message_policies[args.message] = RULES[args.rule]
+
+        policy["messagePolicies"] = message_policies
+        body = {"expected_revision": revision, "policy": policy}
+        return pi_call(request, config, f"/context/{args.session}", body)
+
+    elif args.operation == "instructions":
+        if args.file and args.clear:
+            raise ValueError("Give an instructions file or --clear.")
+        if not args.file and not args.clear:
+            raise ValueError("Give an instructions file or --clear.")
+
+        if args.clear:
+            text = ""
+        else:
+            text = _file_text(
+                args.file,
+                "Instructions file",
+                "Session instructions are limited to 16000 characters.",
+            )
+
+        policy_response = pi_call(request, config, f"/context/{args.session}")
+        if policy_response.get("policy") is None:
+            raise ValueError(NO_SETTINGS.format(session=args.session))
+
+        policy = copy.deepcopy(policy_response["policy"])
+        policy["sessionInstructions"] = text
+        body = {"expected_revision": policy_response["revision"], "policy": policy}
+        return pi_call(request, config, f"/context/{args.session}", body)
+
+    elif args.operation == "budget":
+        if not (2 <= args.window <= 10000000):
+            raise ValueError(BUDGET_RULE)
+        if args.reserve < 1 or args.reserve >= args.window:
+            raise ValueError(BUDGET_RULE)
+        if args.other is not None and args.other < 0:
+            raise ValueError(BUDGET_RULE)
+
+        policy_response = pi_call(request, config, f"/context/{args.session}")
+        policy = policy_response.get("policy")
+
+        if policy is None:
+            policy = {
+                "sessionInstructions": "",
+                "messagePolicies": {},
+                "budget": {
+                    "contextWindowTokens": args.window,
+                    "outputReserveTokens": args.reserve,
+                    "otherInputTokens": 0 if args.other is None else args.other,
+                },
+            }
+        else:
+            policy = copy.deepcopy(policy)
+            budget = policy["budget"]
+            budget["contextWindowTokens"] = args.window
+            budget["outputReserveTokens"] = args.reserve
+            if args.other is not None:
+                budget["otherInputTokens"] = args.other
+            policy["budget"] = budget
+
+        body = {"expected_revision": policy_response["revision"], "policy": policy}
+        return pi_call(request, config, f"/context/{args.session}", body)
+
+    elif args.operation == "summary-edit":
+        text = _file_text(args.file, "Summary file", "Summaries are limited to 16000 characters.")
+
+        summary_response = pi_call(request, config, f"/context/{args.session}/summary")
+        body = {"expected_revision": summary_response["revision"], "summary": text}
+        return pi_call(request, config, f"/context/{args.session}/summary", body)
+
+    elif args.operation == "summary-restore":
+        if args.revision < 0:
+            raise ValueError("Revision must be 0 or greater.")
+
+        summary_response = pi_call(request, config, f"/context/{args.session}/summary")
+        versions = summary_response.get("versions", [])
+
+        if not any(v.get("revision") == args.revision for v in versions):
+            raise ValueError("That summary version does not exist.")
+
+        body = {
+            "expected_revision": summary_response["revision"],
+            "revision": args.revision,
+        }
+        return pi_call(request, config, f"/context/{args.session}/summary/restore", body)
+
+    elif args.operation == "fork":
+        text = _file_text(args.file, "Summary file", "Summaries are limited to 16000 characters.")
+
+        request_id = args.request_id
+        if request_id:
+            identity(request_id, r"[A-Za-z0-9_-]{16,128}", "fork request identity")
+        else:
+            request_id = "fork_" + uuid.uuid4().hex
+
+        policy_response = pi_call(request, config, f"/context/{args.session}")
+        if policy_response["revision"] == 0:
+            raise ValueError("Fork needs saved context settings; set them first.")
+
+        session_response = pi_call(request, config, f"/sessions/{args.session}")
+        messages = session_response.get("messages", [])
+        last_message_id = messages[-1]["id"] if messages else None
+
+        body = {
+            "expected_revision": policy_response["revision"],
+            "expected_last_message_id": last_message_id,
+            "summary": text,
+            "request_id": request_id,
+        }
+        response = pi_call(request, config, f"/context/{args.session}/fork", body)
+        response["request_id"] = request_id
+        return response
+
+    elif args.operation == "summary-draft":
+        focus = args.focus or ""
+        if len(focus) > 500:
+            raise ValueError("Focus text is limited to 500 characters.")
+        body = {"focus": focus}
+        return pi_call(request, config, f"/context/{args.session}/summary/draft", body)
+
+    elif args.operation in ("decide", "thread"):
+        text = args.text.strip()
+        if not 1 <= len(text) <= 500 or any(ord(c) < 32 and c != "\n" for c in text):
+            raise ValueError(ITEM_TEXT_ERROR)
+        cites = args.cite
+        if len(cites) > 10:
+            raise ValueError("Use at most 10 cites.")
+        if len(set(cites)) != len(cites):
+            raise ValueError("Cites must be distinct.")
+        for cite in cites:
+            identity(cite, MESSAGE, "cite message identity")
+        if (
+            args.operation == "decide"
+            and args.replaces
+            and not re.fullmatch(r"^dec_[0-9a-f]{16}$", args.replaces)
+        ):
+            raise ValueError("Use a decision item identity (dec_ followed by 16 hex digits).")
+        kind = "decision" if args.operation == "decide" else "thread"
+        items_response = pi_call(request, config, f"/context/{args.session}/items")
+        body = {
+            "expected_revision": items_response["revision"],
+            "kind": kind,
+            "text": text,
+            "author": "owner",
+            "cites": cites,
+        }
+        if args.operation == "decide" and args.replaces:
+            body["replaces"] = args.replaces
+        return pi_call(request, config, f"/context/{args.session}/items", body)
+
+    elif args.operation == "items":
+        return pi_call(request, config, f"/context/{args.session}/items")
+
+    elif args.operation == "item-state":
+        item = args.item
+        if not re.fullmatch(r"^(dec|thr)_[0-9a-f]{16}$", item):
+            raise ValueError("Use an item identity (dec_ or thr_ followed by 16 hex digits).")
+        items_response = pi_call(request, config, f"/context/{args.session}/items")
+        body = {
+            "expected_revision": items_response["revision"],
+            "state": args.state,
+        }
+        return pi_call(request, config, f"/context/{args.session}/items/{item}/state", body)
+
+    elif args.operation == "compact":
+        summary_text = _file_text(
+            args.summary_file,
+            "Summary file",
+            "Summaries are limited to 16000 characters.",
+        )
+
+        if args.cover:
+            covers = args.cover
+        else:
+            cover_text = read_text(args.cover_file, 1_000_000, "Cover file")
+            covers = [line.strip() for line in cover_text.splitlines() if line.strip()]
+
+        if not covers:
+            raise ValueError("Provide at least one message to cover.")
+
+        if len(covers) > 10000:
+            raise ValueError("Cover at most 10000 messages.")
+
+        seen = set()
+        for cover_id in covers:
+            identity(cover_id, MESSAGE, "message identity")
+            if cover_id in seen:
+                raise ValueError("Cover each message once.")
+            seen.add(cover_id)
+
+        policy_response = pi_call(request, config, f"/context/{args.session}")
+        if policy_response.get("policy") is None:
+            raise ValueError(
+                "Set context settings before compacting: " + START.format(session=args.session)
+            )
+
+        summary_response = pi_call(request, config, f"/context/{args.session}/summary")
+
+        body = {
+            "expected_policy_revision": policy_response["revision"],
+            "expected_summary_revision": summary_response["revision"],
+            "summary": summary_text,
+            "covers": covers,
+        }
+        return pi_call(request, config, f"/context/{args.session}/compact", body)
+
+    elif args.operation == "compaction":
+        return pi_call(request, config, f"/context/{args.session}/compaction")
+
+    else:
+        raise ValueError(f"Unknown context operation: {args.operation}")

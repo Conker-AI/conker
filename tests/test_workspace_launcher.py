@@ -45,7 +45,7 @@ def test_existing_install_does_not_rotate_credentials(tmp_path, monkeypatch):
 
 def test_enhancement_refuses_a_running_memorygate_before_source_changes(monkeypatch):
     monkeypatch.syspath_prepend(str(Path(__file__).resolve().parents[1] / "scripts"))
-    from scripts import workspace_setup
+    from scripts.devstack import workspace_setup
 
     inspected = []
 
@@ -246,7 +246,7 @@ def test_maintenance_refuses_owned_process_before_bind(
     operation,
 ):
     monkeypatch.syspath_prepend(str(Path(__file__).resolve().parents[1] / "scripts"))
-    from scripts import workspace_setup
+    from scripts.devstack import workspace_setup
 
     config, process, _reserved = starting_service
     config["ports"] = {key: workspace_setup.PORTS[key] for key in ("pi", "memorygate")}

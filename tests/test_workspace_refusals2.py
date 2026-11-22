@@ -9,7 +9,8 @@ import subprocess
 
 import pytest
 
-from scripts import workspace, workspace_setup
+from scripts import workspace
+from scripts.devstack import workspace_setup
 
 
 @pytest.fixture
@@ -142,7 +143,7 @@ def test_enhance_refuses_changed_ports(monkeypatch):
 
 
 def test_enhance_names_the_first_wrong_checkout(tmp_path, monkeypatch):
-    from scripts import workspace_memory
+    from scripts.devstack import workspace_memory
 
     idle(monkeypatch)
     monkeypatch.setattr(workspace_memory, "prepare", lambda config: (config, False))
@@ -171,7 +172,7 @@ def test_enhance_names_the_first_wrong_checkout(tmp_path, monkeypatch):
 
 
 def test_enhance_turns_a_bad_configuration_into_a_refusal(monkeypatch):
-    from scripts import workspace_memory
+    from scripts.devstack import workspace_memory
 
     idle(monkeypatch)
 

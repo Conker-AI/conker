@@ -19,6 +19,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 import import_listener  # noqa: E402
 
+from tests.installer_source import installer_text  # noqa: E402
 from tests.ubuntu_generator import prepare  # noqa: E402
 
 ADMIN = "admin-" + "a" * 40
@@ -235,7 +236,7 @@ def test_the_repository_layout_wires_the_key_to_pi_and_creates_the_listener():
     assert pi["PI_MEMORYGATE_IMPORT_SOURCE"] == "${MEMORYGATE_IMPORT_KEY:+assistant-imports}"
     assert pi["PI_MEMORYGATE_IMPORT_KEY"] == "${MEMORYGATE_IMPORT_KEY:-}"
     assert "MEMORYGATE_IMPORT_KEY" not in json.dumps(services["memorygate"])
-    installer = (ROOT / "install.sh").read_text(encoding="utf-8")
+    installer = installer_text()
     assert "MEMORYGATE_IMPORT_KEY=$(keep_or_make_long MEMORYGATE_IMPORT_KEY)" in installer
     assert "\nMEMORYGATE_IMPORT_KEY=$MEMORYGATE_IMPORT_KEY\n" in installer
     assert "    wait_for_health\n    create_import_listener\n" in installer

@@ -20,6 +20,7 @@ both sides are tested together.
 dashboard/          React + Vite + TypeScript + shadcn frontend (the product UI)
 services/decisions/ Optional Laya decision service (routing, memory ranking)
 install.sh, conker  The one-command installer and the installed launcher
+deploy/install/     The installer's steps, sourced by install.sh
 deploy/ubuntu/      The source-built server layout and its acceptance checks
 scripts/            CLI, local stack, update, recovery and verification scripts
 tests/              Installer, deployment and cross-repository contract tests
