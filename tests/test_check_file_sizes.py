@@ -125,3 +125,15 @@ def test_a_file_in_the_generated_directory_without_the_generator_header_counts(t
     result = run_guard(tmp_path)
     assert result.returncode == 1
     assert "700 lines, limit 600. Split it by concern." in result.stdout
+
+
+def test_shell_scripts_count_with_or_without_an_extension(tmp_path):
+    write_lines(tmp_path, "deploy/part.sh", 601)
+    write_lines(tmp_path, "launcher", 601, first_line="#!/usr/bin/env bash")
+    write_lines(tmp_path, "notes", 601, first_line="plain text, no shebang")
+    make_repo(tmp_path)
+    result = run_guard(tmp_path)
+    assert result.returncode == 1
+    assert "deploy/part.sh: 601 lines" in result.stdout
+    assert "launcher: 601 lines" in result.stdout
+    assert "notes" not in result.stdout

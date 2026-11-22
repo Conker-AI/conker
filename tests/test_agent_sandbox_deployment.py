@@ -8,6 +8,8 @@ from pathlib import Path
 import pytest
 import yaml
 
+from tests.installer_source import installer_text
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -211,7 +213,7 @@ def test_memorygate_has_cap_drop_all_dac_override_read_only_and_tmpfs():
 
 
 def test_launcher_and_installer_select_overlay_only_for_active_sandbox():
-    installer = (ROOT / "install.sh").read_text(encoding="utf-8")
+    installer = installer_text()
     launcher = (ROOT / "conker").read_text(encoding="utf-8")
 
     for source, name in ((installer, "install.sh"), (launcher, "conker")):

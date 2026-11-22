@@ -18,8 +18,8 @@ def test_a_hung_run_fails_the_drill_with_its_output_kept(tmp_path, monkeypatch, 
 
     from scripts import auth_mutation_drill as drill
 
-    for directory in ("scripts", "tests"):
-        (tmp_path / directory).mkdir()
+    for directory in ("scripts", "tests", "deploy/install"):
+        (tmp_path / directory).mkdir(parents=True)
     for file in ("conker", "install.sh", "docker-compose.yml", "versions.env"):
         (tmp_path / file).write_text("", encoding="utf-8")
 

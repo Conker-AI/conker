@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 
+from tests.installer_source import installer_text
 from tests.ubuntu_generator import prepare
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -163,7 +164,7 @@ def test_repository_terminal_overlay_matches_the_isolated_boundary():
     assert "secrets:" not in terminal
     assert "networks:" not in terminal
 
-    installer = (ROOT / "install.sh").read_text(encoding="utf-8")
+    installer = installer_text()
     launcher = (ROOT / "conker").read_text(encoding="utf-8")
     for source in (installer, launcher):
         assert "OWNER_TERMINAL_STATE=active" in source
