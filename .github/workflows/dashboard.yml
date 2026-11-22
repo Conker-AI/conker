@@ -3,9 +3,10 @@ name: Dashboard
 on:
   pull_request:
     paths: ["dashboard/**", ".github/workflows/dashboard.yml", "scripts/workspace-sources.json", "README.md", "scripts/check_quickstart.py"]
-  push:
-    branches: [main]
-    paths: ["dashboard/**", ".github/workflows/dashboard.yml", "scripts/workspace-sources.json", "README.md", "scripts/check_quickstart.py"]
+  # No run after each merge: the pull request already ran these same checks. Beta fast lane
+  # (context/design/fast-shipping-method.md): main is re-checked nightly instead.
+  schedule:
+    - cron: "17 3 * * *"
   workflow_dispatch:
 
 permissions:
@@ -51,19 +52,39 @@ jobs:
       - run: npm run design:check:test
       - run: npm run build
       - run: npm run check
-      # Chat, approval and forget clicked through in Chromium against the preview gateway.
-      - name: End-to-end tests
-        run: |
-          npx playwright install --with-deps chromium
-          npm run e2e
       # The README preview lines, run as written; fails unless the page is up within five minutes.
       - name: README quickstart
         run: python3 ../scripts/check_quickstart.py --run
+
+  e2e:
+    # Chat, approval, forget and the accessibility sweep, clicked through in Chromium against the
+    # preview gateway. Three shards in parallel: this was 11 of the 13 minutes of the old single job.
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    defaults:
+      run:
+        working-directory: dashboard
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24.11.1"
+          cache: npm
+          cache-dependency-path: dashboard/package-lock.json
+      - run: npm ci
+      - name: End-to-end tests (shard ${{ matrix.shard }} of 3)
+        run: |
+          npx playwright install --with-deps chromium
+          npx playwright test --shard=${{ matrix.shard }}/3
       - name: End-to-end report
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: playwright-report
+          name: playwright-report-${{ matrix.shard }}
           path: |
             dashboard/playwright-report
             dashboard/test-results
