@@ -6,6 +6,12 @@ which module versions a release pins.
 
 ## Unreleased
 
+## 0.6.4
+
+Beta build from main. Changes since the last tag:
+
+- chore: CI test report (reruns, skips, slowest) and JUnit artifact (#402)
+
 ## 0.6.0
 
 - **The folded update card says "Updating to X.Y.Z...".** While an update runs, the card in the Inbox no longer loses its button in silence. (#391)
