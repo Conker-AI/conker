@@ -11,12 +11,12 @@ from pathlib import Path
 
 import pytest
 
-pytest.importorskip("pi.owner.preferences", reason="Add the Pi checkout to PYTHONPATH")
+pytest.importorskip("pi.core.owner_preferences", reason="Add the Pi checkout to PYTHONPATH")
 from pi.context import controls, universal_search
 from pi.conversation import output_settings
 from pi.conversation import settings as chat_settings
-from pi.owner import preferences
-from pi.owner import settings as owner_settings
+from pi.core import owner_preferences as preferences
+from pi.core import owner_settings
 from pydantic import ValidationError
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))

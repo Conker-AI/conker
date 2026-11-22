@@ -1,0 +1,67 @@
+name: Stack smoke
+
+# The real local stack on a plain runner: PostgreSQL, MemoryGate, ToolGate, Pi and the Gateway from
+# the pinned sources (scripts/workspace-sources.json), the built dashboard, and a small CPU model in
+# Ollama. scripts/stack_smoke.py then signs in and checks a chat round trip, the Inbox list and a
+# chat moved to the Trash and back. Only for changes that can break that path, nightly and by hand.
+on:
+  pull_request:
+    paths:
+      - "dashboard/**"
+      - "scripts/workspace*.py"
+      - "scripts/workspace-sources.json"
+      - "scripts/stack_smoke.py"
+      - "tests/test_stack_smoke.py"
+      - ".github/workflows/stack-smoke.yml"
+  schedule:
+    - cron: "41 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stack-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      SMOKE_MODEL: qwen2.5:0.5b
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24.11.1"
+          cache: npm
+          cache-dependency-path: dashboard/package-lock.json
+
+      - name: Local model (Ollama on CPU, loopback only)
+        run: |
+          docker run --detach --name ollama --publish 127.0.0.1:11434:11434 ollama/ollama:0.9.0
+          for _ in $(seq 60); do curl -fsS http://127.0.0.1:11434/api/tags >/dev/null && break; sleep 1; done
+          docker exec ollama ollama pull "$SMOKE_MODEL"
+
+      - name: Install the workspace (pinned sources, dashboard build)
+        run: python scripts/workspace.py install --model "$SMOKE_MODEL"
+
+      - name: Start the stack
+        run: python scripts/workspace.py up
+
+      - name: Smoke
+        run: python scripts/stack_smoke.py
+
+      - name: Service logs
+        if: failure()
+        run: |
+          for log in .local-run/*/service.log; do echo "== $log"; tail -n 60 "$log"; done
+          docker logs --tail 40 ollama
+
+      - name: Stop the stack
+        if: always()
+        run: python scripts/workspace.py down || true
