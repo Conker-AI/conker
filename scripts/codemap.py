@@ -101,7 +101,9 @@ def folder_lines(files: list[str], folder: str) -> list[str]:
     for rel in files:
         if rel.startswith(folder + "/"):
             by_dir.setdefault(Path(rel).parent.as_posix(), []).append(Path(rel).stem)
-    return [clip(f"{d}/ - {len(s)} files: {', '.join(sorted(s))}") for d, s in sorted(by_dir.items())]
+    return [
+        clip(f"{d}/ - {len(s)} files: {', '.join(sorted(s))}") for d, s in sorted(by_dir.items())
+    ]
 
 
 def render(root: Path, everything: bool) -> str:
@@ -116,14 +118,23 @@ def render(root: Path, everything: bool) -> str:
     if not everything:
         for folder in PER_FOLDER:
             body += folder_lines(files, folder)
-    return HEADER + f"\n{len(body)} entries; {missing} files without a docstring.\n\n" + "\n".join(body) + "\n"
+    return (
+        HEADER
+        + f"\n{len(body)} entries; {missing} files without a docstring.\n\n"
+        + "\n".join(body)
+        + "\n"
+    )
 
 
 def main(argv: list[str]) -> int:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     parser.add_argument("--check", action="store_true", help="fail when the map is out of date")
     parser.add_argument("--root", type=Path, default=ROOT)
-    parser.add_argument("--all", action="store_true", help="every source file outside tests/ (gate repos)")
+    parser.add_argument(
+        "--all", action="store_true", help="every source file outside tests/ (gate repos)"
+    )
     parser.add_argument("--out", default=DEFAULT_OUT)
     args = parser.parse_args(argv)
     root = args.root.resolve()
