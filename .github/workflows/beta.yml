@@ -1,0 +1,44 @@
+name: Beta build
+
+# Beta fast lane: every green main becomes a pre-release (plain vX.Y.Z tag, next patch) that a server set
+# to the beta channel is offered in its Inbox. See scripts/beta_release.py. Servers on the stable channel
+# never see it.
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: beta-build
+  cancel-in-progress: false
+
+jobs:
+  beta:
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Only the newest main
+        id: newest
+        run: |
+          git fetch -q origin main
+          if [ "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" ]; then echo "go=true" >> "$GITHUB_OUTPUT"; else echo "go=false" >> "$GITHUB_OUTPUT"; fi
+      - name: Cut the beta
+        if: steps.newest.outputs.go == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/beta_release.py --push

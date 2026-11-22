@@ -26,20 +26,28 @@ def git(*args: str, cwd: Path = ROOT) -> str:
 
 
 def main(argv: list[str]) -> int:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     parser.add_argument("name", help="folder name under wt/, for example feat-x")
     parser.add_argument("--branch", help="branch name (default: NAME)")
     parser.add_argument("--no-install", action="store_true", help="skip npm ci")
     args = parser.parse_args(argv)
     if not re.fullmatch(r"[A-Za-z0-9._-]+", args.name):
         raise SystemExit("name may only use letters, digits, dot, dash and underscore")
-    target = (ROOT.parent / "wt" / args.name).resolve()
+    # wt/ sits beside the main checkout, even when this runs from inside another worktree.
+    common = Path(git("rev-parse", "--path-format=absolute", "--git-common-dir"))
+    target = (common.parent.parent / "wt" / args.name).resolve()
     if target.exists():
         raise SystemExit(f"{target} already exists")
     git("fetch", "-q", "origin")
     git("worktree", "add", "-q", str(target), "-b", args.branch or args.name, "origin/main")
     if not args.no_install:
-        subprocess.run([NPM, "ci", "--prefer-offline", "--no-audit", "--no-fund"], cwd=target / "dashboard", check=True)
+        subprocess.run(
+            [NPM, "ci", "--prefer-offline", "--no-audit", "--no-fund"],
+            cwd=target / "dashboard",
+            check=True,
+        )
     print(target)
     return 0
 
