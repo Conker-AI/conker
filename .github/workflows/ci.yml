@@ -123,7 +123,7 @@ jobs:
           CONKER_TEST_TOOLGATE: ${{ github.workspace }}/.test-gates/toolgate
         # The coverage floor is CI's Linux coverage after the refusal tests (about 80%, 2026-11-14),
         # rounded down, so it only stops coverage from falling (.coveragerc names what is measured).
-        run: python -m pytest tests/ -q --cov --cov-report=term --cov-fail-under=80
+        run: python -m pytest tests/ -q --cov --cov-report=term --cov-fail-under=82
 
       - name: Browser deployment and recovery mutation drill
         run: python scripts/auth_mutation_drill.py
