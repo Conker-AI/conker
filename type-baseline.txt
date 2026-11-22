@@ -12,12 +12,3 @@ services/subscriptions/native_claude_sessions.py 3
 services/subscriptions/native_codex_sessions.py 3
 services/subscriptions/subscription_runtime.py 1
 services/subscriptions/workspace_providers.py 1
-tests/test_capability_status_refusals.py 2
-tests/test_chatgpt_provider.py 3
-tests/test_context_cli.py 4
-tests/test_local_stack_config.py 8
-tests/test_native_claude_sessions.py 4
-tests/test_native_codex_observer.py 5
-tests/test_release_first_run_refusals.py 15
-tests/test_settings_registry.py 13
-tests/test_workspace_launcher.py 4

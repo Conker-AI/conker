@@ -4,6 +4,7 @@ import json
 import os
 import stat
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -11,7 +12,8 @@ import pytest
 def test_local_configuration_matches_service_bootstrap_contracts_and_is_not_replaced(tmp_path):
     path = Path(__file__).parents[1] / "scripts/local_stack.py"
     spec = importlib.util.spec_from_file_location("local_stack_test", path)
-    module = importlib.util.module_from_spec(spec)
+    assert spec is not None and spec.loader is not None
+    module: Any = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     module.STATE = tmp_path / "state"
     module.CONFIG = module.STATE / "configuration.json"
@@ -45,7 +47,8 @@ def test_local_configuration_matches_service_bootstrap_contracts_and_is_not_repl
 def load(name):
     path = Path(__file__).parents[1] / "scripts/local_stack.py"
     spec = importlib.util.spec_from_file_location(name, path)
-    module = importlib.util.module_from_spec(spec)
+    assert spec is not None and spec.loader is not None
+    module: Any = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
 

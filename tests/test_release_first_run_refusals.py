@@ -7,7 +7,7 @@ from __future__ import annotations
 import io
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import pytest
 
@@ -42,8 +42,15 @@ class ScriptedRunner:
         return [phase for _, phase, _ in self.calls]
 
 
-def steps(tmp_path: Path, replies: dict[str, Any] | None = None) -> FirstRunSteps:
-    gate = FirstRunSteps()
+class ScriptedSteps(FirstRunSteps):
+    """FirstRunSteps whose runner is the scripted fake (type-only narrowing)."""
+
+    runner: ScriptedRunner
+    browser: Any
+
+
+def steps(tmp_path: Path, replies: dict[str, Any] | None = None) -> ScriptedSteps:
+    gate = ScriptedSteps()
     gate.runner = ScriptedRunner(replies)
     gate.evidence = Evidence(tmp_path / "evidence")
     gate.work = tmp_path / "work"
@@ -169,7 +176,7 @@ def test_reply_over_one_mebibyte_is_refused(tmp_path):
     opener = FakeOpener(b"{" + b" " * 1048576 + b"}")
 
     with pytest.raises(AcceptanceError, match=r"response from /auth/session exceeded 1 MiB"):
-        gate._request_json(opener, "GET", "/auth/session")
+        gate._request_json(cast(Any, opener), "GET", "/auth/session")
 
 
 def test_reply_of_exactly_one_mebibyte_is_read(tmp_path):
@@ -177,7 +184,7 @@ def test_reply_of_exactly_one_mebibyte_is_read(tmp_path):
     raw = b'{"ok": true}'
     opener = FakeOpener(raw + b" " * (1048576 - len(raw)))
 
-    assert gate._request_json(opener, "GET", "/auth/session") == {"ok": True}
+    assert gate._request_json(cast(Any, opener), "GET", "/auth/session") == {"ok": True}
 
 
 @pytest.mark.parametrize("raw", [b"[]", b'"text"', b"null", b"3"])
@@ -185,21 +192,21 @@ def test_reply_that_is_not_a_json_object_is_refused(tmp_path, raw):
     gate = steps(tmp_path)
 
     with pytest.raises(AcceptanceError, match="response from /auth/login was not a JSON object"):
-        gate._request_json(FakeOpener(raw), "POST", "/auth/login", {"password": "x"})
+        gate._request_json(cast(Any, FakeOpener(raw)), "POST", "/auth/login", {"password": "x"})
 
 
 def test_reply_that_is_not_json_raises(tmp_path):
     gate = steps(tmp_path)
 
     with pytest.raises(json.JSONDecodeError):
-        gate._request_json(FakeOpener(b"<html>sign in</html>"), "GET", "/auth/session")
+        gate._request_json(cast(Any, FakeOpener(b"<html>sign in</html>")), "GET", "/auth/session")
 
 
 def test_get_sends_no_body_and_no_csrf_header(tmp_path):
     gate = steps(tmp_path)
     opener = FakeOpener(b"{}")
 
-    gate._request_json(opener, "GET", "/auth/session")
+    gate._request_json(cast(Any, opener), "GET", "/auth/session")
 
     request, timeout = opener.requests[0]
     assert request.full_url == "https://localhost:8050/auth/session"
@@ -215,7 +222,9 @@ def test_post_sends_json_with_its_csrf_token_and_timeout(tmp_path):
     gate = steps(tmp_path)
     opener = FakeOpener(b"{}")
 
-    gate._request_json(opener, "POST", "/auth/login", {"password": "p"}, csrf="tok", timeout=7)
+    gate._request_json(
+        cast(Any, opener), "POST", "/auth/login", {"password": "p"}, csrf="tok", timeout=7
+    )
 
     request, timeout = opener.requests[0]
     assert request.get_method() == "POST"
