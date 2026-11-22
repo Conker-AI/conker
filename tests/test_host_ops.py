@@ -7,6 +7,7 @@ import json
 import subprocess
 import sys
 import threading
+import time
 from pathlib import Path
 
 import pytest
@@ -437,8 +438,18 @@ def test_the_lock_spans_processes_and_the_kernel_drops_it_when_its_holder_dies(
         assert error.code == "host_busy"
     finally:
         holder.kill()
-        holder.wait(10)
-    assert ops.start(action("services.restart", {"service": "pi"}), wait=True)["outcome"] == "done"
+        holder.wait(30)
+    # The kernel releases a dead process's lock, but on Windows that can lag a moment.
+    deadline = time.monotonic() + 30
+    while True:
+        try:
+            result = ops.start(action("services.restart", {"service": "pi"}), wait=True)
+            break
+        except Exception:
+            if time.monotonic() > deadline:
+                raise
+            time.sleep(0.05)
+    assert result["outcome"] == "done"
 
 
 # Receipts across restarts, and the unknown outcome
