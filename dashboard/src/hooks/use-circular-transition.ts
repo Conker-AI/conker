@@ -1,7 +1,7 @@
-"use client"
+'use client'
 
-import { useRef, useCallback } from "react"
-import { useTheme } from "@/hooks/use-theme"
+import { useRef, useCallback } from 'react'
+import { useTheme } from '@/hooks/use-theme'
 
 interface CircularTransitionHook {
   startTransition: (coords: { x: number; y: number }, callback: () => void) => void
@@ -32,7 +32,9 @@ export function useCircularTransition(): CircularTransitionHook {
         callback()
       })
 
-      const finish = () => { isTransitioningRef.current = false }
+      const finish = () => {
+        isTransitioningRef.current = false
+      }
       // Navigation or resizing can interrupt a reveal. Release the lock on either
       // outcome without leaving an unhandled rejection from the animation.
       void transition.finished.then(finish, finish)
@@ -45,17 +47,20 @@ export function useCircularTransition(): CircularTransitionHook {
     }
   }, [])
 
-  const toggleTheme = useCallback((event: React.MouseEvent) => {
-    // Get precise click coordinates - use clientX/clientY directly like tweakcn
-    const coords = {
-      x: event.clientX,
-      y: event.clientY
-    }
+  const toggleTheme = useCallback(
+    (event: React.MouseEvent) => {
+      // Get precise click coordinates - use clientX/clientY directly like tweakcn
+      const coords = {
+        x: event.clientX,
+        y: event.clientY,
+      }
 
-    startTransition(coords, () => {
-      setTheme(theme === "dark" ? "light" : "dark")
-    })
-  }, [theme, setTheme, startTransition])
+      startTransition(coords, () => {
+        setTheme(theme === 'dark' ? 'light' : 'dark')
+      })
+    },
+    [theme, setTheme, startTransition],
+  )
 
   const isTransitioning = useCallback(() => {
     return isTransitioningRef.current
@@ -64,6 +69,6 @@ export function useCircularTransition(): CircularTransitionHook {
   return {
     startTransition,
     toggleTheme,
-    isTransitioning
+    isTransitioning,
   }
 }

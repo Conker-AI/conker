@@ -1,32 +1,16 @@
-import { Badge } from "@/components/ui/badge"
-import { cn } from "@/lib/utils"
+import { Badge } from '@/components/ui/badge'
+import { cn } from '@/lib/utils'
 
-export function StatusBadge({
-  children,
-  tone = "neutral",
-}: {
-  children: React.ReactNode
-  tone?: "neutral" | "live" | "warning"
-}) {
+export function StatusBadge({ children, tone = 'neutral' }: { children: React.ReactNode; tone?: 'neutral' | 'live' | 'warning' }) {
   return (
     <Badge
       variant="outline"
-      className={cn("gap-1.5 font-normal", {
-        "border-success/30 bg-success/10 text-success-foreground": tone === "live",
-        "border-warning/30 bg-warning/10 text-warning-foreground": tone === "warning",
+      className={cn('gap-1.5 font-normal', {
+        'border-success/30 bg-success/10 text-success-foreground': tone === 'live',
+        'border-warning/30 bg-warning/10 text-warning-foreground': tone === 'warning',
       })}
     >
-      <span
-        aria-hidden="true"
-        className={cn(
-          "size-1.5 rounded-full",
-          tone === "live"
-            ? "bg-success"
-            : tone === "warning"
-              ? "bg-warning"
-              : "bg-muted-foreground"
-        )}
-      />
+      <span aria-hidden="true" className={cn('size-1.5 rounded-full', tone === 'live' ? 'bg-success' : tone === 'warning' ? 'bg-warning' : 'bg-muted-foreground')} />
       {children}
     </Badge>
   )

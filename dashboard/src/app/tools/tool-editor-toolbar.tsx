@@ -1,29 +1,10 @@
-import {
-  ArrowLeft,
-  Check,
-  ChevronDown,
-  Download,
-  History,
-  Maximize,
-  Minimize,
-  Save,
-  TestTube2,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import {
-  type ToolDefinition,
-  type ValidationIssue,
-} from "@/lib/tool-workspace";
+import { ArrowLeft, Check, ChevronDown, Download, History, Maximize, Minimize, Save, TestTube2 } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { type ToolDefinition, type ValidationIssue } from '@/lib/tool-workspace'
 
-export type EditorMode = "build" | "source" | "configure";
+export type EditorMode = 'build' | 'source' | 'configure'
 
 /** Top bar with back, view switch, save, test, publish and maximize actions. */
 export function ToolEditorToolbar({
@@ -44,22 +25,22 @@ export function ToolEditorToolbar({
   save,
   exportDefinition,
 }: {
-  definition: ToolDefinition;
-  busy: boolean;
-  dirty: boolean;
-  pendingEdits: boolean;
-  expanded: boolean;
-  mode: EditorMode;
-  issues: ValidationIssue[];
-  livePublish: () => void;
-  liveHistory: () => void;
-  liveRun: () => void;
-  onBack: () => void;
-  setLeave: (leave: boolean) => void;
-  setExpanded: (expanded: boolean) => void;
-  switchMode: (next: EditorMode) => boolean;
-  save: () => void;
-  exportDefinition: () => void;
+  definition: ToolDefinition
+  busy: boolean
+  dirty: boolean
+  pendingEdits: boolean
+  expanded: boolean
+  mode: EditorMode
+  issues: ValidationIssue[]
+  livePublish: () => void
+  liveHistory: () => void
+  liveRun: () => void
+  onBack: () => void
+  setLeave: (leave: boolean) => void
+  setExpanded: (expanded: boolean) => void
+  switchMode: (next: EditorMode) => boolean
+  save: () => void
+  exportDefinition: () => void
 }) {
   return (
     <div className="tools-toolbar">
@@ -68,20 +49,21 @@ export function ToolEditorToolbar({
         size="icon"
         aria-label="Back to tool library"
         disabled={busy}
-        onClick={() => { if (dirty || pendingEdits) setLeave(true); else onBack(); }}
+        onClick={() => {
+          if (dirty || pendingEdits) setLeave(true)
+          else onBack()
+        }}
       >
         <ArrowLeft />
       </Button>
       <div className="tool-title">
         <strong className="truncate text-sm">{definition.name}</strong>
-        <span className="text-xs text-muted-foreground">
-          {dirty ? "Unsaved draft" : "Draft"}
-        </span>
+        <span className="text-xs text-muted-foreground">{dirty ? 'Unsaved draft' : 'Draft'}</span>
       </div>
       <Select
         value={mode}
-        onValueChange={(v) => {
-          switchMode(v as EditorMode);
+        onValueChange={v => {
+          switchMode(v as EditorMode)
         }}
       >
         <SelectTrigger aria-label="Editor view" className="w-32">
@@ -94,44 +76,24 @@ export function ToolEditorToolbar({
         </SelectContent>
       </Select>
       <div className="tools-toolbar-spacer" />
-      <Button
-        variant="outline"
-        size="sm"
-        disabled={busy || pendingEdits || !dirty}
-        onClick={() => void save()}
-      >
+      <Button variant="outline" size="sm" disabled={busy || pendingEdits || !dirty} onClick={() => void save()}>
         <Save />
         Save
       </Button>
-      <Button
-        size="sm"
-        disabled={dirty || busy || pendingEdits || issues.length > 0}
-        onClick={liveRun}
-      >
+      <Button size="sm" disabled={dirty || busy || pendingEdits || issues.length > 0} onClick={liveRun}>
         <TestTube2 />
         Run
       </Button>
       <Popover>
-        <PopoverTrigger render={<Button
-            variant="outline"
-            size="icon"
-            aria-label="More tool actions" />}>
-            <ChevronDown />
-          </PopoverTrigger>
+        <PopoverTrigger render={<Button variant="outline" size="icon" aria-label="More tool actions" />}>
+          <ChevronDown />
+        </PopoverTrigger>
         <PopoverContent align="end" className="flex flex-col gap-2">
-          <Button
-            variant="outline"
-            disabled={dirty || busy || pendingEdits || issues.length > 0}
-            onClick={livePublish}
-          >
+          <Button variant="outline" disabled={dirty || busy || pendingEdits || issues.length > 0} onClick={livePublish}>
             <Check />
             Publish saved version
           </Button>
-          <Button
-            variant="ghost"
-            disabled={pendingEdits}
-            onClick={exportDefinition}
-          >
+          <Button variant="ghost" disabled={pendingEdits} onClick={exportDefinition}>
             <Download />
             Export definition
           </Button>
@@ -141,14 +103,9 @@ export function ToolEditorToolbar({
           </Button>
         </PopoverContent>
       </Popover>
-      <Button
-        variant="ghost"
-        size="icon"
-        aria-label={expanded ? "Restore workspace" : "Maximize workspace"}
-        onClick={() => setExpanded(!expanded)}
-      >
+      <Button variant="ghost" size="icon" aria-label={expanded ? 'Restore workspace' : 'Maximize workspace'} onClick={() => setExpanded(!expanded)}>
         {expanded ? <Minimize /> : <Maximize />}
       </Button>
     </div>
-  );
+  )
 }

@@ -19,36 +19,67 @@ export function watchRuntimeObservation(options: {
 }) {
   const schedule = options.schedule ?? ((run, delay) => setTimeout(run, delay))
   const unschedule = options.unschedule ?? (timer => clearTimeout(timer))
-  let stopped = false, generation = 0, failures = 0, active = false
-  let revision: number | undefined, controller: AbortController | null = null, timer: Timer | undefined
+  let stopped = false,
+    generation = 0,
+    failures = 0,
+    active = false
+  let revision: number | undefined,
+    controller: AbortController | null = null,
+    timer: Timer | undefined
   const available = () => !stopped && options.available()
-  function clearTimer() { if (timer !== undefined) unschedule(timer); timer = undefined }
-  function pause() { generation++; clearTimer(); controller?.abort(); controller = null }
+  function clearTimer() {
+    if (timer !== undefined) unschedule(timer)
+    timer = undefined
+  }
+  function pause() {
+    generation++
+    clearTimer()
+    controller?.abort()
+    controller = null
+  }
   function queue(delay: number) {
     clearTimer()
-    if (available()) timer = schedule(() => { timer = undefined; void poll() }, delay)
+    if (available())
+      timer = schedule(() => {
+        timer = undefined
+        void poll()
+      }, delay)
   }
   async function poll() {
     if (!available() || controller) return
-    const request = new AbortController(), ticket = generation, version = options.version()
+    const request = new AbortController(),
+      ticket = generation,
+      version = options.version()
     controller = request
     const current = () => available() && ticket === generation && version === options.version()
     try {
       const observation = await readRuntimeWithDeadline(options.observe, request, options)
       if (!current() || request.signal.aborted) return
-      if (observation.forgotten) { pause(); options.forgotten(); return }
+      if (observation.forgotten) {
+        pause()
+        options.forgotten()
+        return
+      }
       active = observation.active
       if (revision !== observation.revision) {
         const detail = await readRuntimeWithDeadline(options.detail, request, options)
         if (!current() || request.signal.aborted) return
-        if (detail.status === 'forgotten') { pause(); options.forgotten(); return }
+        if (detail.status === 'forgotten') {
+          pause()
+          options.forgotten()
+          return
+        }
         options.apply(detail)
         // Keep the token read BEFORE history, so a write during that read is seen next time.
         revision = observation.revision
       }
-      failures = 0; options.failure(false)
+      failures = 0
+      options.failure(false)
     } catch {
-      if (current()) { failures++; options.failure(true) }
+      if (current()) {
+        failures++
+        options.failure(true)
+      }
     } finally {
       if (controller === request) controller = null
       if (available() && ticket === generation) queue(version !== options.version() ? 0 : failures ? Math.min(observationTiming.maxBackoff, 2000 * 2 ** Math.min(failures - 1, 5)) : active ? observationTiming.active : observationTiming.idle)
@@ -56,8 +87,16 @@ export function watchRuntimeObservation(options: {
   }
   queue(0)
   return {
-    wake: () => { if (available() && !controller) queue(0) },
-    recheck: () => { pause(); if (available()) queue(0) },
-    cancel: () => { stopped = true; pause() },
+    wake: () => {
+      if (available() && !controller) queue(0)
+    },
+    recheck: () => {
+      pause()
+      if (available()) queue(0)
+    },
+    cancel: () => {
+      stopped = true
+      pause()
+    },
   }
 }

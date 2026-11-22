@@ -3,7 +3,9 @@ import type { OwnerModelSettings } from '@/lib/gateway/control'
 
 type Configuration = NonNullable<OwnerModelSettings['configuration']>
 export type ModelsState = {
-  value: OwnerModelSettings | null; error: string; pending: boolean
+  value: OwnerModelSettings | null
+  error: string
+  pending: boolean
   /** Models that are on, with their provider on: what a role may use. */
   enabled: Configuration['models']
   save: (next: Configuration) => Promise<void>

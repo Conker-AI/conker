@@ -8,7 +8,8 @@ import { useRefreshState } from './use-refresh'
 
 // Only opened when something is unsaved, so the dialog stays out of the app's first download.
 const RefreshConfirm = lazy(() => import('./refresh-confirm').then(module => ({ default: module.RefreshConfirm })))
-const DONE_SHOWN_MS = 2500, ERROR_SHOWN_MS = 4000
+const DONE_SHOWN_MS = 2500,
+  ERROR_SHOWN_MS = 4000
 const LABEL = 'Refresh everything'
 
 const asking: Record<RefreshBlocker, string> = {
@@ -36,13 +37,34 @@ export function RefreshButton() {
     return () => window.clearTimeout(timer)
   }, [status, state.lastDoneAt])
   const Icon = status === 'done' ? Check : status === 'error' ? TriangleAlert : RefreshCw
-  const click = () => { const needed = refresh.manual(); if (needed) setAsked(needed) }
+  const click = () => {
+    const needed = refresh.manual()
+    if (needed) setAsked(needed)
+  }
   const text = words(state)
-  return <>
-    <Tooltip><TooltipTrigger render={<Button variant="outline" size="icon" aria-label={LABEL} aria-busy={status === 'refreshing'} disabled={status === 'refreshing'} onClick={click} />}>
-      <Icon className={status === 'refreshing' ? 'animate-spin motion-reduce:animate-none' : status === 'done' ? 'text-success-foreground' : status === 'error' ? 'text-warning-foreground' : undefined} aria-hidden="true" />
-    </TooltipTrigger><TooltipPopup side="right">{text}</TooltipPopup></Tooltip>
-    <span role="status" className="sr-only">{status === 'idle' || status === 'refreshing' ? '' : text}</span>
-    {asked && <Suspense fallback={null}><RefreshConfirm description={asking[asked]} onCancel={() => setAsked(null)} onConfirm={() => { setAsked(null); refresh.manual(true) }} /></Suspense>}
-  </>
+  return (
+    <>
+      <Tooltip>
+        <TooltipTrigger render={<Button variant="outline" size="icon" aria-label={LABEL} aria-busy={status === 'refreshing'} disabled={status === 'refreshing'} onClick={click} />}>
+          <Icon className={status === 'refreshing' ? 'animate-spin motion-reduce:animate-none' : status === 'done' ? 'text-success-foreground' : status === 'error' ? 'text-warning-foreground' : undefined} aria-hidden="true" />
+        </TooltipTrigger>
+        <TooltipPopup side="right">{text}</TooltipPopup>
+      </Tooltip>
+      <span role="status" className="sr-only">
+        {status === 'idle' || status === 'refreshing' ? '' : text}
+      </span>
+      {asked && (
+        <Suspense fallback={null}>
+          <RefreshConfirm
+            description={asking[asked]}
+            onCancel={() => setAsked(null)}
+            onConfirm={() => {
+              setAsked(null)
+              refresh.manual(true)
+            }}
+          />
+        </Suspense>
+      )}
+    </>
+  )
 }

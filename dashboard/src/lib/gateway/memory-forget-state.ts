@@ -16,8 +16,11 @@ export function memoryForgetFailure(error: unknown) {
     outcome_unknown: 'The forget outcome is not confirmed. Check the same request; memory recall stays paused until it is resolved.',
     invalid_receipt: 'The server could not confirm the forget receipt. Check the same request; memory recall stays paused until it is resolved.',
   }
-  const message = problem.code && problem.code in messages ? messages[problem.code as keyof typeof messages]
-    : ['network', 'aborted', 'invalid-response', 'dependency'].includes(problem.kind)
-      ? 'The forget outcome is not confirmed. Check the same request before starting another deletion.' : problem.message
+  const message =
+    problem.code && problem.code in messages
+      ? messages[problem.code as keyof typeof messages]
+      : ['network', 'aborted', 'invalid-response', 'dependency'].includes(problem.kind)
+        ? 'The forget outcome is not confirmed. Check the same request before starting another deletion.'
+        : problem.message
   return { message, reset, privateUnavailable: ['browser-expired', 'session-changed', 'upstream-denied'].includes(problem.kind) }
 }

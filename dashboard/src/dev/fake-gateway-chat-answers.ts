@@ -10,7 +10,7 @@ type Family = { root_message_id: string; retry_of: string | null; selected_messa
 
 const refuse = (status: number, code: string) => new GatewayError('http', status, undefined, code as never)
 const familyOf = (message: Message) => message.response_family as Family | undefined
-const piTurn = (message: Message) => /^trn_[0-9a-f]{16}$/.test(message.turn_id ?? '') ? message.turn_id! : `trn_${message.seq.toString(16).padStart(16, '0')}`
+const piTurn = (message: Message) => (/^trn_[0-9a-f]{16}$/.test(message.turn_id ?? '') ? message.turn_id! : `trn_${message.seq.toString(16).padStart(16, '0')}`)
 
 export function createFakeChatAnswers(now: () => number, fail: (status: number) => never, store: FakeChatStore) {
   let turns = 0
@@ -25,14 +25,16 @@ export function createFakeChatAnswers(now: () => number, fail: (status: number) 
     receipts.set(id, { key, value })
     return structuredClone(value)
   }
-  const familyMessages = (session: Session, rootId: string) =>
-    session.messages.filter(message => familyOf(message)?.root_message_id === rootId).sort((a, b) => a.seq - b.seq)
+  const familyMessages = (session: Session, rootId: string) => session.messages.filter(message => familyOf(message)?.root_message_id === rootId).sort((a, b) => a.seq - b.seq)
   const familyView = (session: Session, rootId: string): Json => {
     const members = familyMessages(session, rootId)
     if (!members.length) throw refuse(404, 'not_found')
     const { selected_message_id, revision } = familyOf(members[0])!
     return {
-      root_message_id: rootId, session_id: session.id, selected_message_id, revision,
+      root_message_id: rootId,
+      session_id: session.id,
+      selected_message_id,
+      revision,
       versions: members.map(message => ({ message_id: message.id, retry_of: familyOf(message)!.retry_of, turn_id: piTurn(message) })),
     }
   }
@@ -67,8 +69,13 @@ export function createFakeChatAnswers(now: () => number, fail: (status: number) 
         const revision = existing ? existing.revision + 1 : 1
         const turnId = `trn_${(++turns + 4096).toString(16).padStart(16, '0')}`
         const added: Message = {
-          id, session_id: session.id, seq: last + 1, role: 'assistant', content: `Another take from ${String(body.model_id)}: ${source.content}`,
-          created_at: now() / 1000, turn_id: turnId,
+          id,
+          session_id: session.id,
+          seq: last + 1,
+          role: 'assistant',
+          content: `Another take from ${String(body.model_id)}: ${source.content}`,
+          created_at: now() / 1000,
+          turn_id: turnId,
         }
         session.messages.push(added)
         // Every version, the first answer included, now points at the new one.
@@ -79,8 +86,16 @@ export function createFakeChatAnswers(now: () => number, fail: (status: number) 
         }
         const asked = session.messages.filter(message => message.role === 'user' && message.seq < source.seq).at(-1)
         return {
-          request_id: body.request_id, session_id: session.id, source_message_id: source.id, source_turn_id: piTurn(source), turn_id: turnId,
-          model_id: body.model_id, status: 'complete', input_message_id: asked?.id ?? null, replayed: false, message: added,
+          request_id: body.request_id,
+          session_id: session.id,
+          source_message_id: source.id,
+          source_turn_id: piTurn(source),
+          turn_id: turnId,
+          model_id: body.model_id,
+          status: 'complete',
+          input_message_id: asked?.id ?? null,
+          replayed: false,
+          message: added,
         }
       })
     }

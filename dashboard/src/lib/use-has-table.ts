@@ -8,8 +8,14 @@ export function useHasTable(text: string | null): boolean {
     if (!possible || text === null) return
     let active = true
     // The answer renderer loads the same Markdown reader, so this adds no download of its own.
-    import('@/lib/rich-answer').then(module => { if (active) setFound({ text, table: module.tableRowsFromMarkdown(text).length > 0 }) }).catch(() => undefined)
-    return () => { active = false }
+    import('@/lib/rich-answer')
+      .then(module => {
+        if (active) setFound({ text, table: module.tableRowsFromMarkdown(text).length > 0 })
+      })
+      .catch(() => undefined)
+    return () => {
+      active = false
+    }
   }, [possible, text])
   return possible && found?.text === text && found.table
 }

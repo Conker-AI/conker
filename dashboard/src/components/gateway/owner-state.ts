@@ -4,18 +4,18 @@ import type { OwnerDecision, OwnerRequest } from '@/lib/gateway/owner'
 export type RetainedOwnerDecision = { status: OwnerDecision; note: string; checked: boolean; conflict?: boolean }
 export function createGatewayOwnerState() {
   return createStore<{
-    epoch: number; notes: Record<string, string>; attempts: Record<string, RetainedOwnerDecision>; pendingId: string | null
+    epoch: number
+    notes: Record<string, string>
+    attempts: Record<string, RetainedOwnerDecision>
+    pendingId: string | null
     reset: () => void
-  }>((set, get) => ({ epoch: 0, notes: {}, attempts: {}, pendingId: null,
-    reset: () => set({ epoch: get().epoch + 1, notes: {}, attempts: {}, pendingId: null }),
-  }))
+  }>((set, get) => ({ epoch: 0, notes: {}, attempts: {}, pendingId: null, reset: () => set({ epoch: get().epoch + 1, notes: {}, attempts: {}, pendingId: null }) }))
 }
 export type GatewayOwnerState = ReturnType<typeof createGatewayOwnerState>
 export function ownerDecisionEligibility(request: OwnerRequest, now: number) {
   // No expiry: the request waits for him. Only a time-limited request runs out.
   const expired = request.approval.expiresAt !== null && Date.parse(request.approval.expiresAt) <= now
-  const reviewableContent = request.status === 'pending' && request.approval.originValid && request.action.args !== null &&
-    !request.approval.consumedAt && [null, 'expired', 'unsupported_subject'].includes(request.unavailableReason)
+  const reviewableContent = request.status === 'pending' && request.approval.originValid && request.action.args !== null && !request.approval.consumedAt && [null, 'expired', 'unsupported_subject'].includes(request.unavailableReason)
   return { approve: reviewableContent && request.reviewable && !expired, reject: reviewableContent, expired }
 }
 /** A failed approval plus a fresh server-expired pending record cannot mint approval on retry. */

@@ -26,17 +26,34 @@ export function memoryFeedback(messageId: string, state: MemoryDeliveryWatchStat
   const receipt = state?.receipts[messageId]
   const checking = state === null || state.phase === 'checking'
   const unavailable = state?.phase === 'error'
-  const description = unavailable ? 'Conker couldn’t check what memory did with this message. Check again to read the result; this does not send the message again.'
-    : !receipt ? state?.truncated ? 'Automatic checks cover the latest 100 user messages. Check this message to read its own receipt.' : checking ? 'Reading the recorded memory outcome for this message.' : 'No memory receipt is available for this message. This chat is kept.'
-    : receipt.reasonCode ? explanation[receipt.reasonCode]
-    : receipt.state === 'saved' ? receipt.admissionMethod === 'owner_requested' ? 'Memory acknowledged your request to retain this message. This does not guarantee it will be recalled in every reply.' : 'Memory acknowledged this message. This does not guarantee it will be recalled in every reply.'
-    : receipt.state === 'filtered' ? 'Memory checked this message and did not retain it as a memory. This chat is kept.'
-    : receipt.state === 'removed' ? 'This memory was removed. The original chat is kept.'
-    : receipt.state === 'excluded' ? 'This message was excluded from memory. This chat is kept.'
-    : 'A memory write has not been confirmed. This chat is kept.'
+  const description = unavailable
+    ? 'Conker couldn’t check what memory did with this message. Check again to read the result; this does not send the message again.'
+    : !receipt
+      ? state?.truncated
+        ? 'Automatic checks cover the latest 100 user messages. Check this message to read its own receipt.'
+        : checking
+          ? 'Reading the recorded memory outcome for this message.'
+          : 'No memory receipt is available for this message. This chat is kept.'
+      : receipt.reasonCode
+        ? explanation[receipt.reasonCode]
+        : receipt.state === 'saved'
+          ? receipt.admissionMethod === 'owner_requested'
+            ? 'Memory acknowledged your request to retain this message. This does not guarantee it will be recalled in every reply.'
+            : 'Memory acknowledged this message. This does not guarantee it will be recalled in every reply.'
+          : receipt.state === 'filtered'
+            ? 'Memory checked this message and did not retain it as a memory. This chat is kept.'
+            : receipt.state === 'removed'
+              ? 'This memory was removed. The original chat is kept.'
+              : receipt.state === 'excluded'
+                ? 'This message was excluded from memory. This chat is kept.'
+                : 'A memory write has not been confirmed. This chat is kept.'
   return {
-    label: undo.state?.phase === 'forgotten' ? 'Forgotten' : unavailable ? 'Couldn’t check memory' : !receipt ? checking ? 'Checking memory…' : 'Memory not checked yet' : labels[receipt.state],
+    label: undo.state?.phase === 'forgotten' ? 'Forgotten' : unavailable ? 'Couldn’t check memory' : !receipt ? (checking ? 'Checking memory…' : 'Memory not checked yet') : labels[receipt.state],
     description: description + (state?.phase === 'paused' && receipt?.state === 'pending' ? ' Automatic status checks have paused. Check again whenever you need an update.' : ''),
-    checking, refresh, memoryId: receipt?.state === 'saved' ? receipt.memoryId : null, undo: undo.action, ...(undo.state ? { undoState: undo.state } : {}),
+    checking,
+    refresh,
+    memoryId: receipt?.state === 'saved' ? receipt.memoryId : null,
+    undo: undo.action,
+    ...(undo.state ? { undoState: undo.state } : {}),
   }
 }

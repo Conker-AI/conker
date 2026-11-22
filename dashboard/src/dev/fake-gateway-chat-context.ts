@@ -8,7 +8,11 @@ type Item = { id: string; kind: 'decision' | 'thread'; text: string; author: 'ow
 type Items = { revision: number; items: Item[] }
 
 const rules = ['keep-exact', 'allow-summary', 'retrieve', 'exclude']
-const hasControlCharacter = (text: string) => [...text].some(char => { const code = char.charCodeAt(0); return (code < 32 && code !== 10) || code === 127 })
+const hasControlCharacter = (text: string) =>
+  [...text].some(char => {
+    const code = char.charCodeAt(0)
+    return (code < 32 && code !== 10) || code === 127
+  })
 const refuse = (status: number, code?: string) => new GatewayError('http', status, undefined, code as never)
 const isObject = (value: unknown): value is Json => typeof value === 'object' && value !== null && !Array.isArray(value)
 const isInt = (value: unknown, min: number, max = Number.MAX_SAFE_INTEGER): value is number => Number.isInteger(value) && (value as number) >= min && (value as number) <= max
@@ -24,10 +28,13 @@ export function createFakeChatContext(now: () => number, _fail: (status: number)
     let entry = itemsByChat.get(sessionId)
     if (!entry) {
       const at = seconds()
-      entry = { revision: 0, items: [
-        { id: itemId('dec'), kind: 'decision', text: 'Keep answers short unless asked for detail.', author: 'ai', cites: [], state: 'active', replaces: null, created_at: at, updated_at: at },
-        { id: itemId('thr'), kind: 'thread', text: 'Which city should the weather use?', author: 'ai', cites: [], state: 'open', replaces: null, created_at: at, updated_at: at },
-      ] }
+      entry = {
+        revision: 0,
+        items: [
+          { id: itemId('dec'), kind: 'decision', text: 'Keep answers short unless asked for detail.', author: 'ai', cites: [], state: 'active', replaces: null, created_at: at, updated_at: at },
+          { id: itemId('thr'), kind: 'thread', text: 'Which city should the weather use?', author: 'ai', cites: [], state: 'open', replaces: null, created_at: at, updated_at: at },
+        ],
+      }
       itemsByChat.set(sessionId, entry)
     }
     return entry
@@ -40,8 +47,7 @@ export function createFakeChatContext(now: () => number, _fail: (status: number)
     const policy = body.policy
     if (!isObject(policy) || typeof policy.sessionInstructions !== 'string' || policy.sessionInstructions.length > 16000) throw refuse(422)
     const budget = policy.budget
-    if (!isObject(budget) || !isInt(budget.contextWindowTokens, 2, 10_000_000) || !isInt(budget.outputReserveTokens, 1) ||
-      budget.outputReserveTokens >= budget.contextWindowTokens || !isInt(budget.otherInputTokens, 0)) throw refuse(422)
+    if (!isObject(budget) || !isInt(budget.contextWindowTokens, 2, 10_000_000) || !isInt(budget.outputReserveTokens, 1) || budget.outputReserveTokens >= budget.contextWindowTokens || !isInt(budget.otherInputTokens, 0)) throw refuse(422)
     const messagePolicies = policy.messagePolicies
     if (!isObject(messagePolicies) || Object.keys(messagePolicies).length > 10_000) throw refuse(422)
     for (const [messageId, rule] of Object.entries(messagePolicies)) {
@@ -68,8 +74,21 @@ export function createFakeChatContext(now: () => number, _fail: (status: number)
       if (replaced.kind !== 'decision' || replaced.state !== 'active') throw refuse(409, 'not_replaceable')
     }
     const at = seconds()
-    const item: Item = { id: itemId(body.kind === 'decision' ? 'dec' : 'thr'), kind: body.kind, text, author: 'owner', cites: [], state: body.kind === 'decision' ? 'active' : 'open', replaces: replaced?.id ?? null, created_at: at, updated_at: at }
-    if (replaced) { replaced.state = 'superseded'; replaced.updated_at = at }
+    const item: Item = {
+      id: itemId(body.kind === 'decision' ? 'dec' : 'thr'),
+      kind: body.kind,
+      text,
+      author: 'owner',
+      cites: [],
+      state: body.kind === 'decision' ? 'active' : 'open',
+      replaces: replaced?.id ?? null,
+      created_at: at,
+      updated_at: at,
+    }
+    if (replaced) {
+      replaced.state = 'superseded'
+      replaced.updated_at = at
+    }
     entry.items.push(item)
     entry.revision += 1
     return { revision: entry.revision, item: structuredClone(item) }
@@ -99,7 +118,12 @@ export function createFakeChatContext(now: () => number, _fail: (status: number)
     const body = options.body ?? {}
     if (!tail) {
       if (method === 'GET') return structuredClone(store.contexts.get(sessionId) ?? { revision: 0, policy: null })
-      if (method === 'POST') return savePolicy(sessionId, body, session.messages.map(message => message.id))
+      if (method === 'POST')
+        return savePolicy(
+          sessionId,
+          body,
+          session.messages.map(message => message.id),
+        )
     } else if (!stateId) {
       if (method === 'GET') return structuredClone(itemsFor(sessionId))
       if (method === 'POST') return addItem(sessionId, body)

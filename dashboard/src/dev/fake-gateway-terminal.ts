@@ -10,8 +10,11 @@ export function createFakeTerminal(fail: (status: number) => never) {
   let terminalOutput = new TextEncoder().encode('\u001b[1mPreview owner shell\u001b[0m\r\nowner@conker:/workspace/conker$ ')
   let terminalLine = ''
   const appendTerminal = (text: string) => {
-    const next = new TextEncoder().encode(text), combined = new Uint8Array(terminalOutput.length + next.length)
-    combined.set(terminalOutput); combined.set(next, terminalOutput.length); terminalOutput = combined
+    const next = new TextEncoder().encode(text),
+      combined = new Uint8Array(terminalOutput.length + next.length)
+    combined.set(terminalOutput)
+    combined.set(next, terminalOutput.length)
+    terminalOutput = combined
   }
   const terminalBase64 = (value: Uint8Array) => {
     let binary = ''
@@ -19,15 +22,22 @@ export function createFakeTerminal(fail: (status: number) => never) {
     return btoa(binary)
   }
   const terminalInput = (value: string) => {
-    const binary = atob(value), bytes = Uint8Array.from(binary, character => character.charCodeAt(0))
+    const binary = atob(value),
+      bytes = Uint8Array.from(binary, character => character.charCodeAt(0))
     const text = new TextDecoder().decode(bytes)
     for (const character of text) {
       if (character === '\r' || character === '\n') {
         appendTerminal(`\r\n${terminalLine.trim() === 'pwd' ? '/workspace/conker\r\n' : terminalLine.trim() ? `Preview received: ${terminalLine.trim()}\r\n` : ''}owner@conker:/workspace/conker$ `)
         terminalLine = ''
       } else if (character === '\u007f') {
-        if (terminalLine) { terminalLine = terminalLine.slice(0, -1); appendTerminal('\b \b') }
-      } else { terminalLine += character; appendTerminal(character) }
+        if (terminalLine) {
+          terminalLine = terminalLine.slice(0, -1)
+          appendTerminal('\b \b')
+        }
+      } else {
+        terminalLine += character
+        appendTerminal(character)
+      }
     }
     return bytes.length
   }
@@ -49,7 +59,10 @@ export function createFakeTerminal(fail: (status: number) => never) {
     }
     if ((match = path.match(/^\/api\/terminal\/([A-Za-z0-9_-]{16,100})\/(input|resize|close)$/)) && method === 'POST') {
       if (terminalLease !== match[1]) return fail(404)
-      if (match[2] === 'input') { const acceptedBytes = terminalInput(String(options.body?.data ?? '')); return { acceptedBytes, automaticReplay: false } }
+      if (match[2] === 'input') {
+        const acceptedBytes = terminalInput(String(options.body?.data ?? ''))
+        return { acceptedBytes, automaticReplay: false }
+      }
       if (match[2] === 'resize') return { resized: true }
       terminalLease = null
       return { closed: true }

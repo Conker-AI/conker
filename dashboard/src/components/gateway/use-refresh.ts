@@ -16,25 +16,41 @@ export function useRefreshState<T>(select: (state: RefreshState) => T): T {
  */
 export function useRefreshWiring(control: GatewayControlClient, conversationState: GatewayRuntimeWorkspaceState) {
   useEffect(() => {
-    let stop: () => void = () => undefined, cancelled = false
+    let stop: () => void = () => undefined,
+      cancelled = false
     const timer = window.setTimeout(() => {
-      void Promise.all([import('@/lib/refresh-store'), import('@/components/resilience/notify')]).then(([{ refresh }, { notifyAction }]) => {
-        if (cancelled) return
-        const unbind = refresh.bind({
-          checkUpdate: signal => control.hostOps.checkUpdate(signal),
-          listUpdates: signal => control.updates.list(signal),
-          probe: signal => control.gatewayHealth(signal),
-          busy: () => { const work = conversationState.getState(); return !!work.operation || !!work.turnCheck || Object.keys(work.uncertain).length > 0 },
-          onUpdateFound: version => notifyAction(`Update available: ${version}`, 'View', '/inbox'),
-          onNewBuild: () => notifyAction('A new version of Conker is ready', 'Reload', null, () => window.location.reload()),
+      void Promise.all([import('@/lib/refresh-store'), import('@/components/resilience/notify')])
+        .then(([{ refresh }, { notifyAction }]) => {
+          if (cancelled) return
+          const unbind = refresh.bind({
+            checkUpdate: signal => control.hostOps.checkUpdate(signal),
+            listUpdates: signal => control.updates.list(signal),
+            probe: signal => control.gatewayHealth(signal),
+            busy: () => {
+              const work = conversationState.getState()
+              return !!work.operation || !!work.turnCheck || Object.keys(work.uncertain).length > 0
+            },
+            onUpdateFound: version => notifyAction(`Update available: ${version}`, 'View', '/inbox'),
+            onNewBuild: () => notifyAction('A new version of Conker is ready', 'Reload', null, () => window.location.reload()),
+          })
+          const away = refresh.watchReturn()
+          stop = () => {
+            away()
+            unbind()
+          }
+          void refresh.enter()
         })
-        const away = refresh.watchReturn()
-        stop = () => { away(); unbind() }
-        void refresh.enter()
-      }).catch(() => undefined)
+        .catch(() => undefined)
     }, 0)
     // The setup readers listen for this event instead of the store.
-    const setup = refreshState.subscribe((state, before) => { if (state.reads !== before.reads) window.dispatchEvent(new Event(setupRefreshEvent)) })
-    return () => { cancelled = true; window.clearTimeout(timer); setup(); stop() }
+    const setup = refreshState.subscribe((state, before) => {
+      if (state.reads !== before.reads) window.dispatchEvent(new Event(setupRefreshEvent))
+    })
+    return () => {
+      cancelled = true
+      window.clearTimeout(timer)
+      setup()
+      stop()
+    }
   }, [control, conversationState])
 }

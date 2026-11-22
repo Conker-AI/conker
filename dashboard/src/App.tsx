@@ -1,4 +1,4 @@
-import { ThemeRuntime } from "@/components/theme-customizer/runtime"
+import { ThemeRuntime } from '@/components/theme-customizer/runtime'
 import { BrowserRouter as Router } from 'react-router-dom'
 import { ThemeProvider } from '@/components/theme-provider'
 import { SidebarConfigProvider } from '@/contexts/sidebar-context'
@@ -21,20 +21,24 @@ function App() {
       {/* Follow the device until the owner picks Light or Dark in Settings > Appearance (ledger: Theme default). */}
       <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
         <ToastProvider>
-        <SidebarConfigProvider>
-          <ThemeRuntime />
-          <ErrorBoundary fallback={props => <CrashScreen {...props} />}>
-          <Router basename={basename}>
-            <Suspense fallback={<AppLoading />}>
-              {runtimeMode === 'fixture' && GatewayPreview
-                ? <GatewayPreview />
-                : runtimeMode === 'gateway'
-                  ? <GatewayEntry />
-                  : <main className="p-6" role="alert">Invalid dashboard mode. Set VITE_CONKER_MODE to gateway or fixture and rebuild.</main>}
-            </Suspense>
-          </Router>
-          </ErrorBoundary>
-        </SidebarConfigProvider>
+          <SidebarConfigProvider>
+            <ThemeRuntime />
+            <ErrorBoundary fallback={props => <CrashScreen {...props} />}>
+              <Router basename={basename}>
+                <Suspense fallback={<AppLoading />}>
+                  {runtimeMode === 'fixture' && GatewayPreview ? (
+                    <GatewayPreview />
+                  ) : runtimeMode === 'gateway' ? (
+                    <GatewayEntry />
+                  ) : (
+                    <main className="p-6" role="alert">
+                      Invalid dashboard mode. Set VITE_CONKER_MODE to gateway or fixture and rebuild.
+                    </main>
+                  )}
+                </Suspense>
+              </Router>
+            </ErrorBoundary>
+          </SidebarConfigProvider>
         </ToastProvider>
       </ThemeProvider>
     </div>

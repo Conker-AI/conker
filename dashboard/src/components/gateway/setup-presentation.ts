@@ -12,7 +12,12 @@ export const setupLabels: Record<SetupStep['id'], { title: string; description: 
 }
 
 export const setupStateLabels: Record<SetupStep['state'], string> = {
-  not_started: 'Not started', in_progress: 'In progress', blocked: 'Blocked', skipped: 'Off for now', complete: 'Verified', degraded: 'Needs attention',
+  not_started: 'Not started',
+  in_progress: 'In progress',
+  blocked: 'Blocked',
+  skipped: 'Off for now',
+  complete: 'Verified',
+  degraded: 'Needs attention',
 }
 
 export const setupOperations: Record<NonNullable<SetupStatus['recommendedNextOperation']>, { label: string; to: string }> = {

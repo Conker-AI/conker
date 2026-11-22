@@ -24,7 +24,10 @@ export function ChatTitle({ control, sessionId, title, disabled, onChanged }: { 
   const save = async () => {
     if (busy.current || cancelled.current) return
     const trimmed = value.trim()
-    if (!trimmed || trimmed === title) { setEditing(false); return }
+    if (!trimmed || trimmed === title) {
+      setEditing(false)
+      return
+    }
     busy.current = true
     setRenaming(true)
     await run(revision => control.chatNames.rename(sessionId, trimmed, revision))
@@ -41,42 +44,55 @@ export function ChatTitle({ control, sessionId, title, disabled, onChanged }: { 
 
   if (editing) {
     // On a phone the header cell is too narrow to type in, so the field spans the bar while editing.
-    return <PageTitle className="min-w-0 flex-1 text-sm font-medium max-sm:fixed max-sm:inset-x-3 max-sm:top-3 max-sm:z-30 max-sm:bg-background">
-      <Input
-        size="sm"
-        value={value}
-        onChange={event => setValue(event.target.value)}
-        onFocus={event => event.currentTarget.select()}
-        onBlur={() => void save()}
-        onKeyDown={event => {
-          if (event.key === 'Enter') { event.preventDefault(); void save() }
-          else if (event.key === 'Escape') { cancelled.current = true; setEditing(false) }
-        }}
-        maxLength={60}
-        autoFocus
-        disabled={renaming}
-        aria-label="Chat name"
-        className="max-w-sm text-sm font-medium max-sm:max-w-none"
-      />
-    </PageTitle>
+    return (
+      <PageTitle className="min-w-0 flex-1 text-sm font-medium max-sm:fixed max-sm:inset-x-3 max-sm:top-3 max-sm:z-30 max-sm:bg-background">
+        <Input
+          size="sm"
+          value={value}
+          onChange={event => setValue(event.target.value)}
+          onFocus={event => event.currentTarget.select()}
+          onBlur={() => void save()}
+          onKeyDown={event => {
+            if (event.key === 'Enter') {
+              event.preventDefault()
+              void save()
+            } else if (event.key === 'Escape') {
+              cancelled.current = true
+              setEditing(false)
+            }
+          }}
+          maxLength={60}
+          autoFocus
+          disabled={renaming}
+          aria-label="Chat name"
+          className="max-w-sm text-sm font-medium max-sm:max-w-none"
+        />
+      </PageTitle>
+    )
   }
 
-  return <div className="flex min-w-0 flex-1 items-center gap-1">
-    <PageTitle className="min-w-0 truncate text-sm font-medium">
-      <Button
-        variant="ghost"
-        size="xs"
-        className="max-w-full font-medium max-md:px-1"
-        aria-label="Rename chat"
-        title="Rename chat"
-        disabled={disabled || naming}
-        onClick={() => { cancelled.current = false; setValue(title); setEditing(true) }}
-      >
-        <span className="truncate">{title}</span>
+  return (
+    <div className="flex min-w-0 flex-1 items-center gap-1">
+      <PageTitle className="min-w-0 truncate text-sm font-medium">
+        <Button
+          variant="ghost"
+          size="xs"
+          className="max-w-full font-medium max-md:px-1"
+          aria-label="Rename chat"
+          title="Rename chat"
+          disabled={disabled || naming}
+          onClick={() => {
+            cancelled.current = false
+            setValue(title)
+            setEditing(true)
+          }}
+        >
+          <span className="truncate">{title}</span>
+        </Button>
+      </PageTitle>
+      <Button variant="ghost" size="icon-xs" className="shrink-0 max-md:hidden" aria-label="Name this chat" title="Name this chat" disabled={disabled || naming} onClick={() => void autoName()}>
+        {naming ? <Spinner /> : <Sparkles />}
       </Button>
-    </PageTitle>
-    <Button variant="ghost" size="icon-xs" className="shrink-0 max-md:hidden" aria-label="Name this chat" title="Name this chat" disabled={disabled || naming} onClick={() => void autoName()}>
-      {naming ? <Spinner /> : <Sparkles />}
-    </Button>
-  </div>
+    </div>
+  )
 }

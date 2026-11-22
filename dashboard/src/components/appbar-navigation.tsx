@@ -1,47 +1,68 @@
-import { useEffect, useRef, type ReactNode } from "react"
-import { Link } from "react-router-dom"
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb"
-import { cn } from "@/lib/utils"
+import { useEffect, useRef, type ReactNode } from 'react'
+import { Link } from 'react-router-dom'
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb'
+import { cn } from '@/lib/utils'
 
 type Crumb = { title: string; to: string }
 type Section = { value: string; label: string; to: string; badge?: number }
 
 export function AppbarBreadcrumbs({ crumbs, className }: { crumbs: Crumb[]; className?: string }) {
-  return <Breadcrumb aria-label="Page path" className={cn("min-w-0 flex-1", className)}>
-    <BreadcrumbList className="flex-nowrap gap-1.5">
-      {crumbs.flatMap((crumb, index) => {
-        const current = index === crumbs.length - 1
-        return [
-          ...(index ? [<BreadcrumbSeparator key={`${crumb.to}-separator`} className="shrink-0" />] : []),
-          <BreadcrumbItem key={crumb.to} className={current ? "min-w-0" : "shrink-0"}>
-            {current ? <BreadcrumbPage className="truncate font-medium" title={crumb.title}>{crumb.title}</BreadcrumbPage>
-              : <BreadcrumbLink className="inline-flex min-h-(--control-height) items-center rounded-md px-1.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring" render={<Link to={crumb.to} aria-label={crumb.title} title={crumb.title} />}>
+  return (
+    <Breadcrumb aria-label="Page path" className={cn('min-w-0 flex-1', className)}>
+      <BreadcrumbList className="flex-nowrap gap-1.5">
+        {crumbs.flatMap((crumb, index) => {
+          const current = index === crumbs.length - 1
+          return [
+            ...(index ? [<BreadcrumbSeparator key={`${crumb.to}-separator`} className="shrink-0" />] : []),
+            <BreadcrumbItem key={crumb.to} className={current ? 'min-w-0' : 'shrink-0'}>
+              {current ? (
+                <BreadcrumbPage className="truncate font-medium" title={crumb.title}>
                   {crumb.title}
-                </BreadcrumbLink>}
-          </BreadcrumbItem>,
-        ]
-      })}
-    </BreadcrumbList>
-  </Breadcrumb>
+                </BreadcrumbPage>
+              ) : (
+                <BreadcrumbLink
+                  className="inline-flex min-h-(--control-height) items-center rounded-md px-1.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                  render={<Link to={crumb.to} aria-label={crumb.title} title={crumb.title} />}
+                >
+                  {crumb.title}
+                </BreadcrumbLink>
+              )}
+            </BreadcrumbItem>,
+          ]
+        })}
+      </BreadcrumbList>
+    </Breadcrumb>
+  )
 }
 
 export function AppbarSections({ sections, activeSection, trailing }: { sections: Section[]; activeSection?: string; trailing?: ReactNode }) {
   const activeLink = useRef<HTMLAnchorElement>(null)
   useEffect(() => {
-    activeLink.current?.scrollIntoView({ block: "nearest", inline: "nearest" })
+    activeLink.current?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
   }, [activeSection])
   if (!sections.length) return null
-  return <nav data-slot="appbar-sections" aria-label="Page sections" className="flex min-w-0 items-center gap-2 px-4 pb-2 sm:px-6">
-    <div className="min-w-0 flex-1 scroll-px-1 overflow-x-auto">
-      <div className="flex w-max min-w-full items-center gap-1">
-        {sections.map(section => <Link key={section.value} to={section.to}
-          ref={activeSection === section.value ? activeLink : undefined}
-          aria-current={activeSection === section.value ? "page" : undefined}
-          className={cn("inline-flex h-(--control-height) pointer-coarse:h-11 shrink-0 items-center gap-2 rounded-lg px-3 text-sm font-medium whitespace-nowrap transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring", activeSection === section.value ? "bg-accent text-accent-foreground" : "text-muted-foreground")}>
-          {section.label}{section.badge !== undefined && <span className="text-xs text-muted-foreground tabular-nums">{section.badge}</span>}
-        </Link>)}
+  return (
+    <nav data-slot="appbar-sections" aria-label="Page sections" className="flex min-w-0 items-center gap-2 px-4 pb-2 sm:px-6">
+      <div className="min-w-0 flex-1 scroll-px-1 overflow-x-auto">
+        <div className="flex w-max min-w-full items-center gap-1">
+          {sections.map(section => (
+            <Link
+              key={section.value}
+              to={section.to}
+              ref={activeSection === section.value ? activeLink : undefined}
+              aria-current={activeSection === section.value ? 'page' : undefined}
+              className={cn(
+                'inline-flex h-(--control-height) pointer-coarse:h-11 shrink-0 items-center gap-2 rounded-lg px-3 text-sm font-medium whitespace-nowrap transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring',
+                activeSection === section.value ? 'bg-accent text-accent-foreground' : 'text-muted-foreground',
+              )}
+            >
+              {section.label}
+              {section.badge !== undefined && <span className="text-xs text-muted-foreground tabular-nums">{section.badge}</span>}
+            </Link>
+          ))}
+        </div>
       </div>
-    </div>
-    {trailing && <div className="shrink-0">{trailing}</div>}
-  </nav>
+      {trailing && <div className="shrink-0">{trailing}</div>}
+    </nav>
+  )
 }

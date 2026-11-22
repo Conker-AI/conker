@@ -8,20 +8,40 @@ import type { EditorRun, GatewayEditorDrafts } from './gateway/editor-drafts'
 
 /** One input as ToolGate lists it; only name, type, required and description are always there. */
 export type ToolInput = {
-  name: string; type?: string; required?: boolean; description?: string; default?: unknown
-  allowed_values?: readonly unknown[]; enum?: readonly unknown[]; item_type?: string
-  minimum?: number; maximum?: number; min_length?: number; max_length?: number; min_items?: number; max_items?: number
+  name: string
+  type?: string
+  required?: boolean
+  description?: string
+  default?: unknown
+  allowed_values?: readonly unknown[]
+  enum?: readonly unknown[]
+  item_type?: string
+  minimum?: number
+  maximum?: number
+  min_length?: number
+  max_length?: number
+  min_items?: number
+  max_items?: number
 }
 export type RunFieldKind = 'text' | 'long-text' | 'number' | 'integer' | 'switch' | 'choice' | 'list' | 'json'
 export type RunField = {
-  name: string; label: string; required: boolean; help?: string; kind: RunFieldKind
+  name: string
+  label: string
+  required: boolean
+  help?: string
+  kind: RunFieldKind
   /** A choice's value is the option's JSON, so "3" stays a number and "true" a boolean. */
   choices?: { value: string; label: string }[]
   /** A list is one item per line: text or numbers. Lists of anything else are written as JSON. */
   items?: 'text' | 'number' | 'integer'
   /** What a JSON field must hold. */
   shape?: 'object' | 'array'
-  min?: number; max?: number; minLength?: number; maxLength?: number; minItems?: number; maxItems?: number
+  min?: number
+  max?: number
+  minLength?: number
+  maxLength?: number
+  minItems?: number
+  maxItems?: number
   initial: string | boolean
 }
 export type RunValues = Record<string, string | boolean>
@@ -34,40 +54,63 @@ const scalar = (value: unknown): value is string | number | boolean => typeof va
 
 /** `include_questions` and `maxResults` read as "Include questions" and "Max results". */
 export function inputLabel(name: string) {
-  const words = name.replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/[_\-.]+/g, ' ').trim().toLowerCase()
+  const words = name
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/[_\-.]+/g, ' ')
+    .trim()
+    .toLowerCase()
   return words ? words.charAt(0).toUpperCase() + words.slice(1) : name
 }
 
 /** The form for a tool's inputs, one typed field each, in the tool's order. */
 export function runFields(inputs: readonly ToolInput[]): RunField[] {
-  return inputs.filter(input => typeof input.name === 'string' && input.name).map(input => {
-    const type = (input.type ?? 'string').toLowerCase(), required = input.required === true
-    const base = { name: input.name, label: inputLabel(input.name), required, help: input.description?.trim() || undefined,
-      min: finite(input.minimum) ? input.minimum : undefined, max: finite(input.maximum) ? input.maximum : undefined,
-      minLength: finite(input.min_length) ? input.min_length : undefined, maxLength: finite(input.max_length) ? input.max_length : undefined,
-      minItems: finite(input.min_items) ? input.min_items : undefined, maxItems: finite(input.max_items) ? input.max_items : undefined }
-    const allowed = (input.allowed_values ?? input.enum ?? []).filter(scalar)
-    const fallback = input.default
-    if (allowed.length) return { ...base, kind: 'choice', choices: allowed.map(value => ({ value: JSON.stringify(value), label: String(value) })), initial: allowed.some(value => value === fallback) ? JSON.stringify(fallback) : '' }
-    if (type === 'boolean') {
-      // A required yes/no always has an answer; an optional one can be left out.
-      if (required) return { ...base, kind: 'switch', initial: fallback === true }
-      return { ...base, kind: 'choice', choices: [{ value: 'true', label: 'Yes' }, { value: 'false', label: 'No' }], initial: typeof fallback === 'boolean' ? String(fallback) : '' }
-    }
-    if (type === 'integer' || type === 'number') return { ...base, kind: type, initial: finite(fallback) ? String(fallback) : '' }
-    if (type === 'array') {
-      const item = (input.item_type ?? 'string').toLowerCase()
-      if (item === 'string' || item === 'number' || item === 'integer') {
-        const items = item === 'string' ? 'text' : item
-        const initial = Array.isArray(fallback) && fallback.every(value => item === 'string' ? typeof value === 'string' : finite(value)) ? fallback.join('\n') : ''
-        return { ...base, kind: 'list', items, initial }
+  return inputs
+    .filter(input => typeof input.name === 'string' && input.name)
+    .map(input => {
+      const type = (input.type ?? 'string').toLowerCase(),
+        required = input.required === true
+      const base = {
+        name: input.name,
+        label: inputLabel(input.name),
+        required,
+        help: input.description?.trim() || undefined,
+        min: finite(input.minimum) ? input.minimum : undefined,
+        max: finite(input.maximum) ? input.maximum : undefined,
+        minLength: finite(input.min_length) ? input.min_length : undefined,
+        maxLength: finite(input.max_length) ? input.max_length : undefined,
+        minItems: finite(input.min_items) ? input.min_items : undefined,
+        maxItems: finite(input.max_items) ? input.max_items : undefined,
       }
-      return { ...base, kind: 'json', shape: 'array', initial: Array.isArray(fallback) ? JSON.stringify(fallback, null, 2) : '' }
-    }
-    if (type === 'object') return { ...base, kind: 'json', shape: 'object', initial: fallback && typeof fallback === 'object' && !Array.isArray(fallback) ? JSON.stringify(fallback, null, 2) : '' }
-    const initial = typeof fallback === 'string' ? fallback : ''
-    return { ...base, kind: (base.maxLength ?? 0) > 200 ? 'long-text' : 'text', initial }
-  })
+      const allowed = (input.allowed_values ?? input.enum ?? []).filter(scalar)
+      const fallback = input.default
+      if (allowed.length) return { ...base, kind: 'choice', choices: allowed.map(value => ({ value: JSON.stringify(value), label: String(value) })), initial: allowed.some(value => value === fallback) ? JSON.stringify(fallback) : '' }
+      if (type === 'boolean') {
+        // A required yes/no always has an answer; an optional one can be left out.
+        if (required) return { ...base, kind: 'switch', initial: fallback === true }
+        return {
+          ...base,
+          kind: 'choice',
+          choices: [
+            { value: 'true', label: 'Yes' },
+            { value: 'false', label: 'No' },
+          ],
+          initial: typeof fallback === 'boolean' ? String(fallback) : '',
+        }
+      }
+      if (type === 'integer' || type === 'number') return { ...base, kind: type, initial: finite(fallback) ? String(fallback) : '' }
+      if (type === 'array') {
+        const item = (input.item_type ?? 'string').toLowerCase()
+        if (item === 'string' || item === 'number' || item === 'integer') {
+          const items = item === 'string' ? 'text' : item
+          const initial = Array.isArray(fallback) && fallback.every(value => (item === 'string' ? typeof value === 'string' : finite(value))) ? fallback.join('\n') : ''
+          return { ...base, kind: 'list', items, initial }
+        }
+        return { ...base, kind: 'json', shape: 'array', initial: Array.isArray(fallback) ? JSON.stringify(fallback, null, 2) : '' }
+      }
+      if (type === 'object') return { ...base, kind: 'json', shape: 'object', initial: fallback && typeof fallback === 'object' && !Array.isArray(fallback) ? JSON.stringify(fallback, null, 2) : '' }
+      const initial = typeof fallback === 'string' ? fallback : ''
+      return { ...base, kind: (base.maxLength ?? 0) > 200 ? 'long-text' : 'text', initial }
+    })
 }
 
 export function initialValues(fields: readonly RunField[]): RunValues {
@@ -77,7 +120,9 @@ export function initialValues(fields: readonly RunField[]): RunValues {
 function number(field: RunField, text: string): number | string {
   const value = Number(text)
   if (!text || !Number.isFinite(value)) return 'Write a number, like 3 or 2.5.'
-  if (field.kind === 'integer' || field.items === 'integer') { if (!Number.isInteger(value)) return 'Write a whole number, like 3.' }
+  if (field.kind === 'integer' || field.items === 'integer') {
+    if (!Number.isInteger(value)) return 'Write a whole number, like 3.'
+  }
   if (field.min !== undefined && value < field.min) return `Use ${field.min} or more.`
   if (field.max !== undefined && value > field.max) return `Use ${field.max} or less.`
   return value
@@ -103,10 +148,16 @@ function readField(field: RunField, raw: string | boolean | undefined): { value?
     return typeof value === 'number' ? { value } : { error: value }
   }
   if (field.kind === 'list') {
-    const lines = text.split(/\r?\n/).map(line => line.trim()).filter(Boolean)
+    const lines = text
+      .split(/\r?\n/)
+      .map(line => line.trim())
+      .filter(Boolean)
     const items: JsonValue[] = []
     for (const [index, line] of lines.entries()) {
-      if (field.items === 'text') { items.push(line); continue }
+      if (field.items === 'text') {
+        items.push(line)
+        continue
+      }
       const value = number(field, line)
       if (typeof value !== 'number') return { error: `Line ${index + 1}: ${value}` }
       items.push(value)
@@ -116,7 +167,11 @@ function readField(field: RunField, raw: string | boolean | undefined): { value?
   }
   if (field.kind === 'json') {
     let value: unknown
-    try { value = JSON.parse(text) } catch { return { error: field.shape === 'array' ? 'Write a JSON list, like ["a", "b"].' : 'Write a JSON object, like {"key": "value"}.' } }
+    try {
+      value = JSON.parse(text)
+    } catch {
+      return { error: field.shape === 'array' ? 'Write a JSON list, like ["a", "b"].' : 'Write a JSON object, like {"key": "value"}.' }
+    }
     if (field.shape === 'array' ? !Array.isArray(value) : !value || typeof value !== 'object' || Array.isArray(value)) return { error: field.shape === 'array' ? 'This must be a list in [ ].' : 'This must be an object in { }.' }
     const problem = Array.isArray(value) ? count(field, value) : null
     return problem ? { error: problem } : { value: value as JsonValue }
@@ -128,7 +183,8 @@ function readField(field: RunField, raw: string | boolean | undefined): { value?
 
 /** The run's arguments from the form, or every field to fix (nothing is sent until none are left). */
 export function readRunInputs(fields: readonly RunField[], values: RunValues): { args: Record<string, JsonValue>; errors: null } | { args: null; errors: Record<string, string> } {
-  const args: Record<string, JsonValue> = {}, errors: Record<string, string> = {}
+  const args: Record<string, JsonValue> = {},
+    errors: Record<string, string> = {}
   for (const field of fields) {
     const { value, error } = readField(field, values[field.name])
     if (error) errors[field.name] = error
@@ -165,7 +221,7 @@ export function runOutcome(answer: RunAnswer): RunOutcome {
     const step = answer.steps?.find(item => item.status === 'failed')
     const inner = answer.result && typeof answer.result === 'object' && !Array.isArray(answer.result) ? (answer.result as Record<string, unknown>).message : undefined
     const why = step?.error ?? (typeof inner === 'string' ? inner : null)
-    return { state: 'failed', reason: step ? `It stopped at “${step.label}”${why ? `: ${why}` : '.'}` : why ?? 'It stopped before it finished.', requestId: null }
+    return { state: 'failed', reason: step ? `It stopped at “${step.label}”${why ? `: ${why}` : '.'}` : (why ?? 'It stopped before it finished.'), requestId: null }
   }
   return { state: 'failed', reason: refused[answer.code] ?? 'Your server turned this run down, so it didn’t run.', requestId: null }
 }
@@ -188,9 +244,10 @@ export type ResultView =
   | { kind: 'json'; text: string; title?: string }
 
 const plain = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object' && !Array.isArray(value)
-const cell = (value: unknown) => value === null || value === undefined ? '' : scalar(value) ? String(value) : Array.isArray(value) && value.every(scalar) ? clip(value.join(', '), 200) : clip(JSON.stringify(value), 200)
-const clip = (text: string, limit: number) => text.length > limit ? `${text.slice(0, limit - 1)}…` : text
-export const TABLE_COLUMNS = 8, TABLE_ROWS = 50
+const cell = (value: unknown) => (value === null || value === undefined ? '' : scalar(value) ? String(value) : Array.isArray(value) && value.every(scalar) ? clip(value.join(', '), 200) : clip(JSON.stringify(value), 200))
+const clip = (text: string, limit: number) => (text.length > limit ? `${text.slice(0, limit - 1)}…` : text)
+export const TABLE_COLUMNS = 8,
+  TABLE_ROWS = 50
 
 /** Text as text, a list of records as a table, flat records as fields; anything else as JSON. */
 export function resultView(value: unknown, title?: string, depth = 0): ResultView {
@@ -235,7 +292,10 @@ export async function automationIdFor(draftId: string): Promise<string | null> {
   const subtle = globalThis.crypto?.subtle
   if (!subtle) return null
   const digest = new Uint8Array(await subtle.digest('SHA-256', new TextEncoder().encode(draftId)))
-  return `editor-${[...digest].map(byte => byte.toString(16).padStart(2, '0')).join('').slice(0, 32)}`
+  return `editor-${[...digest]
+    .map(byte => byte.toString(16).padStart(2, '0'))
+    .join('')
+    .slice(0, 32)}`
 }
 
 /**

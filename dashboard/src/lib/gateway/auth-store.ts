@@ -23,34 +23,51 @@ export function createGatewayAuthStore({ client }: { client: GatewayAuthClient }
   let latest = 0
   let flight: Promise<boolean> | null = null
   const visible = (session: GatewaySession | null): Pick<GatewayAuthState, 'phase' | 'session'> => ({
-    phase: !session ? 'error' : session.setupRequired ? 'setup-required' : session.authenticated ? 'authenticated' : 'anonymous', session,
+    phase: !session ? 'error' : session.setupRequired ? 'setup-required' : session.authenticated ? 'authenticated' : 'anonymous',
+    session,
   })
   const store = createStore<GatewayAuthState>(() => ({
-    phase: 'checking', session: null, pending: false, error: null, logoutUnconfirmed: false,
+    phase: 'checking',
+    session: null,
+    pending: false,
+    error: null,
+    logoutUnconfirmed: false,
     bootstrap: () => {
       if (flight) return flight
-      flight = run(() => client.bootstrap()).finally(() => { flight = null })
+      flight = run(() => client.bootstrap()).finally(() => {
+        flight = null
+      })
       return flight
     },
     revalidate: () => run(() => client.revalidate()),
     login: password => run(() => client.login(password), false, true),
-    logout: () => run(async () => { await client.logout(); return null }, true),
-    lock: () => { latest++; client.lock(); store.setState({ phase: 'anonymous', session: null, pending: false, error: new GatewayError('browser-expired') }) },
-    markActivity: () => { if (!operations) void client.markActivity() },
-    confirmSessionRevoked: () => { latest++; client.lock(); store.setState({ phase: 'anonymous', session: null, pending: false, error: null, logoutUnconfirmed: false }) },
+    logout: () =>
+      run(async () => {
+        await client.logout()
+        return null
+      }, true),
+    lock: () => {
+      latest++
+      client.lock()
+      store.setState({ phase: 'anonymous', session: null, pending: false, error: new GatewayError('browser-expired') })
+    },
+    markActivity: () => {
+      if (!operations) void client.markActivity()
+    },
+    confirmSessionRevoked: () => {
+      latest++
+      client.lock()
+      store.setState({ phase: 'anonymous', session: null, pending: false, error: null, logoutUnconfirmed: false })
+    },
   }))
   async function run(action: () => Promise<GatewaySession | null>, logout = false, interactiveLogin = false): Promise<boolean> {
     const id = ++latest
     operations++
     const current = store.getState()
-    store.setState(interactiveLogin && current.phase === 'anonymous'
-      ? { pending: true, error: null }
-      : { phase: 'checking', session: null, pending: true, error: null })
+    store.setState(interactiveLogin && current.phase === 'anonymous' ? { pending: true, error: null } : { phase: 'checking', session: null, pending: true, error: null })
     try {
       const session = await action()
-      if (id === latest) store.setState(logout
-        ? { phase: 'anonymous', session: null, error: null, logoutUnconfirmed: false }
-        : { ...visible(session), error: null })
+      if (id === latest) store.setState(logout ? { phase: 'anonymous', session: null, error: null, logoutUnconfirmed: false } : { ...visible(session), error: null })
       return true
     } catch (error) {
       if (id === latest) {

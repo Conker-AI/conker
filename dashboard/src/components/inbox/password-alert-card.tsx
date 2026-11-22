@@ -19,26 +19,48 @@ const passwordAlertOrigin: Record<PasswordAlerts['results'][number]['origin'], s
  * "That was me" marks them seen; "Sign out everywhere" revokes every browser session (it asks the
  * password itself) and then marks them seen.
  */
-export function PasswordAlertCard({ alerts, now, busy, error, onSeen, onRevokeAll }: {
-  alerts: PasswordAlerts; now: number; busy: boolean; error: string | null; onSeen: () => void; onRevokeAll: () => void
-}) {
+export function PasswordAlertCard({ alerts, now, busy, error, onSeen, onRevokeAll }: { alerts: PasswordAlerts; now: number; busy: boolean; error: string | null; onSeen: () => void; onRevokeAll: () => void }) {
   const unseen = alerts.results.filter(alert => !alert.seen)
   const last = unseen[0]?.at ?? alerts.results[0]?.at ?? 0
   const source = `${alerts.unseen} ${alerts.unseen === 1 ? 'time' : 'times'} · last ${relative(last, now)}`
-  return <InboxCard icon={<ShieldAlert className="text-warning-foreground" />} title="Someone typed a wrong password" source={source}
-    primary={<Button type="button" size="sm" variant="outline" disabled={busy} onClick={onSeen}>That was me</Button>}
-    actions={<>
-      {error && <p role="alert" className="text-sm text-destructive-foreground">{error}</p>}
-      <div className="flex flex-col gap-1">
-        {unseen.map((alert, index) => <p key={`${alert.at}-${index}`} className="flex flex-wrap items-baseline gap-x-2">
-          <span className="text-foreground">{relative(alert.at, now)} · {new Date(alert.at * 1000).toLocaleString()}</span>
-          <span className="text-muted-foreground">{passwordAlertOrigin[alert.origin]}</span>
-        </p>)}
-      </div>
-      <div className="flex flex-wrap gap-2">
-        <Button type="button" size="sm" variant="outline" disabled={busy} onClick={onSeen}>That was me</Button>
-        <Button type="button" size="sm" variant="outline" disabled={busy} onClick={onRevokeAll}>Sign out everywhere</Button>
-      </div>
-    </>}
-    facts={[['Attempts not seen', String(alerts.unseen)]] as InboxFact[]} />
+  return (
+    <InboxCard
+      icon={<ShieldAlert className="text-warning-foreground" />}
+      title="Someone typed a wrong password"
+      source={source}
+      primary={
+        <Button type="button" size="sm" variant="outline" disabled={busy} onClick={onSeen}>
+          That was me
+        </Button>
+      }
+      actions={
+        <>
+          {error && (
+            <p role="alert" className="text-sm text-destructive-foreground">
+              {error}
+            </p>
+          )}
+          <div className="flex flex-col gap-1">
+            {unseen.map((alert, index) => (
+              <p key={`${alert.at}-${index}`} className="flex flex-wrap items-baseline gap-x-2">
+                <span className="text-foreground">
+                  {relative(alert.at, now)} · {new Date(alert.at * 1000).toLocaleString()}
+                </span>
+                <span className="text-muted-foreground">{passwordAlertOrigin[alert.origin]}</span>
+              </p>
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" size="sm" variant="outline" disabled={busy} onClick={onSeen}>
+              That was me
+            </Button>
+            <Button type="button" size="sm" variant="outline" disabled={busy} onClick={onRevokeAll}>
+              Sign out everywhere
+            </Button>
+          </div>
+        </>
+      }
+      facts={[['Attempts not seen', String(alerts.unseen)]] as InboxFact[]}
+    />
+  )
 }

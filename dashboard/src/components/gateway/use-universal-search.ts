@@ -8,6 +8,9 @@ import { createUniversalSearch } from './universal-search-state'
 
 export function useUniversalSearch(client: GatewaySearchClient, auth: GatewayAuthStore, workspace: GatewayRuntimeWorkspaceState, privacy: GatewaySourcePrivacyState) {
   const search = useMemo(() => createUniversalSearch({ client, auth, workspace, privacy }), [client, auth, workspace, privacy])
-  useEffect(() => { search.start(); return () => search.stop() }, [search])
+  useEffect(() => {
+    search.start()
+    return () => search.stop()
+  }, [search])
   return { ...useStore(search.store), search }
 }

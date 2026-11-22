@@ -16,16 +16,39 @@ export type SettingHome =
   | { service: 'toolgate'; path: string; key: string; field: string; verify?: boolean }
 
 export type Setting = {
-  id: string; title: string; description: string; type: SettingType; default: SettingValue
-  tier: 'basic' | 'advanced'; scope: SettingScope; effect: SettingEffect
-  options?: SettingOption[]; min?: number; max?: number; step?: number; unit?: string; ends?: [string, string]
-  max_length?: number; max_items?: number; pattern?: string; component?: string
-  keywords: string[]; related: string[]; dependsOn?: { id: string; value: SettingValue }
-  home?: SettingHome; group: string; section: string
+  id: string
+  title: string
+  description: string
+  type: SettingType
+  default: SettingValue
+  tier: 'basic' | 'advanced'
+  scope: SettingScope
+  effect: SettingEffect
+  options?: SettingOption[]
+  min?: number
+  max?: number
+  step?: number
+  unit?: string
+  ends?: [string, string]
+  max_length?: number
+  max_items?: number
+  pattern?: string
+  component?: string
+  keywords: string[]
+  related: string[]
+  dependsOn?: { id: string; value: SettingValue }
+  home?: SettingHome
+  group: string
+  section: string
 }
 export type SettingsSection = { id: string; title: string; description?: string; settings: Setting[] }
 export type SettingsGroup = {
-  id: string; title: string; description: string; icon: string; category: string; order: number
+  id: string
+  title: string
+  description: string
+  icon: string
+  category: string
+  order: number
   sections: SettingsSection[]
 }
 
@@ -51,7 +74,11 @@ function normalize(raw: RawGroup): SettingsGroup {
     sections: raw.sections.map(section => ({
       ...section,
       settings: section.settings.map(setting => ({
-        keywords: [], related: [], ...setting, group: raw.id, section: section.id,
+        keywords: [],
+        related: [],
+        ...setting,
+        group: raw.id,
+        section: section.id,
         ...(setting.type !== 'custom' && !setting.home ? { home: { ...OWNER_SETTINGS, field: setting.id } } : {}),
       })),
     })),
@@ -59,7 +86,9 @@ function normalize(raw: RawGroup): SettingsGroup {
 }
 
 const files = import.meta.glob<RawGroup>('./registry/*.json', { eager: true, import: 'default' })
-export const SETTINGS_GROUPS: SettingsGroup[] = Object.values(files).map(normalize).sort((a, b) => a.order - b.order)
+export const SETTINGS_GROUPS: SettingsGroup[] = Object.values(files)
+  .map(normalize)
+  .sort((a, b) => a.order - b.order)
 export const ALL_SETTINGS: Setting[] = SETTINGS_GROUPS.flatMap(group => group.sections.flatMap(section => section.settings))
 export const SETTINGS_BY_ID = new Map(ALL_SETTINGS.map(setting => [setting.id, setting]))
 

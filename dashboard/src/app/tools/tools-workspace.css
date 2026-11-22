@@ -289,11 +289,11 @@
   .tools-toolbar > .tools-toolbar-spacer {
     display: none;
   }
-  .tools-toolbar > [aria-label="Editor view"] {
+  .tools-toolbar > [aria-label='Editor view'] {
     order: 2;
     flex: 1;
   }
-  .tools-toolbar > button:not([aria-label="Back to tool library"]) {
+  .tools-toolbar > button:not([aria-label='Back to tool library']) {
     order: 2;
   }
   .tools-build-controls {

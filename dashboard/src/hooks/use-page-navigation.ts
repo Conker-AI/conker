@@ -1,5 +1,5 @@
-import { useLocation } from "react-router-dom"
-import { gatewayPageNavigation } from "@/components/gateway/navigation"
+import { useLocation } from 'react-router-dom'
+import { gatewayPageNavigation } from '@/components/gateway/navigation'
 
 /** The tab a page shows, from the one navigation table the sidebar and header use. */
 export function usePageSection() {

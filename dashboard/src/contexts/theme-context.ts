@@ -1,6 +1,6 @@
-import * as React from "react"
+import * as React from 'react'
 
-type Theme = "dark" | "light" | "system"
+type Theme = 'dark' | 'light' | 'system'
 
 export type ThemeProviderState = {
   theme: Theme
@@ -8,7 +8,7 @@ export type ThemeProviderState = {
 }
 
 const initialState: ThemeProviderState = {
-  theme: "system",
+  theme: 'system',
   setTheme: () => null,
 }
 

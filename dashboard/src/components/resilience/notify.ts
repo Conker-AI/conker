@@ -20,8 +20,17 @@ export function notifyFailure(title: string, detail?: unknown, retry?: () => voi
     title,
     description: typeof detail === 'string' ? detail : detail instanceof GatewayError ? detail.message : undefined,
     timeout: 0,
-    actionProps: retry ? { children: 'Try again', onClick: retry }
-      : fix ? { children: fix.label, onClick: () => { toastManager.close(id); open(fix.to) } } : undefined,
+    actionProps: retry
+      ? { children: 'Try again', onClick: retry }
+      : fix
+        ? {
+            children: fix.label,
+            onClick: () => {
+              toastManager.close(id)
+              open(fix.to)
+            },
+          }
+        : undefined,
   })
 }
 
@@ -32,7 +41,16 @@ export function notifyDone(title: string, description?: string) {
 /** A plain notice with one button: it opens a place (`to`) or runs `run`, and closes the notice. */
 export function notifyAction(title: string, label: string, to: string | null, run?: () => void) {
   const id: string = toastManager.add({
-    type: 'info', title, timeout: 0,
-    actionProps: { children: label, onClick: () => { toastManager.close(id); if (to) open(to); run?.() } },
+    type: 'info',
+    title,
+    timeout: 0,
+    actionProps: {
+      children: label,
+      onClick: () => {
+        toastManager.close(id)
+        if (to) open(to)
+        run?.()
+      },
+    },
   })
 }

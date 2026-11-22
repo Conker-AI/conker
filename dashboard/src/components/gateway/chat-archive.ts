@@ -3,7 +3,7 @@ import { notifyFailure } from '@/components/resilience/notify'
 import { toastManager } from '@/components/ui/toast'
 import { chatFeatureMessage } from '@/lib/gateway/chat-feature-errors'
 
-const count = (n: number) => n === 1 ? 'chat' : `${n} chats`
+const count = (n: number) => (n === 1 ? 'chat' : `${n} chats`)
 
 /**
  * Archive or restore chats, then offer Undo. Archiving only hides a chat from the list: nothing is
@@ -19,8 +19,7 @@ export async function archiveChats(chatNames: GatewayControlClient['chatNames'],
   }
   onChanged()
   const title = `${count(ids.length)[0].toUpperCase()}${count(ids.length).slice(1)} ${archived ? 'archived' : 'restored'}`
-  toastManager.add({ type: 'success', title, timeout: 6000,
-    actionProps: undo ? { children: 'Undo', onClick: () => void archiveChats(chatNames, ids, !archived, onChanged, false) } : undefined })
+  toastManager.add({ type: 'success', title, timeout: 6000, actionProps: undo ? { children: 'Undo', onClick: () => void archiveChats(chatNames, ids, !archived, onChanged, false) } : undefined })
   return true
 }
 
@@ -38,7 +37,6 @@ export async function trashChats(chatNames: GatewayControlClient['chatNames'], i
   }
   onChanged()
   const title = `${count(ids.length)[0].toUpperCase()}${count(ids.length).slice(1)} ${trashed ? 'moved to Trash' : 'restored'}`
-  toastManager.add({ type: 'success', title, timeout: 6000,
-    actionProps: undo ? { children: 'Undo', onClick: () => void trashChats(chatNames, ids, !trashed, onChanged, false) } : undefined })
+  toastManager.add({ type: 'success', title, timeout: 6000, actionProps: undo ? { children: 'Undo', onClick: () => void trashChats(chatNames, ids, !trashed, onChanged, false) } : undefined })
   return true
 }

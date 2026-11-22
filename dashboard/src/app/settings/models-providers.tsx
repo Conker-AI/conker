@@ -1,21 +1,16 @@
-import { useEffect, useState } from "react"
-import { ChevronDown, Eye, EyeOff, Plus, Trash2 } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Switch } from "@/components/ui/switch"
-import { CollectionEmpty, FormActions, OverlayBody, TaskDialogContent } from "@/components/design-system"
-import { Dialog } from "@/components/ui/dialog"
-import { ModelRolesEditor } from "./model-roles-editor"
-import {
-  getAvailableModels,
-  validateModelsConfiguration,
-  type ModelProvider,
-  type ModelsConfiguration,
-} from "@/lib/api/model-catalogue"
+import { useEffect, useState } from 'react'
+import { ChevronDown, Eye, EyeOff, Plus, Trash2 } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Switch } from '@/components/ui/switch'
+import { CollectionEmpty, FormActions, OverlayBody, TaskDialogContent } from '@/components/design-system'
+import { Dialog } from '@/components/ui/dialog'
+import { ModelRolesEditor } from './model-roles-editor'
+import { getAvailableModels, validateModelsConfiguration, type ModelProvider, type ModelsConfiguration } from '@/lib/api/model-catalogue'
 
 type ModelsProvidersProps = {
   configuration: ModelsConfiguration
@@ -28,11 +23,17 @@ type ModelsProvidersProps = {
 // Retain an unfinished in-memory form across Settings navigation, like other editors.
 let retainedDraft: ModelsConfiguration | null = null
 const supportedProviders = [
-  { id: 'ollama', name: 'Local Ollama' }, { id: 'decisions', name: 'Decisions (Laya)' },
+  { id: 'ollama', name: 'Local Ollama' },
+  { id: 'decisions', name: 'Decisions (Laya)' },
   { id: 'chatgpt', name: 'ChatGPT subscription' },
-  { id: 'openrouter', name: 'OpenRouter' }, { id: 'openai', name: 'OpenAI API' }, { id: 'anthropic', name: 'Anthropic' },
-  { id: 'gemini', name: 'Google Gemini API' }, { id: 'xai', name: 'xAI API (Grok)' }, { id: 'mistral', name: 'Mistral API' },
-  { id: 'deepseek', name: 'DeepSeek API' }, { id: 'groq', name: 'Groq API' },
+  { id: 'openrouter', name: 'OpenRouter' },
+  { id: 'openai', name: 'OpenAI API' },
+  { id: 'anthropic', name: 'Anthropic' },
+  { id: 'gemini', name: 'Google Gemini API' },
+  { id: 'xai', name: 'xAI API (Grok)' },
+  { id: 'mistral', name: 'Mistral API' },
+  { id: 'deepseek', name: 'DeepSeek API' },
+  { id: 'groq', name: 'Groq API' },
 ]
 
 export function ModelsProviders({ configuration, pending, onSave, serverManaged = false, subscriptionModels = [] }: ModelsProvidersProps) {
@@ -42,14 +43,19 @@ export function ModelsProviders({ configuration, pending, onSave, serverManaged 
   const [error, setError] = useState<string | null>(null)
   const [adding, setAdding] = useState<'provider' | 'model' | null>(null)
   const [providerId, setProviderId] = useState('')
-  const [modelName, setModelName] = useState(''), [modelRoute, setModelRoute] = useState('')
+  const [modelName, setModelName] = useState(''),
+    [modelRoute, setModelRoute] = useState('')
   const availableModels = getAvailableModels(draft)
   const dirty = JSON.stringify(draft) !== JSON.stringify(configuration)
-  useEffect(() => { if (!serverManaged) retainedDraft = dirty ? draft : null }, [dirty, draft, serverManaged])
   useEffect(() => {
-    const warn = (event: BeforeUnloadEvent) => { if (dirty) event.preventDefault() }
-    window.addEventListener("beforeunload", warn)
-    return () => window.removeEventListener("beforeunload", warn)
+    if (!serverManaged) retainedDraft = dirty ? draft : null
+  }, [dirty, draft, serverManaged])
+  useEffect(() => {
+    const warn = (event: BeforeUnloadEvent) => {
+      if (dirty) event.preventDefault()
+    }
+    window.addEventListener('beforeunload', warn)
+    return () => window.removeEventListener('beforeunload', warn)
   }, [dirty])
 
   function updateDraft(next: ModelsConfiguration) {
@@ -61,8 +67,8 @@ export function ModelsProviders({ configuration, pending, onSave, serverManaged 
     setError(null)
   }
 
-  function updateProvider(id: ModelProvider["id"], patch: Partial<ModelProvider>) {
-    updateDraft({ ...draft, providers: draft.providers.map(provider => provider.id === id ? { ...provider, ...patch } : provider) })
+  function updateProvider(id: ModelProvider['id'], patch: Partial<ModelProvider>) {
+    updateDraft({ ...draft, providers: draft.providers.map(provider => (provider.id === id ? { ...provider, ...patch } : provider)) })
   }
 
   function removeModel(id: string) {
@@ -70,145 +76,403 @@ export function ModelsProviders({ configuration, pending, onSave, serverManaged 
       setError('Choose another default, primary, or fallback model before removing this entry.')
       return
     }
-    const roleSettings = draft.roleSettings && { ...draft.roleSettings, roles: Object.fromEntries(Object.entries(draft.roleSettings.roles).map(([role, value]) => [role, { ...value, eligibleModelIds: value.eligibleModelIds.filter(modelId => modelId !== id) }])) as typeof draft.roleSettings.roles }
+    const roleSettings = draft.roleSettings && {
+      ...draft.roleSettings,
+      roles: Object.fromEntries(Object.entries(draft.roleSettings.roles).map(([role, value]) => [role, { ...value, eligibleModelIds: value.eligibleModelIds.filter(modelId => modelId !== id) }])) as typeof draft.roleSettings.roles,
+    }
     updateDraft({ ...draft, models: draft.models.filter(model => model.id !== id), roleSettings })
   }
 
-  return <Card>
-    <CardHeader className="flex flex-wrap items-start justify-between gap-3 sm:flex-row">
-      <div className="min-w-0 space-y-1.5">
-        <CardTitle><h2>Models / Providers</h2></CardTitle>
-        <CardDescription>Manage the catalogue used by conversation model picks and the default route.</CardDescription>
-      </div>
-      <Badge variant="outline">{serverManaged ? "Server configuration" : "Not connected"}</Badge>
-    </CardHeader>
-    <CardContent>
-      <form className="space-y-6" noValidate onSubmit={async event => {
-        event.preventDefault()
-        const validation = validateModelsConfiguration(draft, serverManaged)
-        setError(validation)
-        if (validation) return
-        try {
-          const result = await onSave(structuredClone(draft))
-          setSaved(result)
-          if (!result) setError("The draft could not be saved. Try again.")
-        } catch {
-          setSaved(false)
-          setError("The draft could not be saved. Try again.")
-        }
-      }}>
-        <p className="text-sm leading-6 text-muted-foreground">{serverManaged ? "Saved on this machine. Provider credentials and endpoints are managed by the server; changing eligibility does not grant tool access." : "Preview configuration only. Nothing is sent to a provider. Endpoints and keys stay in memory until reload; use a placeholder key while trying this out."}</p>
-        {/* Live Pi answers with the Answer role, so a separate default route would only mislead there. */}
-        {!serverManaged && <div className="grid items-start gap-3 border-y py-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-          <div className="space-y-1">
-            <Label htmlFor="default-model-route">Default route</Label>
-            <p className="text-sm leading-6 text-muted-foreground">Used when a conversation has no model override.</p>
-          </div>
-          <div className="min-w-0 space-y-2">
-            <Select value={draft.defaultModelId ?? "none"} disabled={pending || !availableModels.length} items={availableModels.length ? availableModels.map(model => ({ value: model.id, label: `${model.name} · ${draft.providers.find(provider => provider.id === model.providerId)?.name ?? ""}` })) : [{ value: "none", label: "No enabled models" }]} onValueChange={value => { if (value !== null) updateDraft({ ...draft, defaultModelId: value === "none" ? null : value }) }}>
-              <SelectTrigger id="default-model-route" className="w-full min-w-0"><SelectValue placeholder="No enabled models" /></SelectTrigger>
-              <SelectContent>
-                {availableModels.length ? availableModels.map(model => <SelectItem key={model.id} value={model.id}>{model.name} · {draft.providers.find(provider => provider.id === model.providerId)?.name}</SelectItem>) : <SelectItem value="none">No enabled models</SelectItem>}
-              </SelectContent>
-            </Select>
-            {!availableModels.length && <p className="text-sm leading-6 text-muted-foreground">Enable a provider and one of its models to choose a route.</p>}
-          </div>
-        </div>}
-        <div className="grid gap-6 xl:grid-cols-2">
-          <section className="min-w-0 space-y-4" aria-labelledby="model-providers-title">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h3 id="model-providers-title" className="font-medium">Providers</h3>
-              {serverManaged ? <Button type="button" size="sm" variant="outline" disabled={pending || supportedProviders.every(provider => draft.providers.some(item => item.id === provider.id))} onClick={() => { setProviderId(supportedProviders.find(provider => !draft.providers.some(item => item.id === provider.id))?.id ?? ''); setAdding('provider') }}><Plus />Add provider</Button> : <Button type="button" variant="ghost" size="sm" aria-pressed={showKeys} onClick={() => setShowKeys(value => !value)}>
-                {showKeys ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}{showKeys ? "Hide keys" : "Show keys"}
-              </Button>}
-            </div>
-            {!draft.providers.length && <CollectionEmpty title="No providers configured" description="Provider configuration will appear here when it is available." />}
-            {draft.providers.map(provider => <fieldset key={provider.id} className="min-w-0 space-y-3 border-t pt-3" disabled={pending}>
-              <legend className="sr-only">{provider.name}</legend>
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex min-w-0 flex-wrap items-center gap-2">
-                  <span className="text-sm font-medium">{provider.name}</span>
-                  <Badge variant="outline" className="text-muted-foreground">{serverManaged ? "Server managed" : "Not connected"}</Badge>
-                </div>
-                <div className="flex items-center gap-2"><Switch aria-label={`Enable ${provider.name}`} checked={provider.enabled} onCheckedChange={enabled => updateProvider(provider.id, { enabled })} />{serverManaged && <Button type="button" size="icon" variant="ghost" aria-label={`Remove ${provider.name} from catalogue`} disabled={draft.models.some(model => model.providerId === provider.id)} onClick={() => updateDraft({ ...draft, providers: draft.providers.filter(item => item.id !== provider.id) })}><Trash2 /></Button>}</div>
-              </div>
-              {serverManaged && <div className="space-y-2"><Label htmlFor={`provider-name-${provider.id}`}>Display name</Label><Input id={`provider-name-${provider.id}`} maxLength={160} value={provider.name} onChange={event => updateProvider(provider.id, { name: event.target.value })} /></div>}
-              {!serverManaged && <div className="grid gap-3 sm:grid-cols-2">
-                <div className="min-w-0 space-y-2">
-                  <Label htmlFor={`model-${provider.id}-endpoint`}>Endpoint</Label>
-                  <Input id={`model-${provider.id}-endpoint`} type="url" autoComplete="off" spellCheck={false} value={provider.endpoint} onChange={event => updateProvider(provider.id, { endpoint: event.target.value })} />
-                </div>
-                <div className="min-w-0 space-y-2">
-                  <Label htmlFor={`model-${provider.id}-key`}>API key draft</Label>
-                  <Input id={`model-${provider.id}-key`} type={showKeys ? "text" : "password"} autoComplete="off" spellCheck={false} placeholder="Placeholder key" value={provider.apiKeyDraft} onChange={event => updateProvider(provider.id, { apiKeyDraft: event.target.value })} />
-                </div>
-              </div>}
-            </fieldset>)}
-          </section>
-          <section className="min-w-0 space-y-4" aria-labelledby="model-catalogue-title">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h3 id="model-catalogue-title" className="font-medium">Model catalogue</h3>
-              <div className="flex items-center gap-2"><span className="text-xs text-muted-foreground">{availableModels.length} enabled</span>{serverManaged && <Button type="button" size="sm" variant="outline" disabled={pending || !draft.providers.length} onClick={() => { setProviderId(draft.providers[0]?.id ?? ''); setModelName(''); setModelRoute(''); setAdding('model') }}><Plus />Add model</Button>}</div>
-            </div>
-            <p className="text-sm leading-6 text-muted-foreground">{serverManaged ? "Configured routes. Availability depends on the running provider, not this enabled switch." : "Sample model names and routes. Availability, capabilities, and pricing have not been checked."}</p>
-            <div className="divide-y border-y">
-              {!draft.models.length && <CollectionEmpty title="No models configured" description="Models from your configuration will appear here and in the composer." />}
-              {draft.models.map(model => {
-                const provider = draft.providers.find(item => item.id === model.providerId)
-                return <div key={model.id} className="space-y-2 py-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="min-w-0 space-y-1">
-                      <p className="flex flex-wrap items-center gap-2 text-sm font-medium">{model.name}{draft.defaultModelId === model.id && <Badge variant="secondary">Default</Badge>}</p>
-                      <p className="text-xs text-muted-foreground">{provider?.name ?? "Unknown provider"}{!provider?.enabled && " · Provider disabled"}</p>
-                    </div>
-                    <div className="flex items-center gap-2"><Switch disabled={pending} aria-label={`Enable ${model.name} through ${provider?.name ?? "unknown provider"}`} checked={model.enabled} onCheckedChange={enabled => updateDraft({ ...draft, models: draft.models.map(item => item.id === model.id ? { ...item, enabled } : item) })} />{serverManaged && <Button type="button" size="icon" variant="ghost" disabled={pending} aria-label={`Remove ${model.name} from catalogue`} onClick={() => removeModel(model.id)}><Trash2 /></Button>}</div>
-                  </div>
-                  <details className="group">
-                    <summary className="flex w-fit cursor-pointer list-none items-center gap-1 rounded-sm text-xs text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden"><ChevronDown className="size-3.5 transition-transform group-open:rotate-180" aria-hidden="true" />Model route</summary>
-                    <div className="mt-2 space-y-2">
-                      {serverManaged && <><Label htmlFor={`model-name-${model.id}`}>Display name</Label><Input id={`model-name-${model.id}`} value={model.name} maxLength={160} disabled={pending} onChange={event => updateDraft({ ...draft, models: draft.models.map(item => item.id === model.id ? { ...item, name: event.target.value } : item) })} /></>}
-                      <Label htmlFor={`model-route-${model.id}`}>Request model ID</Label>
-                      <Input id={`model-route-${model.id}`} value={model.route} disabled={pending} autoComplete="off" spellCheck={false} onChange={event => updateDraft({ ...draft, models: draft.models.map(item => item.id === model.id ? { ...item, route: event.target.value } : item) })} />
-                      {serverManaged && <><Label htmlFor={`model-purpose-${model.id}`}>Routing guidance</Label><Input id={`model-purpose-${model.id}`} value={model.routingDescription ?? ""} maxLength={240} disabled={pending} placeholder="Which tasks suit this model?" onChange={event => updateDraft({ ...draft, models: draft.models.map(item => item.id === model.id ? { ...item, routingDescription: event.target.value } : item) })} /></>}
-                    </div>
-                  </details>
-                </div>
-              })}
-            </div>
-          </section>
+  return (
+    <Card>
+      <CardHeader className="flex flex-wrap items-start justify-between gap-3 sm:flex-row">
+        <div className="min-w-0 space-y-1.5">
+          <CardTitle>
+            <h2>Models / Providers</h2>
+          </CardTitle>
+          <CardDescription>Manage the catalogue used by conversation model picks and the default route.</CardDescription>
         </div>
-        <ModelRolesEditor serverManaged={serverManaged} configuration={draft} pending={pending} onChange={roleSettings => updateDraft({ ...draft, roleSettings })} />
-        {error && <p role="alert" className="text-sm leading-6 text-destructive-foreground">{error}</p>}
-        <FormActions description={<span role="status">{saved ? (serverManaged ? "Saved on the server." : "Saved for this preview. Catalogue available to chat; helper roles remain unwired.") : dirty ? "Unsaved changes" : "Model draft is up to date"}</span>}>
-          <Button type="button" variant="outline" disabled={pending || !dirty} onClick={() => {
-            setDraft(structuredClone(configuration))
-            setError(null)
-            setSaved(false)
-            setShowKeys(false)
-          }}>Discard changes</Button>
-          <Button type="submit" disabled={pending || !dirty}>{pending ? "Saving…" : serverManaged ? "Save model settings" : "Save model draft"}</Button>
-        </FormActions>
-      </form>
-    </CardContent>
-    <Dialog open={adding !== null} onOpenChange={open => { if (!open) setAdding(null) }}>
-      <TaskDialogContent title={adding === 'provider' ? 'Add provider' : 'Add model'} description="Adds a catalogue entry to this draft. Save model settings to apply it; this does not connect credentials or download a model.">
-        <form className="flex min-h-0 flex-col" onSubmit={event => {
-          event.preventDefault()
-          if (adding === 'provider') {
-            const provider = supportedProviders.find(item => item.id === providerId)
-            if (!provider || draft.providers.some(item => item.id === providerId)) return
-            updateDraft({ ...draft, providers: [...draft.providers, { ...provider, endpoint: '', apiKeyDraft: '', enabled: true }] })
-          } else {
-            if (!modelName.trim() || !modelRoute.trim() || !draft.providers.some(item => item.id === providerId)) return
-            updateDraft({ ...draft, models: [...draft.models, { id: `model_${crypto.randomUUID().replaceAll('-', '')}`, name: modelName.trim(), route: modelRoute.trim(), providerId, enabled: true, routingDescription: '' }] })
-          }
-          setAdding(null)
-        }}>
-          <OverlayBody><div className="space-y-2"><Label htmlFor="catalogue-provider">Provider</Label><Select value={providerId} onValueChange={value => { if (value !== null) setProviderId(value) }} items={[...(adding === 'provider' ? supportedProviders.filter(provider => !draft.providers.some(item => item.id === provider.id)) : draft.providers).map((provider) => ({ value: provider.id, label: provider.name }))]}><SelectTrigger id="catalogue-provider"><SelectValue /></SelectTrigger><SelectContent>{(adding === 'provider' ? supportedProviders.filter(provider => !draft.providers.some(item => item.id === provider.id)) : draft.providers).map(provider => <SelectItem key={provider.id} value={provider.id}>{provider.name}</SelectItem>)}</SelectContent></Select></div>
-            {adding === 'model' && <><div className="space-y-2"><Label htmlFor="catalogue-model-name">Display name</Label><Input id="catalogue-model-name" required maxLength={160} value={modelName} onChange={event => setModelName(event.target.value)} /></div><div className="space-y-2"><Label htmlFor="catalogue-model-route">Request model ID</Label>{providerId === 'chatgpt' && serverManaged ? <><Select value={subscriptionModels.some(model => model.id === modelRoute) ? modelRoute : ''} onValueChange={route => { if (route === null) return; setModelRoute(route); setModelName(subscriptionModels.find(model => model.id === route)?.name ?? route) }} disabled={!subscriptionModels.length} items={[...subscriptionModels.map((model) => ({ value: model.id, label: model.name }))]}><SelectTrigger id="catalogue-model-route"><SelectValue placeholder="No subscription catalogue loaded" /></SelectTrigger><SelectContent>{subscriptionModels.map(model => <SelectItem key={model.id} value={model.id}>{model.name}</SelectItem>)}</SelectContent></Select><p className="text-xs text-muted-foreground">Server-discovered catalogue. Availability depends on your plan; a successful answer verifies access.</p></> : <Input id="catalogue-model-route" required maxLength={300} autoComplete="off" spellCheck={false} value={modelRoute} onChange={event => setModelRoute(event.target.value)} />}</div></>}
-          </OverlayBody><FormActions inset><Button type="button" variant="outline" onClick={() => setAdding(null)}>Cancel</Button><Button type="submit" disabled={!providerId || adding === 'model' && (!modelName.trim() || !modelRoute.trim() || serverManaged && providerId === 'chatgpt' && !subscriptionModels.some(model => model.id === modelRoute))}>Add to draft</Button></FormActions>
+        <Badge variant="outline">{serverManaged ? 'Server configuration' : 'Not connected'}</Badge>
+      </CardHeader>
+      <CardContent>
+        <form
+          className="space-y-6"
+          noValidate
+          onSubmit={async event => {
+            event.preventDefault()
+            const validation = validateModelsConfiguration(draft, serverManaged)
+            setError(validation)
+            if (validation) return
+            try {
+              const result = await onSave(structuredClone(draft))
+              setSaved(result)
+              if (!result) setError('The draft could not be saved. Try again.')
+            } catch {
+              setSaved(false)
+              setError('The draft could not be saved. Try again.')
+            }
+          }}
+        >
+          <p className="text-sm leading-6 text-muted-foreground">
+            {serverManaged
+              ? 'Saved on this machine. Provider credentials and endpoints are managed by the server; changing eligibility does not grant tool access.'
+              : 'Preview configuration only. Nothing is sent to a provider. Endpoints and keys stay in memory until reload; use a placeholder key while trying this out.'}
+          </p>
+          {/* Live Pi answers with the Answer role, so a separate default route would only mislead there. */}
+          {!serverManaged && (
+            <div className="grid items-start gap-3 border-y py-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+              <div className="space-y-1">
+                <Label htmlFor="default-model-route">Default route</Label>
+                <p className="text-sm leading-6 text-muted-foreground">Used when a conversation has no model override.</p>
+              </div>
+              <div className="min-w-0 space-y-2">
+                <Select
+                  value={draft.defaultModelId ?? 'none'}
+                  disabled={pending || !availableModels.length}
+                  items={
+                    availableModels.length
+                      ? availableModels.map(model => ({ value: model.id, label: `${model.name} · ${draft.providers.find(provider => provider.id === model.providerId)?.name ?? ''}` }))
+                      : [{ value: 'none', label: 'No enabled models' }]
+                  }
+                  onValueChange={value => {
+                    if (value !== null) updateDraft({ ...draft, defaultModelId: value === 'none' ? null : value })
+                  }}
+                >
+                  <SelectTrigger id="default-model-route" className="w-full min-w-0">
+                    <SelectValue placeholder="No enabled models" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableModels.length ? (
+                      availableModels.map(model => (
+                        <SelectItem key={model.id} value={model.id}>
+                          {model.name} · {draft.providers.find(provider => provider.id === model.providerId)?.name}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value="none">No enabled models</SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+                {!availableModels.length && <p className="text-sm leading-6 text-muted-foreground">Enable a provider and one of its models to choose a route.</p>}
+              </div>
+            </div>
+          )}
+          <div className="grid gap-6 xl:grid-cols-2">
+            <section className="min-w-0 space-y-4" aria-labelledby="model-providers-title">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 id="model-providers-title" className="font-medium">
+                  Providers
+                </h3>
+                {serverManaged ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={pending || supportedProviders.every(provider => draft.providers.some(item => item.id === provider.id))}
+                    onClick={() => {
+                      setProviderId(supportedProviders.find(provider => !draft.providers.some(item => item.id === provider.id))?.id ?? '')
+                      setAdding('provider')
+                    }}
+                  >
+                    <Plus />
+                    Add provider
+                  </Button>
+                ) : (
+                  <Button type="button" variant="ghost" size="sm" aria-pressed={showKeys} onClick={() => setShowKeys(value => !value)}>
+                    {showKeys ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}
+                    {showKeys ? 'Hide keys' : 'Show keys'}
+                  </Button>
+                )}
+              </div>
+              {!draft.providers.length && <CollectionEmpty title="No providers configured" description="Provider configuration will appear here when it is available." />}
+              {draft.providers.map(provider => (
+                <fieldset key={provider.id} className="min-w-0 space-y-3 border-t pt-3" disabled={pending}>
+                  <legend className="sr-only">{provider.name}</legend>
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex min-w-0 flex-wrap items-center gap-2">
+                      <span className="text-sm font-medium">{provider.name}</span>
+                      <Badge variant="outline" className="text-muted-foreground">
+                        {serverManaged ? 'Server managed' : 'Not connected'}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Switch aria-label={`Enable ${provider.name}`} checked={provider.enabled} onCheckedChange={enabled => updateProvider(provider.id, { enabled })} />
+                      {serverManaged && (
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="ghost"
+                          aria-label={`Remove ${provider.name} from catalogue`}
+                          disabled={draft.models.some(model => model.providerId === provider.id)}
+                          onClick={() => updateDraft({ ...draft, providers: draft.providers.filter(item => item.id !== provider.id) })}
+                        >
+                          <Trash2 />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  {serverManaged && (
+                    <div className="space-y-2">
+                      <Label htmlFor={`provider-name-${provider.id}`}>Display name</Label>
+                      <Input id={`provider-name-${provider.id}`} maxLength={160} value={provider.name} onChange={event => updateProvider(provider.id, { name: event.target.value })} />
+                    </div>
+                  )}
+                  {!serverManaged && (
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="min-w-0 space-y-2">
+                        <Label htmlFor={`model-${provider.id}-endpoint`}>Endpoint</Label>
+                        <Input id={`model-${provider.id}-endpoint`} type="url" autoComplete="off" spellCheck={false} value={provider.endpoint} onChange={event => updateProvider(provider.id, { endpoint: event.target.value })} />
+                      </div>
+                      <div className="min-w-0 space-y-2">
+                        <Label htmlFor={`model-${provider.id}-key`}>API key draft</Label>
+                        <Input
+                          id={`model-${provider.id}-key`}
+                          type={showKeys ? 'text' : 'password'}
+                          autoComplete="off"
+                          spellCheck={false}
+                          placeholder="Placeholder key"
+                          value={provider.apiKeyDraft}
+                          onChange={event => updateProvider(provider.id, { apiKeyDraft: event.target.value })}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </fieldset>
+              ))}
+            </section>
+            <section className="min-w-0 space-y-4" aria-labelledby="model-catalogue-title">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 id="model-catalogue-title" className="font-medium">
+                  Model catalogue
+                </h3>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">{availableModels.length} enabled</span>
+                  {serverManaged && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={pending || !draft.providers.length}
+                      onClick={() => {
+                        setProviderId(draft.providers[0]?.id ?? '')
+                        setModelName('')
+                        setModelRoute('')
+                        setAdding('model')
+                      }}
+                    >
+                      <Plus />
+                      Add model
+                    </Button>
+                  )}
+                </div>
+              </div>
+              <p className="text-sm leading-6 text-muted-foreground">
+                {serverManaged ? 'Configured routes. Availability depends on the running provider, not this enabled switch.' : 'Sample model names and routes. Availability, capabilities, and pricing have not been checked.'}
+              </p>
+              <div className="divide-y border-y">
+                {!draft.models.length && <CollectionEmpty title="No models configured" description="Models from your configuration will appear here and in the composer." />}
+                {draft.models.map(model => {
+                  const provider = draft.providers.find(item => item.id === model.providerId)
+                  return (
+                    <div key={model.id} className="space-y-2 py-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0 space-y-1">
+                          <p className="flex flex-wrap items-center gap-2 text-sm font-medium">
+                            {model.name}
+                            {draft.defaultModelId === model.id && <Badge variant="secondary">Default</Badge>}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {provider?.name ?? 'Unknown provider'}
+                            {!provider?.enabled && ' · Provider disabled'}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            disabled={pending}
+                            aria-label={`Enable ${model.name} through ${provider?.name ?? 'unknown provider'}`}
+                            checked={model.enabled}
+                            onCheckedChange={enabled => updateDraft({ ...draft, models: draft.models.map(item => (item.id === model.id ? { ...item, enabled } : item)) })}
+                          />
+                          {serverManaged && (
+                            <Button type="button" size="icon" variant="ghost" disabled={pending} aria-label={`Remove ${model.name} from catalogue`} onClick={() => removeModel(model.id)}>
+                              <Trash2 />
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                      <details className="group">
+                        <summary className="flex w-fit cursor-pointer list-none items-center gap-1 rounded-sm text-xs text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
+                          <ChevronDown className="size-3.5 transition-transform group-open:rotate-180" aria-hidden="true" />
+                          Model route
+                        </summary>
+                        <div className="mt-2 space-y-2">
+                          {serverManaged && (
+                            <>
+                              <Label htmlFor={`model-name-${model.id}`}>Display name</Label>
+                              <Input
+                                id={`model-name-${model.id}`}
+                                value={model.name}
+                                maxLength={160}
+                                disabled={pending}
+                                onChange={event => updateDraft({ ...draft, models: draft.models.map(item => (item.id === model.id ? { ...item, name: event.target.value } : item)) })}
+                              />
+                            </>
+                          )}
+                          <Label htmlFor={`model-route-${model.id}`}>Request model ID</Label>
+                          <Input
+                            id={`model-route-${model.id}`}
+                            value={model.route}
+                            disabled={pending}
+                            autoComplete="off"
+                            spellCheck={false}
+                            onChange={event => updateDraft({ ...draft, models: draft.models.map(item => (item.id === model.id ? { ...item, route: event.target.value } : item)) })}
+                          />
+                          {serverManaged && (
+                            <>
+                              <Label htmlFor={`model-purpose-${model.id}`}>Routing guidance</Label>
+                              <Input
+                                id={`model-purpose-${model.id}`}
+                                value={model.routingDescription ?? ''}
+                                maxLength={240}
+                                disabled={pending}
+                                placeholder="Which tasks suit this model?"
+                                onChange={event => updateDraft({ ...draft, models: draft.models.map(item => (item.id === model.id ? { ...item, routingDescription: event.target.value } : item)) })}
+                              />
+                            </>
+                          )}
+                        </div>
+                      </details>
+                    </div>
+                  )
+                })}
+              </div>
+            </section>
+          </div>
+          <ModelRolesEditor serverManaged={serverManaged} configuration={draft} pending={pending} onChange={roleSettings => updateDraft({ ...draft, roleSettings })} />
+          {error && (
+            <p role="alert" className="text-sm leading-6 text-destructive-foreground">
+              {error}
+            </p>
+          )}
+          <FormActions
+            description={
+              <span role="status">{saved ? (serverManaged ? 'Saved on the server.' : 'Saved for this preview. Catalogue available to chat; helper roles remain unwired.') : dirty ? 'Unsaved changes' : 'Model draft is up to date'}</span>
+            }
+          >
+            <Button
+              type="button"
+              variant="outline"
+              disabled={pending || !dirty}
+              onClick={() => {
+                setDraft(structuredClone(configuration))
+                setError(null)
+                setSaved(false)
+                setShowKeys(false)
+              }}
+            >
+              Discard changes
+            </Button>
+            <Button type="submit" disabled={pending || !dirty}>
+              {pending ? 'Saving…' : serverManaged ? 'Save model settings' : 'Save model draft'}
+            </Button>
+          </FormActions>
         </form>
-      </TaskDialogContent>
-    </Dialog>
-  </Card>
+      </CardContent>
+      <Dialog
+        open={adding !== null}
+        onOpenChange={open => {
+          if (!open) setAdding(null)
+        }}
+      >
+        <TaskDialogContent title={adding === 'provider' ? 'Add provider' : 'Add model'} description="Adds a catalogue entry to this draft. Save model settings to apply it; this does not connect credentials or download a model.">
+          <form
+            className="flex min-h-0 flex-col"
+            onSubmit={event => {
+              event.preventDefault()
+              if (adding === 'provider') {
+                const provider = supportedProviders.find(item => item.id === providerId)
+                if (!provider || draft.providers.some(item => item.id === providerId)) return
+                updateDraft({ ...draft, providers: [...draft.providers, { ...provider, endpoint: '', apiKeyDraft: '', enabled: true }] })
+              } else {
+                if (!modelName.trim() || !modelRoute.trim() || !draft.providers.some(item => item.id === providerId)) return
+                updateDraft({ ...draft, models: [...draft.models, { id: `model_${crypto.randomUUID().replaceAll('-', '')}`, name: modelName.trim(), route: modelRoute.trim(), providerId, enabled: true, routingDescription: '' }] })
+              }
+              setAdding(null)
+            }}
+          >
+            <OverlayBody>
+              <div className="space-y-2">
+                <Label htmlFor="catalogue-provider">Provider</Label>
+                <Select
+                  value={providerId}
+                  onValueChange={value => {
+                    if (value !== null) setProviderId(value)
+                  }}
+                  items={[...(adding === 'provider' ? supportedProviders.filter(provider => !draft.providers.some(item => item.id === provider.id)) : draft.providers).map(provider => ({ value: provider.id, label: provider.name }))]}
+                >
+                  <SelectTrigger id="catalogue-provider">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(adding === 'provider' ? supportedProviders.filter(provider => !draft.providers.some(item => item.id === provider.id)) : draft.providers).map(provider => (
+                      <SelectItem key={provider.id} value={provider.id}>
+                        {provider.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {adding === 'model' && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="catalogue-model-name">Display name</Label>
+                    <Input id="catalogue-model-name" required maxLength={160} value={modelName} onChange={event => setModelName(event.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="catalogue-model-route">Request model ID</Label>
+                    {providerId === 'chatgpt' && serverManaged ? (
+                      <>
+                        <Select
+                          value={subscriptionModels.some(model => model.id === modelRoute) ? modelRoute : ''}
+                          onValueChange={route => {
+                            if (route === null) return
+                            setModelRoute(route)
+                            setModelName(subscriptionModels.find(model => model.id === route)?.name ?? route)
+                          }}
+                          disabled={!subscriptionModels.length}
+                          items={[...subscriptionModels.map(model => ({ value: model.id, label: model.name }))]}
+                        >
+                          <SelectTrigger id="catalogue-model-route">
+                            <SelectValue placeholder="No subscription catalogue loaded" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {subscriptionModels.map(model => (
+                              <SelectItem key={model.id} value={model.id}>
+                                {model.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-muted-foreground">Server-discovered catalogue. Availability depends on your plan; a successful answer verifies access.</p>
+                      </>
+                    ) : (
+                      <Input id="catalogue-model-route" required maxLength={300} autoComplete="off" spellCheck={false} value={modelRoute} onChange={event => setModelRoute(event.target.value)} />
+                    )}
+                  </div>
+                </>
+              )}
+            </OverlayBody>
+            <FormActions inset>
+              <Button type="button" variant="outline" onClick={() => setAdding(null)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={!providerId || (adding === 'model' && (!modelName.trim() || !modelRoute.trim() || (serverManaged && providerId === 'chatgpt' && !subscriptionModels.some(model => model.id === modelRoute))))}>
+                Add to draft
+              </Button>
+            </FormActions>
+          </form>
+        </TaskDialogContent>
+      </Dialog>
+    </Card>
+  )
 }

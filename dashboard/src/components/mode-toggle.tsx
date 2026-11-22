@@ -1,20 +1,20 @@
-"use client"
+'use client'
 
-import * as React from "react"
-import { cn } from "@/lib/utils"
-import { Moon, Sun } from "lucide-react"
+import * as React from 'react'
+import { cn } from '@/lib/utils'
+import { Moon, Sun } from 'lucide-react'
 
-import { Button } from "@/components/ui/button"
-import { useTheme } from "@/hooks/use-theme"
-import { useCircularTransition } from "@/hooks/use-circular-transition"
-import "./theme-customizer/circular-transition.css"
+import { Button } from '@/components/ui/button'
+import { useTheme } from '@/hooks/use-theme'
+import { useCircularTransition } from '@/hooks/use-circular-transition'
+import './theme-customizer/circular-transition.css'
 
 interface ModeToggleProps {
   className?: string
-  variant?: "outline" | "ghost" | "default"
+  variant?: 'outline' | 'ghost' | 'default'
 }
 
-export function ModeToggle({ variant = "outline", className }: ModeToggleProps) {
+export function ModeToggle({ variant = 'outline', className }: ModeToggleProps) {
   const { theme } = useTheme()
   const { toggleTheme } = useCircularTransition()
 
@@ -23,22 +23,22 @@ export function ModeToggle({ variant = "outline", className }: ModeToggleProps) 
 
   React.useEffect(() => {
     const updateMode = () => {
-      if (theme === "dark") {
+      if (theme === 'dark') {
         setIsDarkMode(true)
-      } else if (theme === "light") {
+      } else if (theme === 'light') {
         setIsDarkMode(false)
       } else {
-        setIsDarkMode(window.matchMedia("(prefers-color-scheme: dark)").matches)
+        setIsDarkMode(window.matchMedia('(prefers-color-scheme: dark)').matches)
       }
     }
 
     updateMode()
 
     // Listen for system theme changes
-    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)")
-    mediaQuery.addEventListener("change", updateMode)
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+    mediaQuery.addEventListener('change', updateMode)
 
-    return () => mediaQuery.removeEventListener("change", updateMode)
+    return () => mediaQuery.removeEventListener('change', updateMode)
   }, [theme])
 
   const handleToggle = (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -46,21 +46,10 @@ export function ModeToggle({ variant = "outline", className }: ModeToggleProps) 
   }
 
   return (
-    <Button
-      variant={variant}
-      size="icon"
-      onClick={handleToggle}
-      className={cn("cursor-pointer mode-toggle-button relative overflow-hidden", className)}
-    >
+    <Button variant={variant} size="icon" onClick={handleToggle} className={cn('cursor-pointer mode-toggle-button relative overflow-hidden', className)}>
       {/* Show the icon for the mode you can switch TO */}
-      {isDarkMode ? (
-        <Sun className="h-[1.2rem] w-[1.2rem] transition-transform duration-300 rotate-0 scale-100" />
-      ) : (
-        <Moon className="h-[1.2rem] w-[1.2rem] transition-transform duration-300 rotate-0 scale-100" />
-      )}
-      <span className="sr-only">
-        Switch to {isDarkMode ? "light" : "dark"} mode
-      </span>
+      {isDarkMode ? <Sun className="h-[1.2rem] w-[1.2rem] transition-transform duration-300 rotate-0 scale-100" /> : <Moon className="h-[1.2rem] w-[1.2rem] transition-transform duration-300 rotate-0 scale-100" />}
+      <span className="sr-only">Switch to {isDarkMode ? 'light' : 'dark'} mode</span>
     </Button>
   )
 }

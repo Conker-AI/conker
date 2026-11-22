@@ -1,4 +1,4 @@
-export type TaskStatus = "planned" | "in_progress" | "blocked" | "completed" | "cancelled"
+export type TaskStatus = 'planned' | 'in_progress' | 'blocked' | 'completed' | 'cancelled'
 export type TaskCriterion = { id: string; text: string }
 export type TaskInput = {
   outcome: string
@@ -13,20 +13,20 @@ export type TaskInput = {
 export type TaskChange = {
   id: string
   at: string
-  kind: "created" | "updated" | "status" | "archived" | "restored"
+  kind: 'created' | 'updated' | 'status' | 'archived' | 'restored'
   note: string
   from?: TaskStatus
   to?: TaskStatus
 }
-export type TaskRecord = Omit<TaskInput, "criteria" | "parentTaskId" | "runIds"> & {
+export type TaskRecord = Omit<TaskInput, 'criteria' | 'parentTaskId' | 'runIds'> & {
   id: string
   criteria: TaskCriterion[]
   parentTaskId: string | null
   runIds: string[]
   status: TaskStatus
   /** Status is an owner's report, never proof that an executor ran. */
-  statusSource: "owner"
-  provenance: "preview"
+  statusSource: 'owner'
+  provenance: 'preview'
   revision: number
   createdAt: string
   updatedAt: string
@@ -35,4 +35,3 @@ export type TaskRecord = Omit<TaskInput, "criteria" | "parentTaskId" | "runIds">
   completedCriterionIds: string[]
   changes: TaskChange[]
 }
-

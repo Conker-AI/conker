@@ -17,7 +17,8 @@ export function parseSseEvents(buffer: string): { events: SseEvent[]; rest: stri
   const blocks = buffer.replace(/\r\n/g, '\n').split('\n\n')
   const rest = blocks.pop() ?? ''
   for (const block of blocks) {
-    let event = 'message', id: number | null = null
+    let event = 'message',
+      id: number | null = null
     const data: string[] = []
     for (const line of block.split('\n')) {
       if (line.startsWith(':')) continue
@@ -43,18 +44,18 @@ export function applyPreviewEvent(text: string, event: SseEvent): { text: string
     const value: unknown = JSON.parse(event.data)
     const piece = value && typeof value === 'object' ? (value as { text?: unknown }).text : undefined
     return { text: typeof piece === 'string' ? text + piece : text }
-  } catch { return { text } }
+  } catch {
+    return { text }
+  }
 }
 
-export async function followLivePreview(
-  requestId: string,
-  onText: (text: string) => void,
-  options: { signal: AbortSignal; fetch?: typeof fetch; origin?: string; retryDelayMs?: number; onReset?: () => void },
-): Promise<LivePreviewEnd> {
+export async function followLivePreview(requestId: string, onText: (text: string) => void, options: { signal: AbortSignal; fetch?: typeof fetch; origin?: string; retryDelayMs?: number; onReset?: () => void }): Promise<LivePreviewEnd> {
   if (!/^[A-Za-z0-9_-]{1,200}$/.test(requestId)) return 'unavailable'
   const origin = options.origin ?? window.location.origin
   const fetcher = options.fetch ?? globalThis.fetch.bind(globalThis)
-  let text = '', after = 0, received = 0
+  let text = '',
+    after = 0,
+    received = 0
   for (let attempt = 0; attempt <= MAX_RECONNECTS; attempt++) {
     if (options.signal.aborted) return 'stopped'
     try {
@@ -65,25 +66,34 @@ export async function followLivePreview(
         await response.body?.cancel().catch(() => undefined)
         return 'unavailable'
       }
-      const reader = response.body.getReader(), decoder = new TextDecoder()
+      const reader = response.body.getReader(),
+        decoder = new TextDecoder()
       let buffer = ''
       try {
         for (;;) {
           const { done, value } = await reader.read()
           if (done) break
           received += value.byteLength
-          if (received > LIVE_PREVIEW_BYTE_LIMIT) { await reader.cancel().catch(() => undefined); return 'unavailable' }
+          if (received > LIVE_PREVIEW_BYTE_LIMIT) {
+            await reader.cancel().catch(() => undefined)
+            return 'unavailable'
+          }
           const parsed = parseSseEvents(buffer + decoder.decode(value, { stream: true }))
           buffer = parsed.rest
           for (const event of parsed.events) {
             if (event.id !== null) after = event.id
             if (event.event === 'reset') options.onReset?.()
             const next = applyPreviewEvent(text, event)
-            if (next.text !== text) { text = next.text; onText(text) }
+            if (next.text !== text) {
+              text = next.text
+              onText(text)
+            }
             if (next.end) return next.end
           }
         }
-      } finally { reader.releaseLock() }
+      } finally {
+        reader.releaseLock()
+      }
     } catch {
       if (options.signal.aborted) return 'stopped'
     }

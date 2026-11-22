@@ -55,21 +55,11 @@ export function foldToolRequests<M extends Shown>(messages: readonly M[]): { mes
     const nextMessage = i + 1 < messages.length ? messages[i + 1] : null
 
     // Check if this is an assistant message with a tool request
-    if (
-      message.role === 'assistant' &&
-      message.content.kind === 'text' &&
-      message.content.text
-    ) {
+    if (message.role === 'assistant' && message.content.kind === 'text' && message.content.text) {
       const request = readToolRequest(message.content.text)
 
       // Check if the next message is a tool record for the same tool
-      if (
-        request &&
-        nextMessage &&
-        nextMessage.role === 'tool' &&
-        nextMessage.content.kind === 'text' &&
-        nextMessage.content.text
-      ) {
+      if (request && nextMessage && nextMessage.role === 'tool' && nextMessage.content.kind === 'text' && nextMessage.content.text) {
         try {
           let toolRecord = JSON.parse(nextMessage.content.text.trim())
 
@@ -79,14 +69,7 @@ export function foldToolRequests<M extends Shown>(messages: readonly M[]): { mes
           }
 
           // Check if it's an object with a matching tool name
-          if (
-            typeof toolRecord === 'object' &&
-            toolRecord !== null &&
-            !Array.isArray(toolRecord) &&
-            'tool' in toolRecord &&
-            typeof toolRecord.tool === 'string' &&
-            toolRecord.tool === request.tool
-          ) {
+          if (typeof toolRecord === 'object' && toolRecord !== null && !Array.isArray(toolRecord) && 'tool' in toolRecord && typeof toolRecord.tool === 'string' && toolRecord.tool === request.tool) {
             // Fold: add the tool record with the request and skip the assistant message
             result.push({ message: nextMessage, request })
             i++ // Skip the next message since we've processed it

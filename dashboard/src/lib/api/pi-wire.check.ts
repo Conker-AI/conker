@@ -24,16 +24,13 @@ import type { TeamRunFinishBody, TeamRunStepBody } from '../gateway/team-runs'
 type Ok<R> = R[Extract<keyof R, 200 | 201 | 202>]
 type Json<R> = R extends { content: { 'application/json': infer J } } ? J : never
 /** The JSON body Pi answers a route with, from the generated OpenAPI types. */
-type PiResponse<P extends keyof paths, M extends keyof paths[P]> =
-  paths[P][M] extends { responses: infer R } ? Json<Ok<R>> : never
+type PiResponse<P extends keyof paths, M extends keyof paths[P]> = paths[P][M] extends { responses: infer R } ? Json<Ok<R>> : never
 
 /** The JSON body Pi accepts on a route. */
-type PiRequest<P extends keyof paths, M extends keyof paths[P]> =
-  paths[P][M] extends { requestBody: { content: { 'application/json': infer J } } } ? J : never
+type PiRequest<P extends keyof paths, M extends keyof paths[P]> = paths[P][M] extends { requestBody: { content: { 'application/json': infer J } } } ? J : never
 
 /** Pydantic always sends fields with defaults, though the generator marks them optional; strict wire schemas may also leave fields optional. */
-type Sent<T> = T extends readonly (infer U)[] ? Sent<U>[]
-  : T extends object ? { [K in keyof T]-?: Sent<Exclude<T[K], undefined>> } : T
+type Sent<T> = T extends readonly (infer U)[] ? Sent<U>[] : T extends object ? { [K in keyof T]-?: Sent<Exclude<T[K], undefined>> } : T
 
 /** Each side accepts the other: Pi's reply fits the dashboard schema and nothing the schema needs is missing from Pi. */
 type Same<A, B> = [Sent<A>] extends [Sent<B>] ? ([Sent<B>] extends [Sent<A>] ? true : false) : false

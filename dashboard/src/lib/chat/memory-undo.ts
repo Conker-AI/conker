@@ -16,7 +16,8 @@ export function createMemoryUndo(options: {
   refresh: (messageId: string) => void
   signal?: AbortSignal
 }) {
-  const requests = new Map<string, MemoryForgetRequest>(), running = new Set<string>()
+  const requests = new Map<string, MemoryForgetRequest>(),
+    running = new Set<string>()
   return async function undo(messageId: string, memoryId: string): Promise<void> {
     if (running.has(memoryId)) return
     running.add(memoryId)
@@ -27,18 +28,22 @@ export function createMemoryUndo(options: {
       if (!request) {
         const preview = await options.control.forgetPreview(memoryId, options.signal)
         if (!live()) return
-        request = options.createRequest(preview); requests.set(memoryId, request)
+        request = options.createRequest(preview)
+        requests.set(memoryId, request)
       }
       await options.control.forgetMemory(request, options.signal)
       if (!live()) return
       requests.delete(memoryId)
-      options.publish(messageId, { phase: 'forgotten' }); options.refresh(messageId)
+      options.publish(messageId, { phase: 'forgotten' })
+      options.refresh(messageId)
     } catch (failure) {
       if (!live()) return
       const problem = memoryForgetFailure(failure)
       if (problem.reset || problem.privateUnavailable) requests.delete(memoryId)
       options.publish(messageId, { phase: 'failed', message: problem.message })
       if (!problem.privateUnavailable) options.refresh(messageId)
-    } finally { running.delete(memoryId) }
+    } finally {
+      running.delete(memoryId)
+    }
   }
 }

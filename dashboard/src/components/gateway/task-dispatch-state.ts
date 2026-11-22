@@ -8,7 +8,7 @@ export type TaskDispatchIntent = { taskId: string; sessionId: string; open: bool
 
 /** Known tombstones hide retained input during render, before effect-based cache cleanup. */
 export function visibleTaskDispatchIntent(intent: TaskDispatchIntent | null, forgottenIds: readonly string[]): TaskDispatchIntent | null {
-  return intent && (forgottenIds.includes(intent.sessionId) || !!intent.prepared && forgottenIds.includes(intent.prepared.sessionId)) ? null : intent
+  return intent && (forgottenIds.includes(intent.sessionId) || (!!intent.prepared && forgottenIds.includes(intent.prepared.sessionId))) ? null : intent
 }
 
 /** Propagate each canonical tombstone before a later read can fail or remain pending. */
