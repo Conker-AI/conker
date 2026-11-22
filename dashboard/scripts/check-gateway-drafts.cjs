@@ -164,7 +164,7 @@ async function main() {
   assert.equal(readDraftStart('owner-session').requestId, requestId)
   assert.equal(readDraftStart('another-session'), null); assert.equal(storage.size, 0)
   clearDraftStart()
-  const source = ['runtime-workspace', 'new-chat-view', 'open-chat-view'].map(name => fs.readFileSync(path.join(root, `src/components/gateway/${name}.tsx`), 'utf8')).join('\n')
+  const source = ['runtime-workspace.tsx', 'runtime-chat-start.ts', 'runtime-submissions.ts', 'new-chat-view.tsx', 'open-chat-view.tsx'].map(name => fs.readFileSync(path.join(root, `src/components/gateway/${name}`), 'utf8')).join('\n')
   assert.match(source, /finishChatStart\(receipt, false\)/, 'Recovered starts never auto-send a new turn request')
   assert.match(source, /draftController\.flush\(id\)[\s\S]*createRequestOptions\(saved.modelId, saved.skillIds, saved.think, saved.revision, saved.researchMode\)/)
   assert.doesNotMatch(fs.readFileSync(path.join(root, 'src/components/gateway/draft-controller.ts'), 'utf8'), /localStorage|sessionStorage|indexedDB/, 'Draft content remains private server state plus transient memory')

@@ -70,7 +70,7 @@ async function main() {
   await transport.request('/api/owner/tools/sandbox.run/access')
   assert.equal(requests, 3)
 
-  const control = fs.readFileSync(path.join(root, 'src/lib/gateway/control.ts'), 'utf8')
+  const control = ['control.ts', 'control-schemas.ts'].map(file => fs.readFileSync(path.join(root, 'src/lib/gateway', file), 'utf8')).join('\n')
   assert.match(control, /access: z\.enum\(\['default', 'ask', 'ai', 'full'\]\)\.optional\(\)/, 'Chat settings carry the access switch')
   assert.match(control, /toolAccess: z\.record\(agentReference, z\.enum\(\['allow', 'ai', 'ask'\]\)\)/, 'Agents carry per-tool access')
   const chat = fs.readFileSync(path.join(root, 'src/components/gateway/session-access-control.tsx'), 'utf8')

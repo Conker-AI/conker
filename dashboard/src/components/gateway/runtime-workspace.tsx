@@ -1,6 +1,8 @@
-import { createDraftController, draftCanSend, draftNeedsUnload, sameDraft } from './draft-controller'
-import { emptyDraft, mergeDraftPrivacy, type DraftStart, type SavedDraft } from '@/lib/gateway/drafts'
-import { readDraftStart, rememberDraftStart, clearDraftStart, type PendingDraftStart } from './draft-start-recovery'
+/* eslint-disable react-hooks/refs, react-hooks/set-state-in-effect, react-hooks/preserve-manual-memoization -- React Compiler skipped this whole component before the
+   send and chat-start handlers moved out (a handler called one declared after it); these older ref, effect and memo patterns are unchanged, not new. */
+import { createDraftController, draftCanSend, draftNeedsUnload } from './draft-controller'
+import { emptyDraft, mergeDraftPrivacy } from '@/lib/gateway/drafts'
+import { readDraftStart, clearDraftStart, type PendingDraftStart } from './draft-start-recovery'
 import { useThinkingCancellation } from './use-thinking-cancellation'
 import { applyThinkingCancellationRead } from './thinking-cancellation'
 import { useMemoryDelivery } from './use-memory-delivery'
@@ -9,27 +11,26 @@ import { useRuntimeObservation } from './use-runtime-observation'
 import { createRuntimeDetailReader, useRefreshChat } from './runtime-detail-read'
 import { useSessionDiscovery } from './session-discovery-context'
 import { gatewayChatContract, type GatewayChatState, type GatewayChatHandlers } from '@/lib/chat/gateway-adapter'
-import type { Attempt, Generation } from '@/lib/chat/contract'
 import type { GatewayControlClient } from '@/lib/gateway/control'
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useStore } from 'zustand'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { readTaskDispatchSources, taskDispatchProblem, visibleTaskDispatchIntent, type PreparedTaskDispatch, type TaskSubmissionBinding } from './task-dispatch-state'
+import { visibleTaskDispatchIntent } from './task-dispatch-state'
 import type { GatewayActivityClient } from '@/lib/gateway/activity'
 import type { GatewayAuthStore } from '@/lib/gateway/auth-store'
-import { createTurnRequestId, RuntimeMutationError, type GatewayRuntimeClient, type RuntimeMessage, type RuntimeSessionDetail, type RuntimeSubmission, type RuntimePendingSubmission } from '@/lib/gateway/runtime'
-import { followLivePreview } from '@/lib/gateway/live-preview'
-import { GatewayError, gatewayError } from '@/lib/gateway/transport'
-import { canReleaseTaskConflict, canSubmitRuntime, checkableTurn, checkedAttempt, createGatewayRuntimeWorkspaceState, createRequestOptions, hasActiveRuntimeTurn, recoverSubmissionDraft, retainedRequestOptions, resolveAttempt, type GatewayRuntimeWorkspaceState, type RequestModelOptions } from './runtime-state'
+import { createTurnRequestId, type GatewayRuntimeClient, type RuntimeMessage, type RuntimeSessionDetail } from '@/lib/gateway/runtime'
+import { gatewayError } from '@/lib/gateway/transport'
+import { canSubmitRuntime, createGatewayRuntimeWorkspaceState, recoverSubmissionDraft, type GatewayRuntimeWorkspaceState } from './runtime-state'
 import { retryTurnText } from './retry-turn'
 import { createGatewaySourcePrivacyState, maskForgottenConversation, maskForgottenSession, type GatewaySourcePrivacyState } from './source-privacy'
 import type { NewChatPrivacy } from './new-chat-privacy-control'
-import { saveNewChatEffort } from './new-chat-effort'
 import type { ChatEffort } from '@/lib/gateway/chat-names'
-import { chooseTemplate, useTemplateActive } from './composer-parts'
+import { useTemplateActive } from './composer-parts'
 import { TaskDispatchReview } from './task-dispatch-review'
 import { NewChatView } from './new-chat-view'
 import { OpenChatView } from './open-chat-view'
+import { useRuntimeSubmissions, type RuntimeInFlight, type RuntimePreview } from './runtime-submissions'
+import { useRuntimeChatStart } from './runtime-chat-start'
 
 export type { GatewayRuntimeWorkspaceState } from './runtime-state'
 export type GatewayRuntimeWorkspaceProps = { harnessBySession?: Record<string, boolean>; control?: GatewayControlClient; client: GatewayRuntimeClient; activityClient?: GatewayActivityClient; authStore: GatewayAuthStore; state?: GatewayRuntimeWorkspaceState; sourcePrivacy?: GatewaySourcePrivacyState; visible?: boolean; onSelectSession?: (id: string | null) => void; headerExtra?: ReactNode }
@@ -97,10 +98,8 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
   const newChatComposer = useRef<HTMLTextAreaElement>(null)
   const replyComposer = useRef<HTMLTextAreaElement>(null), templateActive = useTemplateActive(selected ?? 'new')
   const [dictating, setDictating] = useState(false)
-  // Display-only text of the answer being written; the saved turn replaces it.
-  const [preview, setPreview] = useState<{ sessionId: string; text: string; resetVersion: number; end?: Generation['end'] } | null>(null)
-  // The request being answered right now, so Stop can name it; cleared when the send settles.
-  const [inFlight, setInFlight] = useState<Attempt & { requestId: string; stopping: boolean; epoch: number } | null>(null)
+  const [preview, setPreview] = useState<RuntimePreview | null>(null)
+  const [inFlight, setInFlight] = useState<RuntimeInFlight | null>(null)
   const [rejected, setRejected] = useState<string | null>(null)
   const chatLatest = useRef<{ snapshot: GatewayChatState; handlers: GatewayChatHandlers } | null>(null)
   const mounted = useRef(false)
@@ -281,244 +280,17 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
   }, [draftEntries, uncertain, pendingStart, taskIntent, sendPending, createPending])
 
   function openSession(id: string) { selectedRef.current = id; setSelected(id); setDetail(null); setDetailError(null); setNotice(null); setRejected(null); setReviewed(false); onSelectSession?.(id) }
-  async function finishChatStart(receipt: DraftStart, send: boolean, original?: SavedDraft) {
-    if (receipt.contentStatus === 'forgotten') {
-      privacy.getState().markForgotten([receipt.sessionId]); clearDraftStart(); setPendingStart(null); setCreateUnknown(null)
-      await draftController.load('new'); setCreateError('That chat was forgotten. Its draft is no longer available.'); return
-    }
-    const epoch = workspace.getState().epoch
-    await draftController.load(receipt.sessionId)
-    if (workspace.getState().epoch !== epoch || !activeRef.current) return
-    const saved = draftController.current(receipt.sessionId)
-    if (!saved?.base || saved.status !== 'saved') { setCreateError('The chat was created, but its draft could not be read. Check the saved chat start to continue.'); return }
-    // Promotion clears only its source revision; a newer draft in another tab survives.
-    await draftController.consumed('new', receipt.sourceRevision!)
-    if (workspace.getState().epoch !== epoch || !activeRef.current) return
-    if (original) setSessionAgents(current => ({ ...current, [receipt.sessionId]: original.agentId ?? 'companion' }))
-    openSession(receipt.sessionId); clearDraftStart(); setPendingStart(null); setCreateUnknown(null); setStartMissing(false); void refreshList(); chooseTemplate('new', null)
-    if (firstEffort !== 'auto') {
-      const failure = await saveNewChatEffort(control, receipt.sessionId, firstEffort); setFirstEffort('auto')
-      if (workspace.getState().epoch !== epoch || !activeRef.current) return
-      if (failure) setNotice(failure)
-    }
-    if (send && original && saved.base.revision === receipt.draftRevision && sameDraft(saved.value, original, receipt.sessionId)) {
-      workspace.setState({ operation: null })
-      await dispatchSubmission(receipt.sessionId, original.text, createTurnRequestId(), undefined, undefined, undefined, undefined, undefined, saved.base)
-    } else if (send) setNotice('The chat was created, but its draft changed before sending. Review the saved draft and send when ready.')
-  }
-  /** Save first, then promote the exact intent. A start receipt never implies inference ran. */
-  async function startChat() {
-    const value = draftController.current('new')?.value
-    if (!value?.text.trim() || value.privacy.harnessDisabled && !value.modelId || workspace.getState().operation || workspace.getState().createUnknown || pendingStart || !activeRef.current || !draftCanSend(draftController.current('new'))) return
-    const epoch = workspace.getState().epoch
-    workspace.setState({ operation: 'create' }); setCreateError(null)
-    let receipt: DraftStart | undefined, savedStart: PendingDraftStart | undefined, original: SavedDraft | undefined
-    try {
-      draftController.edit('new', { title: value.title || value.text.trim().split('\n')[0].slice(0, 60) })
-      const saved = await draftController.flush('new'); original = saved
-      if (workspace.getState().epoch !== epoch || !activeRef.current) return
-      const candidate = { requestId: createTurnRequestId(), revision: saved.revision, identity: authStore.getState().session!.sessionId }
-      rememberDraftStart(candidate); savedStart = candidate; setPendingStart(candidate); setCreateUnknown('unchecked')
-      receipt = await request(signal => client.drafts.start(savedStart!.requestId, savedStart!.revision, signal))
-    } catch (error) {
-      if (workspace.getState().epoch !== epoch) return
-      if (savedStart && error instanceof GatewayError && [400, 403, 404, 413, 422].includes(error.status ?? 0)) { clearDraftStart(); setPendingStart(null); setCreateUnknown(null); setCreateError('The chat was not created. Review the draft, agent and privacy options before trying again.'); void draftController.load('new') }
-      else if (savedStart) { setCreateUnknown('unchecked'); setCreateError('Chat creation was not confirmed. Check this saved start before continuing; your message has not been sent by this tab.') }
-      else setCreateError(error instanceof Error ? error.message : 'Save the draft before starting this chat.')
-    } finally { if (!receipt && workspace.getState().epoch === epoch) workspace.setState({ operation: null }) }
-    try { if (receipt && workspace.getState().epoch === epoch && activeRef.current) await finishChatStart(receipt, true, original) }
-    finally { if (workspace.getState().epoch === epoch) workspace.setState({ operation: null }) }
-  }
-  async function recoverChatStart(replay = false) {
-    if (!pendingStart || workspace.getState().operation || !activeRef.current) return
-    const saved = pendingStart, epoch = workspace.getState().epoch
-    workspace.setState({ operation: 'create' }); setCreateError(null)
-    let receipt: DraftStart | undefined
-    try { receipt = await request(signal => replay ? client.drafts.start(saved.requestId, saved.revision, signal) : client.drafts.checkStart(saved.requestId, signal)) }
-    catch (error) {
-      if (workspace.getState().epoch !== epoch) return
-      if (error instanceof GatewayError && error.status === 404 && !replay) { setStartMissing(true); setCreateError('No chat is recorded for this start yet. Retry the same saved start to avoid creating a second chat.') }
-      else if (error instanceof GatewayError && [400, 403, 404, 409, 413, 422].includes(error.status ?? 0) && replay) {
-        clearDraftStart(); setPendingStart(null); setCreateUnknown(null); setStartMissing(false)
-        await draftController.load('new'); setCreateError('The draft changed before a chat was created. Review its saved version, then send when ready.')
-      } else setCreateError('The saved chat start could not be checked. Keep this tab open and try again when connected.')
-    } finally { if (!receipt && workspace.getState().epoch === epoch) workspace.setState({ operation: null }) }
-    try { if (receipt && workspace.getState().epoch === epoch && activeRef.current) await finishChatStart(receipt, false) }
-    finally { if (workspace.getState().epoch === epoch) workspace.setState({ operation: null }) }
-  }
+  const { resumeTurn, dispatchSubmission, stopAnswer, checkSubmission, releaseUnstartedSubmission, inspectSubmission, checkHistory, resolve } = useRuntimeSubmissions({
+    client, activityClient, harnessBySession, workspace, privacy, draftController, selected, current, attempt, draft, reviewed, inFlight, sendPending, detailPending, sessionAgents,
+    mounted, activeRef, selectedRef, chatLatest, request, refreshDetail, refreshList, openSession,
+    setNotice, setDetailError, setTaskError, setRejected, setReviewed, setDetailPending, setInFlight, setPreview })
+  const { startChat, recoverChatStart } = useRuntimeChatStart({ client, control, authStore, workspace, privacy, draftController, pendingStart, firstEffort, activeRef, request, refreshList, openSession, dispatchSubmission,
+    setPendingStart, setStartMissing, setCreateUnknown, setCreateError, setFirstEffort, setNotice, setSessionAgents })
   async function submit() {
     const live = workspace.getState(), id = live.selected
     const text = id ? draftController.current(id)?.value.text ?? '' : ''
     if (live.operation || !id || id !== current?.id || !canSubmitRuntime(text, pending, live.uncertain[id], current)) return
     await dispatchSubmission(id, text, createTurnRequestId())
-  }
-  async function acceptSubmission(id: string, text: string, receipt: RuntimeSubmission, taskBinding?: TaskSubmissionBinding, requestOptions?: RequestModelOptions) {
-    const frozenOptions = requestOptions ?? retainedRequestOptions({ text, checked: true, submission: receipt })
-    if (receipt.contentStatus === 'forgotten') privacy.getState().markForgotten([id, ...(receipt.sessionId ? [receipt.sessionId] : [])])
-    if (!receipt.turnId || !receipt.sessionId || receipt.state === 'forgotten') {
-      workspace.setState(values => ({ uncertain: { ...values.uncertain, [id]: { text: privacy.getState().sessionIds.includes(id) ? '' : text, requestOptions: frozenOptions, taskBinding, requestId: receipt.requestId, requestedSessionId: receipt.requestedSessionId, submission: receipt, checked: true } } }))
-      if (mounted.current) setNotice(`Submission is ${receipt.state.replaceAll('_', ' ')}. No request was repeated.`)
-      if (mounted.current && selectedRef.current === id) await refreshDetail(id)
-      return
-    }
-    const destination = receipt.sessionId
-    const epoch = workspace.getState().epoch
-    if (!taskBinding && frozenOptions.draftRevision) await draftController.consumed(id, frozenOptions.draftRevision)
-    if (workspace.getState().epoch !== epoch || !activeRef.current) return
-    workspace.setState(values => {
-      const uncertain = { ...values.uncertain }; delete uncertain[id]
-      uncertain[destination] = { text: privacy.getState().sessionIds.includes(destination) ? '' : text, requestOptions: frozenOptions, taskBinding, requestId: receipt.requestId, requestedSessionId: receipt.requestedSessionId, turnId: receipt.turnId!, checked: false, accepted: true, submission: receipt }
-      return { uncertain, selected: destination }
-    })
-    if (!mounted.current || !activeRef.current) return
-    if (selectedRef.current !== destination) openSession(destination)
-    // A completed answer speaks for itself and a parked turn has its own card; only a fork or an unusual outcome needs a line.
-    if (destination !== id || !['complete', 'awaiting_approval', 'acted_no_reply'].includes(receipt.status)) setNotice(`${destination !== id ? 'The server continued in a fork. ' : ''}Turn ${receipt.turnId} is recorded (${receipt.status.replaceAll('_', ' ')}).`)
-    selectedRef.current = destination
-    await refreshDetail(destination)
-    void refreshList()
-  }
-  async function resumeTurn(turnId: string) {
-    const latest = chatLatest.current?.snapshot.current
-    const turn = latest?.turns.find(turn => turn.id === turnId)
-    if (!selected || workspace.getState().selected !== selected || latest?.id !== selected || latest.status !== 'open' || privacy.getState().sessionIds.includes(selected) || workspace.getState().uncertain[selected] || !turn || !(turn.status === 'awaiting_approval' || turn.status === 'acted_no_reply' && turn.acted || checkableTurn(turn.status)) || workspace.getState().operation || !activeRef.current) return
-    const id = selected, epoch = workspace.getState().epoch, checking = checkableTurn(turn.status)
-    let failure: string | null = null
-    workspace.setState({ operation: 'resume', turnCheck: checking ? { turnId, phase: 'checking' } : null }); setNotice(null); setDetailError(null)
-    try {
-      const status = await request(signal => client.resumeTurn(turnId, { signal }))
-      // A check always reports what it found; otherwise the reply appears on its own, and only a turn still waiting on the owner needs a line.
-      if (workspace.getState().epoch === epoch) { if (checking) workspace.setState({ turnCheck: { turnId, phase: 'checked', status } }); else if (status === 'awaiting_approval') setNotice('Still waiting for you in the Inbox. Your answer there continues this chat.') }
-    } catch (error) {
-      failure = error instanceof Error ? error.message : 'Resume could not be confirmed. Check history before trying again.'
-    } finally {
-      if (workspace.getState().epoch === epoch) {
-        await refreshDetail(id)
-        if (workspace.getState().epoch === epoch && selectedRef.current === id && failure) { if (checking) workspace.setState({ turnCheck: { turnId, phase: 'failed', reason: failure } }); else setDetailError(failure) }
-        if (workspace.getState().epoch === epoch) workspace.setState({ operation: null })
-      }
-    }
-  }
-  async function dispatchSubmission(id: string, text: string, requestId: string, taskBinding?: TaskSubmissionBinding, prepared?: PreparedTaskDispatch, modelOverride?: string, skillOverride?: string[], thinkOverride?: boolean, promotedDraft?: SavedDraft) {
-    if (workspace.getState().operation || !activeRef.current) return
-    const prior = Object.values(workspace.getState().uncertain).find(attempt => attempt.requestId === requestId)
-    const composer = draftController.current(id)?.value
-    let requestOptions = prior ? retainedRequestOptions(prior) : createRequestOptions(modelOverride ?? composer?.modelId, skillOverride ?? (taskBinding || harnessBySession?.[id] ? [] : composer?.skillIds ?? []), thinkOverride ?? (!taskBinding && (sessionAgents[id] ?? 'companion') === 'companion' && !harnessBySession?.[id] && Boolean(composer?.think)))
-    const { modelId } = requestOptions
-    if (harnessBySession?.[id] && !modelId) { setDetailError('Choose an answer model while harness processing is disabled.'); return }
-    const epoch = workspace.getState().epoch
-    workspace.setState({ operation: 'send', turnCheck: null }); setDetailError(null); setNotice(null); setTaskError(null)
-    let dispatched = false
-    const previewStop = new AbortController()
-    try {
-      if (!prior && promotedDraft) {
-        const live = draftController.current(id)
-        if (!live || live.base?.revision !== promotedDraft.revision || !sameDraft(live.value, promotedDraft, id)) throw new Error('The draft changed before sending. Review it, then send again.')
-        requestOptions = createRequestOptions(promotedDraft.modelId, promotedDraft.skillIds, promotedDraft.think, promotedDraft.revision, promotedDraft.researchMode)
-      } else if (!prior && !taskBinding) {
-        draftController.edit(id, { modelId: requestOptions.modelId ?? null, skillIds: requestOptions.skillIds ?? [], think: !!requestOptions.think })
-        const saved = await draftController.flush(id)
-        if (workspace.getState().epoch !== epoch || !activeRef.current || privacy.getState().sessionIds.includes(id)) return
-        if (saved.text !== text) throw new Error('The draft changed while preparing to send. Review it, then send again.')
-        requestOptions = createRequestOptions(saved.modelId, saved.skillIds, saved.think, saved.revision, saved.researchMode)
-      }
-      if (prepared) {
-        if (!activityClient || workspace.getState().uncertain[id]) throw new Error('Review the previous request before starting task work.')
-        const { task, session } = await request(signal => readTaskDispatchSources(prepared.taskId, activityClient, client, forgottenId => {
-          if (workspace.getState().epoch !== epoch) return
-          privacy.getState().markForgotten([forgottenId])
-          workspace.setState(value => ({ taskIntent: visibleTaskDispatchIntent(value.taskIntent, privacy.getState().sessionIds) }))
-        }, signal))
-        if (session.id !== id) throw new Error('The task and reviewed conversation do not match. Reload the saved task.')
-        const problem = taskDispatchProblem(task, session, prepared.taskExpectedRevision)
-        if (problem) throw new Error(problem)
-        if (workspace.getState().epoch !== epoch || !activeRef.current || privacy.getState().sessionIds.includes(id)) return
-      }
-      dispatched = true
-      if (prepared) workspace.setState(value => value.taskIntent?.taskId === prepared.taskId ? { taskIntent: { ...value.taskIntent, open: false } } : {})
-      setRejected(null)
-      setInFlight({ requestId, requestedSessionId: id, input: { kind: 'text', text }, stopping: false, epoch })
-      let resetVersion = 0
-      const previewCurrent = () => mounted.current && activeRef.current && workspace.getState().epoch === epoch && !previewStop.signal.aborted && !privacy.getState().sessionIds.includes(id)
-      void followLivePreview(requestId, streamed => { if (previewCurrent()) setPreview({ sessionId: id, text: streamed, resetVersion }) }, { signal: previewStop.signal, onReset: () => { resetVersion++; if (previewCurrent()) setPreview({ sessionId: id, text: '', resetVersion }) } }).then(end => { if (previewCurrent()) setPreview(value => ({ sessionId: id, text: value?.text ?? '', resetVersion, end })) })
-      const receipt = await request(signal => client.submitRequest(id, text, requestId, { signal, ...taskBinding, ...requestOptions }))
-      if (workspace.getState().epoch !== epoch) return
-      if (prepared) workspace.setState({ taskIntent: null })
-      await acceptSubmission(id, text, receipt, taskBinding, requestOptions); chooseTemplate(id, null)
-    } catch (error) {
-      if (workspace.getState().epoch !== epoch) return
-      if (error instanceof RuntimeMutationError && error.outcome === 'rejected' && error.status === 409 && !taskBinding) void draftController.load(id)
-      if (!dispatched || error instanceof RuntimeMutationError && error.outcome === 'rejected' || error instanceof GatewayError && ['validation', 'configuration', 'too-large'].includes(error.kind)) {
-        if (prepared) workspace.setState(value => value.taskIntent?.taskId === prepared.taskId ? { taskIntent: { ...value.taskIntent, open: true } } : {})
-        if (mounted.current) { const message = error instanceof Error ? error.message : gatewayError(error).message; if (prepared) setTaskError(message); else { setRejected(message); setDetailError(message) } }
-      }
-      else {
-        workspace.setState(values => ({ uncertain: { ...values.uncertain, [id]: { requestOptions, taskBinding, rejectionStatus: error instanceof RuntimeMutationError && error.status === 409 ? 409 : undefined, text: privacy.getState().sessionIds.includes(id) ? '' : text, requestId, requestedSessionId: id, turnId: error instanceof RuntimeMutationError ? error.turnId : undefined, checked: false } } }))
-        if (prepared) workspace.setState({ taskIntent: null })
-        if (mounted.current) { setReviewed(false); setDetailError('Send outcome unknown. Check the saved request identity before continuing.') }
-      }
-    } finally {
-      previewStop.abort()
-      if (mounted.current && workspace.getState().epoch === epoch) { setPreview(null); setInFlight(null) }
-      if (workspace.getState().epoch === epoch) workspace.setState({ operation: null })
-    }
-  }
-  async function stopAnswer() {
-    if (!inFlight || inFlight.stopping || inFlight.epoch !== workspace.getState().epoch || !activeRef.current) return
-    const saved = inFlight
-    setInFlight({ ...inFlight, stopping: true })
-    try { await client.cancelSubmission(inFlight.requestId) }
-    catch (error) {
-      if (mounted.current && workspace.getState().epoch === saved.epoch) { setInFlight(value => value?.requestId === saved.requestId ? { ...value, stopping: false } : value); setDetailError(`Stop was not confirmed: ${gatewayError(error).message}`) }
-    }
-  }
-  async function checkSubmission() {
-    if (!selected || !attempt?.requestId || sendPending || detailPending) return
-    const id = selected, saved = attempt, epoch = workspace.getState().epoch
-    setDetailPending(true); setDetailError(null)
-    try {
-      const receipt = await request(signal => client.getSubmission(saved.requestId!, saved.requestedSessionId ?? id, { signal }))
-      if (workspace.getState().epoch !== epoch) return
-      await acceptSubmission(id, saved.text, receipt, saved.taskBinding, retainedRequestOptions(saved))
-    } catch (failure) {
-      if (workspace.getState().epoch !== epoch) return
-      const safe = gatewayError(failure)
-      if (safe.status === 404) workspace.setState(values => ({ uncertain: { ...values.uncertain, [id]: { ...saved, checked: true, notFound: true } } }))
-      if (mounted.current) setDetailError(safe.status === 404 ? saved.taskBinding && saved.rejectionStatus === 409 ? 'The task request was declined and no saved submission exists. Dismiss this attempt, then review the current task before sending again.' : 'No saved submission was found yet. Check again or retry the same retained request; its identity prevents another execution.' : safe.message)
-    } finally { if (mounted.current) setDetailPending(false) }
-  }
-  function releaseUnstartedSubmission() {
-    if (!selected || !attempt || (!canReleaseTaskConflict(attempt) && !['preparation_failed', 'preparation_interrupted'].includes(attempt.submission?.state ?? ''))) return
-    workspace.setState(values => { const uncertain = { ...values.uncertain }; delete uncertain[selected]; return { uncertain } })
-    setDetailError(null); setNotice(attempt.taskBinding || attempt.submission?.taskId ? 'No task turn was started. Reopen Work on this task to review its current revision before sending again. Your chat draft is unchanged.' : 'The recorded preparation did not bind a turn. Your draft is retained; sending again starts a new request.')
-  }
-  async function inspectSubmission(saved: RuntimePendingSubmission) {
-    if (!selected || attempt || sendPending || detailPending) return
-    const id = selected, epoch = workspace.getState().epoch
-    setDetailPending(true); setDetailError(null)
-    try {
-      const receipt = await request(signal => client.getSubmission(saved.requestId, saved.requestedSessionId, { signal }))
-      if (workspace.getState().epoch !== epoch || selectedRef.current !== id) return
-      await acceptSubmission(id, '', receipt)
-    } catch (failure) { if (mounted.current) setDetailError(gatewayError(failure).message) }
-    finally { if (mounted.current) setDetailPending(false) }
-  }
-  async function checkHistory() {
-    if (!selected || detailPending || sendPending || workspace.getState().operation) return
-    setReviewed(false)
-    const id = selected
-    workspace.setState(values => values.uncertain[id] ? { uncertain: { ...values.uncertain, [id]: { ...values.uncertain[id], checked: false } } } : {})
-    const detailChecked = await refreshDetail(id)
-    const listChecked = await refreshList()
-    if (detailChecked && listChecked && mounted.current && selectedRef.current === id) workspace.setState(values => values.uncertain[id] ? { uncertain: { ...values.uncertain, [id]: checkedAttempt(values.uncertain[id]) } } : {})
-  }
-  function resolve(decision: 'found' | 'allow-new') {
-    if (!selected || !attempt?.checked || !reviewed || !current || current.status === 'forgotten' || hasActiveRuntimeTurn(current)) return
-    const result = resolveAttempt(attempt, draft, decision)
-    draftController.edit(selected, { text: result.draft })
-    workspace.setState(values => { const next = { ...values.uncertain }; delete next[selected]; return { uncertain: next } })
-    setReviewed(false); setDetailError(null)
-    setNotice(decision === 'found' ? 'Marked as found in server history. No text was sent.' : 'Sending is enabled after your review. No text was sent; the earlier operation may still finish.')
   }
 
   const activeAgentId = selected ? sessionAgents[selected] ?? 'companion' : firstAgent

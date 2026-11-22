@@ -188,7 +188,7 @@ async function main() {
   assert.equal(refilled.roleSettings.roles.routing.followAnswer, false) // non-Auto role unchanged
 
   // Test Zod keeps the flag
-  const controlTs = fs.readFileSync(path.join(root, 'src/lib/gateway/control.ts'), 'utf8')
+  const controlTs = ['control.ts', 'control-schemas.ts'].map(file => fs.readFileSync(path.join(root, 'src/lib/gateway', file), 'utf8')).join('\n')
   assert.ok(controlTs.includes('followAnswer: z.boolean().default(false)'), 'Zod schema should include followAnswer')
 
   // Test SIDE_JOBS has no auto on search-ranking and memory-ranking
