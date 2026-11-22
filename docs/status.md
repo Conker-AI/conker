@@ -6,7 +6,7 @@ inventory of what the source can do, [`versions.env`](../versions.env) pins the 
 [release-acceptance](reference/release-acceptance.md) evidence bundle is the only proof that an
 assembled deployment works. One never stands in for another.
 
-Last updated **13 November 2026**. The family counts, the release table and the deferred table
+Last updated **22 November 2026**. The newest proof on the owner's server is Conker 0.2.0 (16 November: `conker status --strict`, a new chat answers, `conker post-update-check`); the "Proven" dates below are older than the releases that followed it, and nothing newer than 0.2.0 is claimed as run there. The family counts, the release table and the deferred table
 are written by `python scripts/status_page.py` from `capabilities.json` and `versions.env`; CI
 fails when they drift.
 

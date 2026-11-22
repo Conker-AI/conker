@@ -5,6 +5,7 @@ import json
 import os
 import sys
 from pathlib import Path
+from typing import Any, cast
 from urllib.error import HTTPError
 
 import pytest
@@ -341,6 +342,8 @@ def test_files_upload_refusal_uses_the_shared_message(invoke, tmp_path, capsys):
     upload = tmp_path / "notes.txt"
     upload.write_bytes(b"hello")
     body = b'{"detail": {"code": "session_closed", "message": "Conversation is closed."}}'
-    state["responses"] = [HTTPError("http://private", 409, "Conflict", {}, io.BytesIO(body))]
+    state["responses"] = [
+        HTTPError("http://private", 409, "Conflict", cast(Any, {}), io.BytesIO(body))
+    ]
     assert run("files", "upload", "ses_a", str(upload)) == 1
     assert "Pi refused this (session_closed): Conversation is closed." in capsys.readouterr().err

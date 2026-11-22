@@ -4,6 +4,7 @@ import json
 import sys
 import time
 from pathlib import Path
+from typing import Any, cast
 
 import pytest
 from fastapi.testclient import TestClient
@@ -176,7 +177,7 @@ def test_identity_uses_exact_session_start_cwd_and_store_not_status_or_name(regi
     ):
         assert sessions._row(row(**changes))["identity"] != original
     another = native.Sessions(sessions.executable, tmp_path / "different-isolated-store")
-    assert another._row(row())["identity"] != original
+    assert cast(Any, another._row(row()))["identity"] != original
 
 
 def test_stop_rechecks_exact_native_identity_and_does_not_report_stopped(registry):
@@ -274,7 +275,7 @@ def test_unknown_stop_outcome_is_not_replayed(registry, monkeypatch):
 
 
 def test_real_runner_uses_isolated_environment_and_bounded_nonblocking_pipes(tmp_path, monkeypatch):
-    sessions = native.Sessions(sys._base_executable, tmp_path)
+    sessions = native.Sessions(cast(Any, sys)._base_executable, tmp_path)
     monkeypatch.setenv("ANTHROPIC_API_KEY", "not-forwarded")
     monkeypatch.setenv("CLAUDE_CODE_OAUTH_TOKEN", "not-forwarded")
     code = "import json,os; print(json.dumps({k:os.getenv(k) for k in ['CLAUDE_CONFIG_DIR','ANTHROPIC_API_KEY','CLAUDE_CODE_OAUTH_TOKEN']}))"
@@ -296,7 +297,7 @@ def test_real_runner_uses_isolated_environment_and_bounded_nonblocking_pipes(tmp
     ],
 )
 def test_real_runner_timeout_overflow_and_failure_are_static(tmp_path, code, seconds):
-    sessions = native.Sessions(sys._base_executable, tmp_path)
+    sessions = native.Sessions(cast(Any, sys)._base_executable, tmp_path)
     with pytest.raises(native.SessionError) as error:
         sessions._run(["-c", code], time.monotonic() + seconds)
     assert str(error.value) == "native_sessions_unavailable"
@@ -305,7 +306,7 @@ def test_real_runner_timeout_overflow_and_failure_are_static(tmp_path, code, sec
 def test_timeout_kills_only_started_command_not_its_independent_child(tmp_path):
     import psutil
 
-    sessions = native.Sessions(sys._base_executable, tmp_path)
+    sessions = native.Sessions(cast(Any, sys)._base_executable, tmp_path)
     marker = tmp_path / "owned-test-child.json"
     code = (
         "import json,pathlib,subprocess,sys,time; "

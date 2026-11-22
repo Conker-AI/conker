@@ -215,6 +215,7 @@ def test_login_is_the_official_cli_sign_in_with_the_runtimes_own_folder(tmp_path
 def fetcher():
     path = ROOT / "services/subscriptions/fetch_claude.py"
     spec = importlib.util.spec_from_file_location("fetch_claude", path)
+    assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module

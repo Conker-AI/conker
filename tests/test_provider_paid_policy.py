@@ -1,5 +1,6 @@
 import json
 import subprocess
+from typing import Any, cast
 
 import pytest
 
@@ -72,7 +73,7 @@ def test_failed_rollback_retains_durable_recovery_hold(tmp_path):
 def test_bad_types_and_ambiguous_source_never_restart(tmp_path):
     value, seen = policy(tmp_path)
     with pytest.raises(ProviderSecretError):
-        value.apply("true", False)
+        value.apply(cast(Any, "true"), False)
     value.environment.write_text("PI_ALLOW_PAID_MODELS=true\nPI_ALLOW_PAID_MODELS=false\n")
     with pytest.raises(ProviderSecretError, match="ambiguous"):
         value.status()

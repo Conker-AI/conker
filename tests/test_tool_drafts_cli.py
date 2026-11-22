@@ -6,6 +6,7 @@ import json
 import sys
 from argparse import Namespace
 from pathlib import Path
+from typing import Any, cast
 from urllib.error import HTTPError
 
 import pytest
@@ -195,7 +196,9 @@ def test_development_cli_shows_pis_refusal(monkeypatch, capsys):
                 "message": "This request_id was already used.",
             }
         }
-        raise HTTPError("http://pi", 409, "conflict", {}, io.BytesIO(json.dumps(detail).encode()))
+        raise HTTPError(
+            "http://pi", 409, "conflict", cast(Any, {}), io.BytesIO(json.dumps(detail).encode())
+        )
 
     monkeypatch.setattr(cli, "read_config", dict)
     monkeypatch.setattr(cli, "request", refuse)

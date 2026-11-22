@@ -2,6 +2,7 @@ import json
 import sys
 from pathlib import Path
 from types import SimpleNamespace
+from typing import Any, cast
 from unittest.mock import patch
 
 import pytest
@@ -104,7 +105,7 @@ def test_native_claude_exposes_current_official_oauth_location_only(tmp_path):
     process = SimpleNamespace(
         stdout=BytesIO((official + "\nhttps://claude.com.evil.test/oauth/authorize\n").encode())
     )
-    native.process = process
+    native.process = cast(Any, process)
     native._read_login(process)
     assert native.url == official
 

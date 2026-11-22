@@ -79,7 +79,7 @@ function OfferCard({ offer, held, busy, error, progress, settled, onUpdate, onSk
 }) {
   const locked = progress !== null && !settled
   // While an update is held the server starts no other one, so Update is replaced by the reason (server-care.md).
-  return <InboxCard icon={<CircleArrowUp className="text-primary" />} title={offer.title} source={held ? `Waiting for the held update to be fixed · ${published(offer)}` : `New Conker release · ${published(offer)}`}
+  return <InboxCard icon={<CircleArrowUp className="text-primary" />} title={offer.title} source={locked ? `Updating to ${offer.version}... Conker is switching versions` : held ? `Waiting for the held update to be fixed · ${published(offer)}` : `New Conker release · ${published(offer)}`}
     primary={locked || held ? undefined : <Button type="button" size="sm" disabled={busy} onClick={onUpdate}>Update</Button>}
     onLater={locked ? undefined : onSkip} laterLabel="Skip this version"
     actions={<>
