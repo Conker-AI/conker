@@ -9,6 +9,7 @@ import pytest
 SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 SPEC = importlib.util.spec_from_file_location("workspace_models", SCRIPTS / "workspace_models.py")
+assert SPEC is not None and SPEC.loader is not None
 models = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(models)
 ROLES = (

@@ -10,6 +10,7 @@ import ast
 import os
 import re
 from pathlib import Path
+from typing import cast
 
 import pytest
 
@@ -32,12 +33,14 @@ def pi_inspections(source: Path) -> dict:
     else:
         raise AssertionError("gateway/inspection.py has no module-level INSPECTIONS dict")
     inspections = {}
-    for key, call in zip(node.value.keys, node.value.values, strict=False):
-        authority, path, *query = (ast.literal_eval(arg) for arg in call.args)
+    for key, call in zip(
+        cast(ast.Dict, node.value).keys, cast(ast.Dict, node.value).values, strict=False
+    ):
+        authority, path, *query = (ast.literal_eval(arg) for arg in cast(ast.Call, call).args)
         route = path
         if query:
             route += "?" + "&".join(f"{k}={v}" for k, v in query[0])
-        inspections[ast.literal_eval(key)] = (authority, route)
+        inspections[ast.literal_eval(cast(ast.expr, key))] = (authority, route)
     return inspections
 
 

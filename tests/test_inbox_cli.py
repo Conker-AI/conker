@@ -4,6 +4,7 @@ import io
 import json
 import sys
 from pathlib import Path
+from typing import Any, cast
 from urllib.error import HTTPError
 
 import pytest
@@ -376,7 +377,9 @@ def test_inbox_time_on_another_day_shows_weekday():
 def test_inbox_pi_refusal_exits(invoke, capsys):
     run, _calls, _, state, _ = invoke
     body = b'{"detail": {"code": "forbidden", "message": "Owner access required."}}'
-    state["responses"] = [HTTPError("http://private", 403, "Forbidden", {}, io.BytesIO(body))]
+    state["responses"] = [
+        HTTPError("http://private", 403, "Forbidden", cast(Any, {}), io.BytesIO(body))
+    ]
     assert run("inbox") == 1
     assert "Pi refused this (forbidden): Owner access required." in capsys.readouterr().err
 
