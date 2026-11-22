@@ -15,20 +15,14 @@ class PaidPolicy:
     def __init__(self, root: Path, layout: str, *, runner=subprocess.run):
         self.root, self.layout, self.runner = root.resolve(), layout, runner
         self.state = self.root / ("state" if layout == "ubuntu" else ".conker")
-        self.environment = self.root / (
-            "state/pi.env" if layout == "ubuntu" else ".env"
-        )
+        self.environment = self.root / ("state/pi.env" if layout == "ubuntu" else ".env")
         self.marker = self.state / "provider-control/paid-transition.json"
         self.lock = SecretStore(self.state / "provider-secrets")
 
     def _environment(self) -> str:
         if self.environment.is_symlink():
             raise ProviderSecretError("Provider environment must be a regular file.")
-        return (
-            self.environment.read_text(encoding="utf-8")
-            if self.environment.exists()
-            else ""
-        )
+        return self.environment.read_text(encoding="utf-8") if self.environment.exists() else ""
 
     @staticmethod
     def _allowed(text: str) -> bool:
@@ -37,9 +31,8 @@ class PaidPolicy:
             for line in text.splitlines()
             if line.startswith("PI_ALLOW_PAID_MODELS=")
         ]
-        if (
-            len(values) > 1
-            or (values and values[0] not in {"", "0", "false", "no", "1", "true", "yes"})
+        if len(values) > 1 or (
+            values and values[0] not in {"", "0", "false", "no", "1", "true", "yes"}
         ):
             raise ProviderSecretError("Provider spending policy is ambiguous.")
         return bool(values and values[0] in {"1", "true", "yes"})
@@ -59,10 +52,7 @@ class PaidPolicy:
         self.lock._write(
             self.environment,
             (
-                "\n".join(
-                    [*lines, f"PI_ALLOW_PAID_MODELS={'true' if enabled else 'false'}"]
-                )
-                + "\n"
+                "\n".join([*lines, f"PI_ALLOW_PAID_MODELS={'true' if enabled else 'false'}"]) + "\n"
             ).encode(),
         )
 
@@ -110,9 +100,7 @@ class PaidPolicy:
         for name in ("decisions", "subscriptions"):
             if (
                 name.encode() in services.stdout.splitlines()
-                and self._compose(
-                    "up", "-d", "--no-deps", "--force-recreate", name
-                ).returncode
+                and self._compose("up", "-d", "--no-deps", "--force-recreate", name).returncode
             ):
                 raise ProviderSecretError(f"The {name} service restart was not confirmed.")
         check = self._compose(
@@ -130,23 +118,16 @@ class PaidPolicy:
         if type(enabled) is not bool or type(expected) is not bool:
             raise ProviderSecretError("Supply a boolean spending policy.")
         if any(
-            (self.root / name).exists()
-            for name in (".conker-recovery.json", ".conker-backup.lock")
+            (self.root / name).exists() for name in (".conker-recovery.json", ".conker-backup.lock")
         ):
-            raise ProviderSecretError(
-                "Installation recovery or backup must finish first."
-            )
+            raise ProviderSecretError("Installation recovery or backup must finish first.")
         self.lock.initialize()
         with self.lock.locked():
             if self.marker.exists():
-                raise ProviderSecretError(
-                    "Recover the interrupted spending-policy change first."
-                )
+                raise ProviderSecretError("Recover the interrupted spending-policy change first.")
             original = self._environment()
             if self._allowed(original) != expected:
-                raise ProviderSecretError(
-                    "Spending policy changed; refresh before continuing."
-                )
+                raise ProviderSecretError("Spending policy changed; refresh before continuing.")
             if enabled == expected:
                 return self.status()
             self.marker.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
@@ -180,12 +161,9 @@ class PaidPolicy:
 
     def recover(self):
         if any(
-            (self.root / name).exists()
-            for name in (".conker-recovery.json", ".conker-backup.lock")
+            (self.root / name).exists() for name in (".conker-recovery.json", ".conker-backup.lock")
         ):
-            raise ProviderSecretError(
-                "Installation recovery or backup must finish first."
-            )
+            raise ProviderSecretError("Installation recovery or backup must finish first.")
         self.lock.initialize()
         with self.lock.locked():
             if (
@@ -193,24 +171,19 @@ class PaidPolicy:
                 or self.marker.is_symlink()
                 or self.marker.stat().st_size > 4096
             ):
-                raise ProviderSecretError(
-                    "No recoverable spending-policy transition exists."
-                )
+                raise ProviderSecretError("No recoverable spending-policy transition exists.")
             try:
                 saved = json.loads(self.marker.read_text())
                 if (
                     not isinstance(saved, dict)
-                    or set(saved)
-                    != {"schemaVersion", "previousAllowed", "requestedAllowed"}
+                    or set(saved) != {"schemaVersion", "previousAllowed", "requestedAllowed"}
                     or saved["schemaVersion"] != 1
                     or type(saved["previousAllowed"]) is not bool
                     or type(saved["requestedAllowed"]) is not bool
                 ):
                     raise ValueError()
             except (ValueError, UnicodeError):
-                raise ProviderSecretError(
-                    "Spending-policy recovery state is invalid."
-                ) from None
+                raise ProviderSecretError("Spending-policy recovery state is invalid.") from None
             self._write_policy(saved["previousAllowed"])
             self._restart(saved["previousAllowed"])
             self.marker.unlink()

@@ -34,9 +34,7 @@ MAX_STDERR = 8192
 MAX_OUTPUT = 65536
 MAX_RESULTS = 100
 OPERATION_SECONDS = 20
-ANSI = re.compile(
-    r"\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)|\x1b\[[0-?]*[ -/]*[@-~]|\x1b[@-_]"
-)
+ANSI = re.compile(r"\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)|\x1b\[[0-?]*[ -/]*[@-~]|\x1b[@-_]")
 
 
 class SessionError(ValueError):
@@ -71,9 +69,7 @@ def _json(raw):
     def invalid(_value):
         raise ValueError()
 
-    return json.loads(
-        raw.decode("utf-8"), object_pairs_hook=pairs, parse_constant=invalid
-    )
+    return json.loads(raw.decode("utf-8"), object_pairs_hook=pairs, parse_constant=invalid)
 
 
 def stop_payload(raw):
@@ -107,11 +103,7 @@ class Sessions:
         if not self.lock.acquire(blocking=False):
             raise SessionError()
         try:
-            if (
-                self.closed.is_set()
-                or not self.executable.is_file()
-                or not self.home.is_dir()
-            ):
+            if self.closed.is_set() or not self.executable.is_file() or not self.home.is_dir():
                 raise SessionError()
             yield time.monotonic() + OPERATION_SECONDS
         finally:
@@ -133,11 +125,7 @@ class Sessions:
                     stdin=subprocess.DEVNULL,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
-                    **(
-                        {"creationflags": subprocess.CREATE_NO_WINDOW}
-                        if os.name == "nt"
-                        else {}
-                    ),
+                    **({"creationflags": subprocess.CREATE_NO_WINDOW} if os.name == "nt" else {}),
                 )
                 self.process = process
             streams = [process.stdout, process.stderr]
@@ -203,10 +191,7 @@ class Sessions:
             or not IDENTITY.fullmatch(identity)
             or (
                 native_session is not None
-                and (
-                    not isinstance(native_session, str)
-                    or not IDENTITY.fullmatch(native_session)
-                )
+                and (not isinstance(native_session, str) or not IDENTITY.fullmatch(native_session))
             )
             or not isinstance(cwd, str)
             or not 1 <= len(cwd) <= 4096
@@ -236,14 +221,8 @@ class Sessions:
         )
         # Missing/new enum values are unknown evidence, never successful completion.
         state = state if isinstance(state, str) and state in STATES else "unknown"
-        status = (
-            status if isinstance(status, str) and status in PROCESS_STATUSES else None
-        )
-        waiting = (
-            WAITING.get(waiting)
-            if isinstance(waiting, str) and status == "waiting"
-            else None
-        )
+        status = status if isinstance(status, str) and status in PROCESS_STATUSES else None
+        waiting = WAITING.get(waiting) if isinstance(waiting, str) and status == "waiting" else None
         return {
             "id": identity,
             "identity": digest,

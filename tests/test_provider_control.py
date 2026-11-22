@@ -38,10 +38,7 @@ def test_ui_and_cli_share_redacted_revisioned_state(tmp_path):
     current = saved["providers"][1]
     assert current["verificationStatus"] == "unverified"
     assert "synthetic-provider-key" not in json.dumps(saved)
-    assert (
-        control.store.status()["providers"][1]["stagedRevision"]
-        == current["stagedRevision"]
-    )
+    assert control.store.status()["providers"][1]["stagedRevision"] == current["stagedRevision"]
     verified = control.apply(
         {
             "provider": "openai",
@@ -54,9 +51,7 @@ def test_ui_and_cli_share_redacted_revisioned_state(tmp_path):
 
 
 def test_stale_stage_and_verify_cannot_change_another_credential(tmp_path):
-    control = bridge(
-        tmp_path, verifier=lambda *_: pytest.fail("must not send stale credential")
-    )
+    control = bridge(tmp_path, verifier=lambda *_: pytest.fail("must not send stale credential"))
     stage(control)
     with pytest.raises(ProviderSecretError, match="changed"):
         stage(control, secret="different-synthetic-key")
@@ -81,9 +76,7 @@ def test_discard_is_revision_bound_and_preserves_active_key(tmp_path):
     assert control.store.active_path("openai").read_bytes() == b"synthetic-active-key"
     assert not control.store.staged_path("openai").exists()
     with pytest.raises(ProviderSecretError):
-        control.apply(
-            {"provider": "openai", "operation": "discard", "revision": revision}
-        )
+        control.apply({"provider": "openai", "operation": "discard", "revision": revision})
 
 
 @pytest.mark.parametrize(
@@ -111,9 +104,7 @@ def test_discard_is_revision_bound_and_preserves_active_key(tmp_path):
     ],
 )
 def test_no_arbitrary_commands_or_endpoints(tmp_path, value):
-    control = bridge(
-        tmp_path, runner=lambda *_args, **_kwargs: pytest.fail("no host invocation")
-    )
+    control = bridge(tmp_path, runner=lambda *_args, **_kwargs: pytest.fail("no host invocation"))
     with pytest.raises(ProviderSecretError):
         control.apply(value)
 
@@ -129,9 +120,7 @@ def test_activation_invokes_only_existing_cli_without_secret_arguments(tmp_path)
     saved = stage(control)
     revision = saved["providers"][1]["stagedRevision"]
     with pytest.raises(ProviderSecretError, match="inspect credential status"):
-        control.apply(
-            {"provider": "openai", "operation": "activate", "revision": revision}
-        )
+        control.apply({"provider": "openai", "operation": "activate", "revision": revision})
     command, kwargs = seen[0]
     assert command[-4:] == ["providers", "activate", "openai", revision]
     assert "synthetic-provider-key" not in json.dumps(command)
@@ -150,9 +139,7 @@ def test_recovery_hold_blocks_browser_writes(tmp_path, name):
 
 def test_interruption_never_includes_subprocess_or_provider_details(tmp_path):
     def interrupted(*_args, **_kwargs):
-        raise subprocess.TimeoutExpired(
-            "private-command", 180, output=b"synthetic-private-body"
-        )
+        raise subprocess.TimeoutExpired("private-command", 180, output=b"synthetic-private-body")
 
     control = bridge(tmp_path, runner=interrupted)
     with pytest.raises(ProviderSecretError) as error:
@@ -182,14 +169,10 @@ def test_failed_runtime_recovery_keeps_transition_and_blocks_verification(tmp_pa
     assert restored["activationPending"] is True
     assert control.store.active_path("openai").read_bytes() == b"synthetic-old-key"
     assert control.store.previous_path("openai").is_file()
-    assert (
-        control.store.finish_rollback("openai", revision)["activationPending"] is False
-    )
+    assert control.store.finish_rollback("openai", revision)["activationPending"] is False
 
 
-@pytest.mark.skipif(
-    __import__("os").name != "posix", reason="Unix socket requires Linux"
-)
+@pytest.mark.skipif(__import__("os").name != "posix", reason="Unix socket requires Linux")
 def test_private_unix_socket_roundtrip(tmp_path):
     import http.client
     import socket
@@ -213,18 +196,14 @@ def test_private_unix_socket_roundtrip(tmp_path):
                 method,
                 path,
                 body=json.dumps(body) if body is not None else None,
-                headers={"Content-Type": "application/json"}
-                if body is not None
-                else {},
+                headers={"Content-Type": "application/json"} if body is not None else {},
             )
             response = connection.getresponse()
             return response.status, json.loads(response.read())
         finally:
             connection.close()
 
-    with socketserver.UnixStreamServer(
-        str(tmp_path / "control.sock"), handler(control)
-    ) as server:
+    with socketserver.UnixStreamServer(str(tmp_path / "control.sock"), handler(control)) as server:
         worker = threading.Thread(target=server.serve_forever, daemon=True)
         worker.start()
         try:
@@ -257,7 +236,16 @@ def test_a_release_without_direct_providers_keeps_the_three_rows(tmp_path):
 def test_a_release_with_direct_providers_offers_every_row(tmp_path):
     control = released(tmp_path, "active")
     ids = [row["id"] for row in control.status()["providers"]]
-    assert ids == ["openrouter", "openai", "anthropic", "gemini", "xai", "mistral", "deepseek", "groq"]
+    assert ids == [
+        "openrouter",
+        "openai",
+        "anthropic",
+        "gemini",
+        "xai",
+        "mistral",
+        "deepseek",
+        "groq",
+    ]
     saved = stage(control, provider="groq")
     assert "synthetic-provider-key" not in json.dumps(saved)
     assert control.store.staged_path("groq").read_bytes() == b"synthetic-provider-key"

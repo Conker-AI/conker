@@ -1,4 +1,5 @@
 """Private typed decision service. No tools, credentials vault or generated prose."""
+
 from __future__ import annotations
 
 import hmac
@@ -39,8 +40,11 @@ def watch_namespace(net=Path("/sys/class/net"), every=2.0, stop=os._exit):
     def run():
         while links():
             time.sleep(every)
-        print("Pi's network namespace is gone; exiting so Docker starts this service in the new one.",
-              file=sys.stderr, flush=True)
+        print(
+            "Pi's network namespace is gone; exiting so Docker starts this service in the new one.",
+            file=sys.stderr,
+            flush=True,
+        )
         stop(1)
 
     thread = threading.Thread(target=run, name="namespace-watch", daemon=True)
@@ -80,6 +84,7 @@ class LayaBackend:
             raise RuntimeError("Configure DECISION_MODEL_PATH with a local checkpoint.")
         import laya
         import torch
+
         torch.set_num_threads(threads)
         self.agent = laya.load(path, device="cpu")
         self.agent.model.eval()
@@ -87,11 +92,12 @@ class LayaBackend:
 
     def choose(self, request: ChoiceRequest) -> dict:
         from laya.common import render_options
+
         agent = self.agent
-        q = {"type": "choice", "instructions": request.instructions,
-             "criteria": request.choices}
+        q = {"type": "choice", "instructions": request.instructions, "criteria": request.choices}
         internal = agent._to_internal(q)
         tok = agent.tok
+
         def encode(text):
             return tok(text.replace(tok.mask_token, " "), add_special_tokens=False)["input_ids"]
 
@@ -100,10 +106,12 @@ class LayaBackend:
         option_size = sum(len(item) + 1 for item in options)
         # The upstream formatter truncates both descriptions and state. Reject
         # before inference so missing evidence cannot masquerade as a decision.
-        if (any(len(item) > 48 for item in options)
-                or option_size + max(16, len(head)) > agent.cfg.get("head_max_len", 192)
-                or len(head) + option_size + len(encode(request.state)) + 4
-                > agent.cfg.get("max_len", 512)):
+        if (
+            any(len(item) > 48 for item in options)
+            or option_size + max(16, len(head)) > agent.cfg.get("head_max_len", 192)
+            or len(head) + option_size + len(encode(request.state)) + 4
+            > agent.cfg.get("max_len", 512)
+        ):
             raise ContextTooLarge()
         result = agent.predict(request.state, {"decision": q})
         return result["answers"]["decision"]
@@ -154,9 +162,12 @@ def create_app(backend: Backend | None = None, *, key: str | None = None):
     @app.get("/health", dependencies=[Depends(authorize)])
     def health():
         value = app.state.backend
-        return {"status": "ready" if value else "loading",
-                "provider": value.name if value else None,
-                "model": value.model if value else None, "busy": lock.locked()}
+        return {
+            "status": "ready" if value else "loading",
+            "provider": value.name if value else None,
+            "model": value.model if value else None,
+            "busy": lock.locked(),
+        }
 
     @app.post("/v1/choose", dependencies=[Depends(authorize)])
     def choose(request: ChoiceRequest):
@@ -173,18 +184,31 @@ def create_app(backend: Backend | None = None, *, key: str | None = None):
             result = value.choose(request)
             choice, confidence = result["choice"], result["confidence"]
             probabilities = result["probabilities"]
-            if (choice not in request.choices or isinstance(confidence, bool)
-                    or not isinstance(confidence, (int, float)) or not math.isfinite(confidence)
-                    or not 0 <= confidence <= 1 or set(probabilities) != set(request.choices)
-                    or any(isinstance(p, bool) or not isinstance(p, (int, float))
-                           or not math.isfinite(p) or not 0 <= p <= 1
-                           for p in probabilities.values())
-                    or abs(sum(probabilities.values()) - 1) > 0.01):
+            if (
+                choice not in request.choices
+                or isinstance(confidence, bool)
+                or not isinstance(confidence, (int, float))
+                or not math.isfinite(confidence)
+                or not 0 <= confidence <= 1
+                or set(probabilities) != set(request.choices)
+                or any(
+                    isinstance(p, bool)
+                    or not isinstance(p, (int, float))
+                    or not math.isfinite(p)
+                    or not 0 <= p <= 1
+                    for p in probabilities.values()
+                )
+                or abs(sum(probabilities.values()) - 1) > 0.01
+            ):
                 raise DecisionUnavailable()
-            return {"choice": choice, "confidence": confidence,
-                    "probabilities": probabilities, "provider": value.name,
-                    "model": value.model,
-                    "elapsed_ms": round((time.perf_counter() - started) * 1000, 2)}
+            return {
+                "choice": choice,
+                "confidence": confidence,
+                "probabilities": probabilities,
+                "provider": value.name,
+                "model": value.model,
+                "elapsed_ms": round((time.perf_counter() - started) * 1000, 2),
+            }
         except ContextTooLarge:
             raise HTTPException(422, "decision_context_too_large") from None
         # Provider failures are intentionally collapsed at this public boundary.

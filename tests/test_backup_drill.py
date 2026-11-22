@@ -112,8 +112,19 @@ def test_receipt_holds_names_and_outcomes_never_secrets(stack):
     text = json.dumps(receipt)
 
     assert set(receipt) == {
-        "v", "kind", "id", "source", "snapshot", "startedAt", "endedAt",
-        "durationSeconds", "outcome", "checks", "leftovers", "swept", "reason",
+        "v",
+        "kind",
+        "id",
+        "source",
+        "snapshot",
+        "startedAt",
+        "endedAt",
+        "durationSeconds",
+        "outcome",
+        "checks",
+        "leftovers",
+        "swept",
+        "reason",
     }
     assert receipt["swept"] == 0
     assert not any(secret in text for secret in SECRETS)
@@ -168,7 +179,9 @@ def test_a_changed_live_stack_fails_the_drill(stack):
     def recreate(*args, **kwargs):
         result = original(*args, **kwargs)
         if args[:2] == ("volume", "create"):
-            engine.containers["replaced-pi"] = {"Config": {"Labels": {"com.docker.compose.project": LIVE}}}
+            engine.containers["replaced-pi"] = {
+                "Config": {"Labels": {"com.docker.compose.project": LIVE}}
+            }
         return result
 
     engine.run = recreate
@@ -297,7 +310,9 @@ def test_a_drill_stopped_by_sigterm_still_cleans_up_and_records_it(tmp_path):
     lock.release()
 
 
-def test_drill_cli_picks_the_newest_backup_and_last_shows_its_receipt(tmp_path, capsys, monkeypatch):
+def test_drill_cli_picks_the_newest_backup_and_last_shows_its_receipt(
+    tmp_path, capsys, monkeypatch
+):
     backups = tmp_path / "backups"
     for name in ("snapshot-20261101T030000Z-aaaaaaaa", "snapshot-20261112T030000Z-bbbbbbbb"):
         (backups / name).mkdir(parents=True)
@@ -318,10 +333,21 @@ def test_drill_cli_picks_the_newest_backup_and_last_shows_its_receipt(tmp_path, 
         "checkouts": (ops.source,),  # an update in the source checkout refuses the drill
     }
     capsys.readouterr()
-    assert backup_cli.main([
-        "--root", str(ops.root), "--source", str(tmp_path / "source"),
-        "--layout", "ubuntu", "drill", "--last",
-    ]) == 0
+    assert (
+        backup_cli.main(
+            [
+                "--root",
+                str(ops.root),
+                "--source",
+                str(tmp_path / "source"),
+                "--layout",
+                "ubuntu",
+                "drill",
+                "--last",
+            ]
+        )
+        == 0
+    )
     out = capsys.readouterr().out
     assert out.startswith("Restore drill passed: snapshot-20261112T030000Z-bbbbbbbb")
 
@@ -339,9 +365,19 @@ def test_scheduled_drill_with_no_destination_is_skipped_and_recorded(tmp_path):
 
 
 def test_drill_last_with_no_drill_yet_says_so(tmp_path, capsys):
-    assert backup_cli.main([
-        "--root", str(tmp_path / "deploy"), "--source", str(tmp_path),
-        "--layout", "ubuntu", "drill", "--last",
-    ]) == 1
+    assert (
+        backup_cli.main(
+            [
+                "--root",
+                str(tmp_path / "deploy"),
+                "--source",
+                str(tmp_path),
+                "--layout",
+                "ubuntu",
+                "drill",
+                "--last",
+            ]
+        )
+        == 1
+    )
     assert "No restore drill has run yet" in capsys.readouterr().out
-

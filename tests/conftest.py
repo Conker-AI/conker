@@ -83,11 +83,11 @@ def ubuntu_cli(tmp_path: Path):
         '  *gateway*python*-m*gateway*inspect*tool-draft:*) printf \'%s\\n\' \'{"id":"example","revision":1,"document":{"id":"example"}}\' ;;\n'
         '  *gateway*python*-m*gateway*inspect*tool-access:*) printf \'%s\\n\' \'{"automation_id":"editor-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","enabled":true}\' ;;\n'
         '  *gateway*python*-m*gateway*apply*models*) cat >/dev/null; printf \'%s\\n\' \'{"revision":5,"configuration":{"models":[]}}\' ;;\n'
-        '  *gateway*python*-m*gateway*apply*agents*) cat >/dev/null; printf \'%s\\n\' \'{"schemaVersion":1,"revision":2}\' ;;\n'
-        '  *gateway*python*-m*gateway*apply*projects*) cat >/dev/null; printf \'%s\\n\' \'{"schemaVersion":1,"revision":2}\' ;;\n'
-        '  *gateway*python*-m*gateway*apply*teams*) cat >/dev/null; printf \'%s\\n\' \'{"schemaVersion":1,"revision":2}\' ;;\n'
+        "  *gateway*python*-m*gateway*apply*agents*) cat >/dev/null; printf '%s\\n' '{\"schemaVersion\":1,\"revision\":2}' ;;\n"
+        "  *gateway*python*-m*gateway*apply*projects*) cat >/dev/null; printf '%s\\n' '{\"schemaVersion\":1,\"revision\":2}' ;;\n"
+        "  *gateway*python*-m*gateway*apply*teams*) cat >/dev/null; printf '%s\\n' '{\"schemaVersion\":1,\"revision\":2}' ;;\n"
         '  *gateway*python*-m*gateway*apply*jobs*) cat >/dev/null; printf \'%s\\n\' \'{"schemaVersion":1,"status":"ready"}\' ;;\n'
-        '  *gateway*python*-m*gateway*apply*memory*) cat >/dev/null; printf \'%s\\n\' \'{"status":"forgotten"}\' ;;\n'
+        "  *gateway*python*-m*gateway*apply*memory*) cat >/dev/null; printf '%s\\n' '{\"status\":\"forgotten\"}' ;;\n"
         '  *gateway*python*-m*gateway*apply*proposals*) cat >/dev/null; printf \'%s\\n\' \'{"id":"proposal_123","state":"declined"}\' ;;\n'
         '  *gateway*python*-m*gateway*apply*tasks*) cat >/dev/null; printf \'%s\\n\' \'{"id":"tsk_11111111111111111111111111111111","revision":2}\' ;;\n'
         '  *gateway*python*-m*gateway*apply*artifacts*) cat >/dev/null; printf \'%s\\n\' \'{"id":"artifact_44444444444444444444444444444444","revision":2}\' ;;\n'
@@ -112,11 +112,11 @@ def ubuntu_cli(tmp_path: Path):
         '  *gateway*python*-m*gateway*setup-rehearsal*finalize*) printf \'%s\\n\' \'{"step":"rehearsal","revision":1,"receiptId":"setup-rehearsal-test","source":"conker.first-run-rehearsal","subject":"owner.daily-workflow","evidenceDigest":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","completedAt":"2026-09-27T00:00:00Z","expiresAt":"2026-10-27T00:00:00Z","recordedAt":"2026-09-27T00:00:01Z","state":"valid"}\' ;;\n'
         '  *gateway*python*-m*gateway*record-setup-receipt*) cat >/dev/null; printf \'%s\\n\' \'{"step":"rehearsal","revision":1,"receiptId":"setup-rehearsal-test","source":"conker.release-acceptance","subject":"release","evidenceDigest":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","completedAt":"2026-09-27T00:00:00Z","expiresAt":"2026-10-27T00:00:00Z","recordedAt":"2026-09-27T00:00:01Z","state":"valid"}\' ;;\n'
         '  *X-Pi-Key*) exec python3 "$FAKE_PI" "$@" ;;\n'
-        '  *config*--services*) printf \'%s\\n\' ${FAKE_SERVICES:-pi gateway} ;;\n'
+        "  *config*--services*) printf '%s\\n' ${FAKE_SERVICES:-pi gateway} ;;\n"
         '  *setup/status*) printf \'%s\\n\' \'{"schemaVersion":1,"workflow":"first-run","state":"blocked","currentStep":"model","recommendedNextOperation":"configure_model","generatedAt":"2026-09-26T12:00:00Z","steps":[]}\' ;;\n'
         '  *setup/receipts*) body=$(cat); receipt=$(printf \'%s\' "$body" | sed -n \'s/.*"receiptId":"\\([^"]*\\)".*/\\1/p\'); digest=$(printf \'%s\' "$body" | sed -n \'s/.*"evidenceDigest":"\\([^"]*\\)".*/\\1/p\'); printf \'{"step":"rehearsal","revision":1,"receiptId":"%s","evidenceDigest":"%s"}\\n\' "$receipt" "$digest" ;;\n'
-        '  *provider_credentials*) printf \'%s\\n\' configured ;;\n'
-        '  *checks*speech*input*) printf \'%s\\n\' "${SPEECH_RUNTIME_RESULT:-confirmed}" ;;\n'
+        "  *provider_credentials*) printf '%s\\n' configured ;;\n"
+        "  *checks*speech*input*) printf '%s\\n' \"${SPEECH_RUNTIME_RESULT:-confirmed}\" ;;\n"
         '  *) printf \'%s\\n\' \'{"status":"ok","checks":{}}\' ;;\n'
         "esac\n",
         encoding="utf-8",

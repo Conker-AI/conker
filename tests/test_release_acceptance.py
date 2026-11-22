@@ -39,10 +39,13 @@ def manifest() -> dict:
         },
         "capabilities": {
             "owner-terminal": {
-                "state": "deferred", "image": None, "acceptance_sha256": None,
+                "state": "deferred",
+                "image": None,
+                "acceptance_sha256": None,
             },
             "agent-sandbox": {
-                "state": "deferred", "image": None,
+                "state": "deferred",
+                "image": None,
             },
         },
     }
@@ -53,9 +56,7 @@ def test_planner_uses_every_normalized_version_and_maps_pi_to_both_services():
 
     assert len(plan["runtime_references"]) == 9
     assert len(plan["pull_references"]) == 10
-    assert plan["build_only_references"] == [
-        "example/node_build@sha256:" + "5".zfill(64)
-    ]
+    assert plan["build_only_references"] == ["example/node_build@sha256:" + "5".zfill(64)]
     assert plan["services"]["gateway"] == "ghcr.io/conker-ai/pi:1.2.3"
     assert plan["services"]["pi"] == plan["services"]["gateway"]
     assert plan["components"]["postgres"].endswith("@sha256:" + "1".zfill(64))
@@ -225,10 +226,7 @@ def complete_setup_status() -> dict:
         "state": "complete",
         "currentStep": None,
         "recommendedNextOperation": None,
-        "steps": [
-            {"id": identity, "state": "complete"}
-            for identity in sorted(SETUP_STEP_IDS)
-        ],
+        "steps": [{"id": identity, "state": "complete"} for identity in sorted(SETUP_STEP_IDS)],
     }
 
 
@@ -484,7 +482,13 @@ def test_headless_setup_uses_server_candidates_and_exact_boundary_digest(tmp_pat
     commands = [command for command, _ in runner.calls]
     assert ["bash", "./conker", "setup", "run", "model", "local-answer"] in commands
     assert [
-        "bash", "./conker", "setup", "run", "boundaries", "--confirm-digest", "a" * 64
+        "bash",
+        "./conker",
+        "setup",
+        "run",
+        "boundaries",
+        "--confirm-digest",
+        "a" * 64,
     ] in commands
     protection = next(command for command in commands if "--destination" in command)
     assert protection[protection.index("--destination") + 1] == str(gate.snapshot_store)
@@ -505,8 +509,13 @@ def test_rehearsal_approves_only_the_server_issued_request(tmp_path: Path):
     }
     commands = [command for command, _ in runner.calls]
     assert [
-        "bash", "./conker", "setup", "run", "rehearsal",
-        "--finish-approval", "setup-approval-123",
+        "bash",
+        "./conker",
+        "setup",
+        "run",
+        "rehearsal",
+        "--finish-approval",
+        "setup-approval-123",
     ] in commands
 
 
@@ -556,9 +565,7 @@ def test_release_backup_uses_policy_bound_protection_and_held_restore(tmp_path: 
     commands = [command for command, _ in runner.calls]
     assert ["bash", "./conker", "setup", "run", "protection"] in commands
     assert not any(command[2:3] == ["backup"] for command in commands)
-    evidence = json.loads(
-        (gate.evidence.root / "recovery-evidence.json").read_text()
-    )
+    evidence = json.loads((gate.evidence.root / "recovery-evidence.json").read_text())
     assert evidence["status"] == "held"
     assert evidence["source_layout"] == "repository"
 

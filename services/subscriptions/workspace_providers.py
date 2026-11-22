@@ -37,15 +37,9 @@ def create_app(config, *, chatgpt_relay=None):
             "Provision separate private credentials for provider control and inference."
         )
     relay = chatgpt_relay
-    chatgpt = (
-        None
-        if relay
-        else ChatGPTControl(Path(settings["state"]), Path(settings["codex"]))
-    )
+    chatgpt = None if relay else ChatGPTControl(Path(settings["state"]), Path(settings["codex"]))
     claude = Claude(settings["claude"], Path(settings["state"]) / "claude-auth")
-    native_sessions = Sessions(
-        settings["claude"], Path(settings["state"]) / "claude-auth"
-    )
+    native_sessions = Sessions(settings["claude"], Path(settings["state"]) / "claude-auth")
     codex_sessions = (
         None
         if relay
@@ -76,31 +70,21 @@ def create_app(config, *, chatgpt_relay=None):
         if not isinstance(value, dict):
             raise AdmissionError("invalid_request", 422)
         value = dict(value)
-        identity = (
-            Requests.identity(value.pop("request_id"))
-            if "request_id" in value
-            else None
-        )
+        identity = Requests.identity(value.pop("request_id")) if "request_id" in value else None
         return value, identity
 
     @app.middleware("http")
     async def authorize(request, call_next):
         if request.url.path == "/health" and request.method == "GET":
             return JSONResponse({"status": "ready"})
-        key = (
-            inference_key if request.url.path.startswith("/inference/") else control_key
-        )
+        key = inference_key if request.url.path.startswith("/inference/") else control_key
         if (
             request.headers.get("origin")
             or (
                 request.url.query
-                and not (
-                    request.method == "GET" and request.url.path == "/codex/sessions"
-                )
+                and not (request.method == "GET" and request.url.path == "/codex/sessions")
             )
-            or not hmac.compare_digest(
-                request.headers.get("authorization", ""), "Bearer " + key
-            )
+            or not hmac.compare_digest(request.headers.get("authorization", ""), "Bearer " + key)
         ):
             return JSONResponse({"error": "unauthorized"}, status_code=401)
         if request.method == "POST":
@@ -145,9 +129,7 @@ def create_app(config, *, chatgpt_relay=None):
             try:
                 return await run_in_threadpool(chatgpt.apply, await request.json())
             except (ValueError, OSError):
-                return JSONResponse(
-                    {"error": "provider_operation_failed"}, status_code=503
-                )
+                return JSONResponse({"error": "provider_operation_failed"}, status_code=503)
 
         @app.get("/chatgpt/limits")
         def chatgpt_limits():
@@ -267,10 +249,7 @@ def create_app(config, *, chatgpt_relay=None):
                         if control.finished.is_set():
                             if control.canceled.is_set():
                                 yield (
-                                    json.dumps(
-                                        {"type": "error", "code": "request_canceled"}
-                                    )
-                                    + "\n"
+                                    json.dumps({"type": "error", "code": "request_canceled"}) + "\n"
                                 )
                             else:
                                 while True:
@@ -282,10 +261,7 @@ def create_app(config, *, chatgpt_relay=None):
                             break
                         continue
                     if control.canceled.is_set():
-                        yield (
-                            json.dumps({"type": "error", "code": "request_canceled"})
-                            + "\n"
-                        )
+                        yield (json.dumps({"type": "error", "code": "request_canceled"}) + "\n")
                         break
                     yield json.dumps(item) + "\n"
             finally:
@@ -308,11 +284,7 @@ def create_app(config, *, chatgpt_relay=None):
             key, control = requests.begin("claude", identity)
         except (ValueError, TypeError) as exc:
             return JSONResponse(
-                {
-                    "error": str(exc)
-                    if isinstance(exc, AdmissionError)
-                    else "invalid_request"
-                },
+                {"error": str(exc) if isinstance(exc, AdmissionError) else "invalid_request"},
                 status_code=exc.status if isinstance(exc, AdmissionError) else 422,
             )
         try:
@@ -327,16 +299,10 @@ def create_app(config, *, chatgpt_relay=None):
             value = await request.json()
             if not isinstance(value, dict) or set(value) != {"request_id"}:
                 raise AdmissionError("invalid_request", 422)
-            return await run_in_threadpool(
-                requests.cancel, provider, value["request_id"]
-            )
+            return await run_in_threadpool(requests.cancel, provider, value["request_id"])
         except (ValueError, TypeError) as exc:
             return JSONResponse(
-                {
-                    "error": str(exc)
-                    if isinstance(exc, AdmissionError)
-                    else "invalid_request"
-                },
+                {"error": str(exc) if isinstance(exc, AdmissionError) else "invalid_request"},
                 status_code=exc.status if isinstance(exc, AdmissionError) else 422,
             )
 

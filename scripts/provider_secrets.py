@@ -60,17 +60,13 @@ class SecretStore:
         if self.state_path.is_symlink() or (
             self.state_path.exists() and not self.state_path.is_file()
         ):
-            raise ProviderSecretError(
-                "Provider credential state must be a regular file."
-            )
+            raise ProviderSecretError("Provider credential state must be a regular file.")
         if not self.state_path.exists():
             self._save({"schemaVersion": SCHEMA, "providers": {}})
         for provider in PROVIDERS:
             path = self.active_path(provider)
             if path.is_symlink() or (path.exists() and not path.is_file()):
-                raise ProviderSecretError(
-                    "Provider credential files must be regular files."
-                )
+                raise ProviderSecretError("Provider credential files must be regular files.")
             if not path.exists():
                 self._write(path, b"")
 
@@ -147,27 +143,17 @@ class SecretStore:
                 raise ValueError("state is too large")
             value = json.loads(encoded.decode("utf-8"))
         except (OSError, UnicodeDecodeError, ValueError) as exc:
-            raise ProviderSecretError(
-                "Provider credential state is unreadable."
-            ) from exc
+            raise ProviderSecretError("Provider credential state is unreadable.") from exc
         if not isinstance(value, dict) or set(value) != {"schemaVersion", "providers"}:
-            raise ProviderSecretError(
-                "Provider credential state has an unsupported shape."
-            )
+            raise ProviderSecretError("Provider credential state has an unsupported shape.")
         if value["schemaVersion"] != SCHEMA or not isinstance(value["providers"], dict):
-            raise ProviderSecretError(
-                "Provider credential state has an unsupported version."
-            )
+            raise ProviderSecretError("Provider credential state has an unsupported version.")
         if any(name not in PROVIDERS for name in value["providers"]):
-            raise ProviderSecretError(
-                "Provider credential state names an unsupported provider."
-            )
+            raise ProviderSecretError("Provider credential state names an unsupported provider.")
         return value
 
     def _save(self, value: dict) -> None:
-        encoded = (
-            json.dumps(value, sort_keys=True, separators=(",", ":")) + "\n"
-        ).encode()
+        encoded = (json.dumps(value, sort_keys=True, separators=(",", ":")) + "\n").encode()
         self._write(self.state_path, encoded)
 
     def active_path(self, provider: str) -> Path:
@@ -181,9 +167,7 @@ class SecretStore:
 
     def _read_secret(self, path: Path, *, allow_empty: bool = False) -> bytes:
         if path.is_symlink() or not path.is_file():
-            raise ProviderSecretError(
-                "Provider credential file is missing or not regular."
-            )
+            raise ProviderSecretError("Provider credential file is missing or not regular.")
         with path.open("rb") as source:
             value = source.read(MAX_SECRET_BYTES + 1)
         if not value and allow_empty:
@@ -196,9 +180,7 @@ class SecretStore:
             raise ProviderSecretError("Choose a provider: " + ", ".join(PROVIDERS) + ".")
         saved = state["providers"].setdefault(provider, empty_record())
         if set(saved) != set(empty_record()):
-            raise ProviderSecretError(
-                "Provider credential record has an unsupported shape."
-            )
+            raise ProviderSecretError("Provider credential record has an unsupported shape.")
         validate_record(saved)
         return saved
 
@@ -209,9 +191,7 @@ class SecretStore:
             "schemaVersion": SCHEMA,
             "storage": "host-files",
             "secretsIncluded": False,
-            "providers": [
-                self._view(name, self._provider(state, name)) for name in PROVIDERS
-            ],
+            "providers": [self._view(name, self._provider(state, name)) for name in PROVIDERS],
         }
 
     def _view(self, provider: str, record: dict) -> dict:
@@ -236,9 +216,7 @@ class SecretStore:
             "secretIncluded": False,
         }
 
-    def stage(
-        self, provider: str, secret: bytes, *, expected: tuple | None = None
-    ) -> dict:
+    def stage(self, provider: str, secret: bytes, *, expected: tuple | None = None) -> dict:
         self.initialize()
         text = self._validate_secret(secret)
         secret = text.encode("ascii")
@@ -279,8 +257,7 @@ class SecretStore:
         except UnicodeDecodeError as exc:
             raise ProviderSecretError("Credential input must be ASCII.") from exc
         if any(
-            character.isspace() or ord(character) < 33 or ord(character) > 126
-            for character in text
+            character.isspace() or ord(character) < 33 or ord(character) > 126 for character in text
         ):
             raise ProviderSecretError(
                 "Credential input must be one printable token without spaces."
@@ -295,9 +272,7 @@ class SecretStore:
             state = self._load()
             record = self._provider(state, provider)
             if record["pendingActivation"] is not None:
-                raise ProviderSecretError(
-                    "Resolve the pending activation before legacy migration."
-                )
+                raise ProviderSecretError("Resolve the pending activation before legacy migration.")
             active = self.active_path(provider)
             if record["activeRevision"]:
                 return self._view(provider, record)
@@ -320,9 +295,7 @@ class SecretStore:
             state = self._load()
             record = self._provider(state, provider)
             if record["pendingActivation"] is not None:
-                raise ProviderSecretError(
-                    "Recover the pending activation before verification."
-                )
+                raise ProviderSecretError("Recover the pending activation before verification.")
             if revision is not None and record["stagedRevision"] != revision:
                 raise ProviderSecretError(
                     "The staged credential changed; refresh before verification."
@@ -332,13 +305,9 @@ class SecretStore:
             secret = self._read_secret(self.staged_path(provider))
             status, basis = verifier(PROVIDERS[provider], secret)
             if status not in {"verified", "rejected", "unavailable"}:
-                raise ProviderSecretError(
-                    "Credential verifier returned an unsupported status."
-                )
+                raise ProviderSecretError("Credential verifier returned an unsupported status.")
             if not isinstance(basis, str) or not BASIS.fullmatch(basis):
-                raise ProviderSecretError(
-                    "Credential verifier returned an unsupported basis."
-                )
+                raise ProviderSecretError("Credential verifier returned an unsupported basis.")
             record["verificationStatus"] = status
             record["verificationBasis"] = basis
             record["verifiedAt"] = now()
@@ -352,19 +321,12 @@ class SecretStore:
             record = self._provider(state, provider)
             if record["pendingActivation"] is not None:
                 raise ProviderSecretError("An activation is already pending recovery.")
-            if (
-                record["stagedRevision"] != revision
-                or record["verificationStatus"] != "verified"
-            ):
-                raise ProviderSecretError(
-                    "Activate the exact verified staged revision."
-                )
+            if record["stagedRevision"] != revision or record["verificationStatus"] != "verified":
+                raise ProviderSecretError("Activate the exact verified staged revision.")
             verified_at = datetime.fromisoformat(record["verifiedAt"])
             age = datetime.now(UTC) - verified_at
             if age > MAX_VERIFICATION_AGE or age < -MAX_CLOCK_SKEW:
-                raise ProviderSecretError(
-                    "Verify the staged credential again before activation."
-                )
+                raise ProviderSecretError("Verify the staged credential again before activation.")
             staged = self.staged_path(provider)
             staged_secret = self._read_secret(staged)
             active, previous = self.active_path(provider), self.previous_path(provider)
@@ -403,9 +365,7 @@ class SecretStore:
             self._save(state)
             return self._view(provider, record)
 
-    def rollback_activation(
-        self, provider: str, revision: str, *, hold: bool = False
-    ) -> dict:
+    def rollback_activation(self, provider: str, revision: str, *, hold: bool = False) -> dict:
         self.initialize()
         with self.locked():
             state = self._load()
@@ -433,16 +393,9 @@ class SecretStore:
             if not isinstance(pending, dict) or pending.get("revision") != revision:
                 raise ProviderSecretError("No matching activation is pending.")
             previous = self.previous_path(provider)
-            expected = (
-                self._read_secret(previous) if pending["previousRevision"] else b""
-            )
-            if (
-                self._read_secret(self.active_path(provider), allow_empty=True)
-                != expected
-            ):
-                raise ProviderSecretError(
-                    "The previous credential has not been restored."
-                )
+            expected = self._read_secret(previous) if pending["previousRevision"] else b""
+            if self._read_secret(self.active_path(provider), allow_empty=True) != expected:
+                raise ProviderSecretError("The previous credential has not been restored.")
             record["pendingActivation"] = None
             previous.unlink(missing_ok=True)
             self._save(state)
@@ -453,10 +406,7 @@ class SecretStore:
         with self.locked():
             state = self._load()
             record = self._provider(state, provider)
-            if (
-                record["pendingActivation"] is not None
-                or record["stagedRevision"] != revision
-            ):
+            if record["pendingActivation"] is not None or record["stagedRevision"] != revision:
                 raise ProviderSecretError(
                     "Discard only the exact staged key with no pending activation."
                 )

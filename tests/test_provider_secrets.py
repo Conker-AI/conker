@@ -17,9 +17,7 @@ def test_secret_lifecycle_is_revision_bound_and_projection_is_redacted(tmp_path:
     assert staged["verificationStatus"] == "unverified"
     assert "synthetic" not in json.dumps(staged)
 
-    verified = store.verify(
-        "openai", lambda provider, secret: ("verified", "synthetic_check")
-    )
+    verified = store.verify("openai", lambda provider, secret: ("verified", "synthetic_check"))
     assert verified["stagedRevision"] == revision
     assert verified["verificationStatus"] == "verified"
     assert store.staged_path("openai").read_bytes() == b"synthetic-provider-key"
@@ -92,9 +90,7 @@ def test_stale_verification_cannot_be_activated(tmp_path: Path):
     ).isoformat()
     store.state_path.write_text(json.dumps(state), encoding="utf-8")
 
-    status = next(
-        item for item in store.status()["providers"] if item["id"] == "openrouter"
-    )
+    status = next(item for item in store.status()["providers"] if item["id"] == "openrouter")
     assert status["verificationStale"] is True
     with pytest.raises(ProviderSecretError, match="Verify the staged credential again"):
         store.prepare_activation("openrouter", staged["stagedRevision"])
@@ -108,9 +104,7 @@ def test_verification_basis_cannot_reflect_provider_or_secret_text(tmp_path: Pat
             "openrouter",
             lambda provider, secret: ("rejected", "synthetic-openrouter-key denied"),
         )
-    status = next(
-        item for item in store.status()["providers"] if item["id"] == "openrouter"
-    )
+    status = next(item for item in store.status()["providers"] if item["id"] == "openrouter")
     assert status["verificationStatus"] == "unverified"
 
 
@@ -149,13 +143,9 @@ def test_posix_secret_files_are_owner_only(tmp_path: Path):
     "mutation",
     [
         lambda record: record.update(activeRevision="credential_not-a-revision"),
-        lambda record: record.update(
-            verificationStatus="verified", verificationBasis="check"
-        ),
+        lambda record: record.update(verificationStatus="verified", verificationBasis="check"),
         lambda record: record.update(revokedRevisions=["credential_" + "A" * 32]),
-        lambda record: record.update(
-            pendingActivation={"revision": "credential_" + "a" * 32}
-        ),
+        lambda record: record.update(pendingActivation={"revision": "credential_" + "a" * 32}),
     ],
 )
 def test_status_fails_closed_on_malformed_saved_records(tmp_path: Path, mutation):

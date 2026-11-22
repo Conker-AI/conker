@@ -9,6 +9,7 @@ The one thing deliberately not mocked is `docker compose config`. It is the
 only check that the compose file and the generated .env actually agree, and a
 fake would assert nothing.
 """
+
 from __future__ import annotations
 
 import contextlib
@@ -41,26 +42,35 @@ def test_failed_checkout_update_never_reports_success(tmp_path, dirty):
     git.write_text(
         "#!/bin/sh\n"
         'case "$3" in\n'
-        + ('status) printf " M local.txt\\n"; exit 0 ;;\n' if dirty else 'status) exit 0 ;;\n')
+        + ('status) printf " M local.txt\\n"; exit 0 ;;\n' if dirty else "status) exit 0 ;;\n")
         + "pull) exit 1 ;;\n"
         + "esac\nexit 1\n"
     )
     git.chmod(0o755)
     result = subprocess.run(
         ["bash", "-s", "--", "--yes"],
-        input=INSTALL.read_text(), text=True, capture_output=True, timeout=15,
-        env={**os.environ, "CONKER_HOME": str(checkout), "NO_COLOR": "1",
-             "PATH": str(commands) + os.pathsep + os.environ.get("PATH", "")},
-        cwd=tmp_path, check=False,
+        input=INSTALL.read_text(),
+        text=True,
+        capture_output=True,
+        timeout=15,
+        env={
+            **os.environ,
+            "CONKER_HOME": str(checkout),
+            "NO_COLOR": "1",
+            "PATH": str(commands) + os.pathsep + os.environ.get("PATH", ""),
+        },
+        cwd=tmp_path,
+        check=False,
     )
     assert result.returncode != 0
     assert "Updated " not in result.stdout
     assert ("local changes" if dirty else "Could not update") in result.stderr
 
+
 pytestmark = pytest.mark.skipif(
     sys.platform == "win32",
     reason="the installer is a POSIX shell script for Linux and macOS servers; "
-           "run these in CI or a container",
+    "run these in CI or a container",
 )
 
 
@@ -80,11 +90,19 @@ def install(tmp_path):
     home.mkdir()
     work = tmp_path / "conker"
     work.mkdir()
-    for name in ("install.sh", "conker", "docker-compose.yml", "docker-compose.sandbox.yml",
-                 "docker-compose.subscriptions.yml", "docker-compose.direct-providers.yml",
-                 "versions.env"):
+    for name in (
+        "install.sh",
+        "conker",
+        "docker-compose.yml",
+        "docker-compose.sandbox.yml",
+        "docker-compose.subscriptions.yml",
+        "docker-compose.direct-providers.yml",
+        "versions.env",
+    ):
         shutil.copy(ROOT / name, work / name)
-    shutil.copytree(ROOT / "scripts", work / "scripts", ignore=shutil.ignore_patterns("__pycache__"))
+    shutil.copytree(
+        ROOT / "scripts", work / "scripts", ignore=shutil.ignore_patterns("__pycache__")
+    )
     (work / "install.sh").chmod(0o755)
 
     def run(*args, expect_ok=True, path=None):
@@ -98,12 +116,18 @@ def install(tmp_path):
             env["PATH"] = path
         proc = subprocess.run(
             ["bash", str(work / "install.sh"), *args],
-            capture_output=True, text=True, env=env, cwd=str(work), timeout=180,
+            capture_output=True,
+            text=True,
+            env=env,
+            cwd=str(work),
+            timeout=180,
             check=False,
         )
         if expect_ok and proc.returncode != 0:
-            pytest.fail(f"exit {proc.returncode}\n--- stdout ---\n{proc.stdout}\n"
-                        f"--- stderr ---\n{proc.stderr}")
+            pytest.fail(
+                f"exit {proc.returncode}\n--- stdout ---\n{proc.stdout}\n"
+                f"--- stderr ---\n{proc.stderr}"
+            )
         return proc
 
     run.dir = work
@@ -122,6 +146,7 @@ def env_values(path: Path) -> dict[str, str]:
 
 
 # --- it works, and it says what is wrong when it does not -------------------
+
 
 @needs_docker
 def test_check_passes_on_a_machine_that_can_run_it(install):
@@ -151,8 +176,7 @@ def path_without(command: str, sandbox: Path) -> str:
 
 def test_a_missing_docker_names_the_exact_fix(install, tmp_path):
     """Not "docker not found". The next command to type."""
-    result = install("--check", expect_ok=False,
-                     path=path_without("docker", tmp_path / "nodocker"))
+    result = install("--check", expect_ok=False, path=path_without("docker", tmp_path / "nodocker"))
 
     assert result.returncode != 0
     assert "Docker is not installed" in result.stderr
@@ -163,9 +187,15 @@ def test_a_missing_docker_names_the_exact_fix(install, tmp_path):
 # --- secrets ----------------------------------------------------------------
 
 SECRETS = [
-    "CONKER_ADMIN_KEY", "TOOLGATE_ADMIN_KEY", "TOOLGATE_VAULT_SALT",
-    "TOOLGATE_CALLBACK_SECRET", "MEMORYGATE_ADMIN_KEY", "MEMORYGATE_READ_KEY",
-    "MEMORYGATE_DB_PASSWORD", "SYSTEMGATE_ADMIN_KEY", "EMBEDDINGS_KEY",
+    "CONKER_ADMIN_KEY",
+    "TOOLGATE_ADMIN_KEY",
+    "TOOLGATE_VAULT_SALT",
+    "TOOLGATE_CALLBACK_SECRET",
+    "MEMORYGATE_ADMIN_KEY",
+    "MEMORYGATE_READ_KEY",
+    "MEMORYGATE_DB_PASSWORD",
+    "SYSTEMGATE_ADMIN_KEY",
+    "EMBEDDINGS_KEY",
     "PI_TOOLGATE_KEY",
     "PI_GATEWAY_KEY",
     "GATEWAY_PI_OWNER_KEY",
@@ -257,6 +287,7 @@ def test_the_env_file_is_not_readable_by_anyone_else(install):
 
 # --- idempotent -------------------------------------------------------------
 
+
 @needs_docker
 def test_running_twice_repairs_rather_than_duplicates(install):
     """Regenerating keys on a re-run would lock the owner out of their own
@@ -280,16 +311,19 @@ def test_gateway_key_and_owner_credential_survive_installer_rerun(install):
 
     install("--yes", "--dry-run")
     first = env_values(install.env_file)
-    assert first["PI_GATEWAY_KEY_SHA256"] == hashlib.sha256(
-        first["PI_GATEWAY_KEY"].encode()
-    ).hexdigest()
-    assert first["PI_OWNER_KEY_SHA256"] == hashlib.sha256(
-        first["GATEWAY_PI_OWNER_KEY"].encode()
-    ).hexdigest()
+    assert (
+        first["PI_GATEWAY_KEY_SHA256"]
+        == hashlib.sha256(first["PI_GATEWAY_KEY"].encode()).hexdigest()
+    )
+    assert (
+        first["PI_OWNER_KEY_SHA256"]
+        == hashlib.sha256(first["GATEWAY_PI_OWNER_KEY"].encode()).hexdigest()
+    )
     assert first["GATEWAY_ORIGIN"] == "https://localhost:8050"
-    assert first["TOOLGATE_OWNER_KEY_SHA256"] == hashlib.sha256(
-        first["GATEWAY_TOOLGATE_OWNER_KEY"].encode()
-    ).hexdigest()
+    assert (
+        first["TOOLGATE_OWNER_KEY_SHA256"]
+        == hashlib.sha256(first["GATEWAY_TOOLGATE_OWNER_KEY"].encode()).hexdigest()
+    )
     install("--yes", "--dry-run")
     second = env_values(install.env_file)
     assert second["PI_GATEWAY_KEY"] == first["PI_GATEWAY_KEY"]
@@ -334,7 +368,9 @@ def test_hosted_provider_settings_survive_installer_rerun(install):
     assert (directory / "openai.key").read_text() == "preserved-openai-key"
     assert (directory / "anthropic.key").read_text() == "preserved-anthropic-key"
     state = json.loads((directory / "state.json").read_text())
-    assert all(state["providers"][name]["activeRevision"] for name in ("openrouter", "openai", "anthropic"))
+    assert all(
+        state["providers"][name]["activeRevision"] for name in ("openrouter", "openai", "anthropic")
+    )
 
 
 @needs_docker
@@ -390,6 +426,7 @@ def test_a_damaged_env_is_repaired_without_losing_what_survived(install):
 
 # --- the compose it writes actually works -----------------------------------
 
+
 @needs_docker
 def test_the_generated_config_validates(install):
     """The only check that the compose file and the generated .env agree."""
@@ -402,10 +439,20 @@ def test_every_image_is_pinned(install):
     """Never `latest`, for anything an owner runs — ADR-0008."""
     install("--yes", "--dry-run")
     config = subprocess.run(
-        ["docker", "compose", "--env-file", str(install.dir / "versions.env"),
-         "--env-file", str(install.env_file), "-f", str(install.dir / "docker-compose.yml"),
-         "config"],
-        capture_output=True, text=True, cwd=str(install.dir),
+        [
+            "docker",
+            "compose",
+            "--env-file",
+            str(install.dir / "versions.env"),
+            "--env-file",
+            str(install.env_file),
+            "-f",
+            str(install.dir / "docker-compose.yml"),
+            "config",
+        ],
+        capture_output=True,
+        text=True,
+        cwd=str(install.dir),
         check=False,
     ).stdout
 
@@ -418,18 +465,30 @@ def test_every_image_is_pinned(install):
 
 def resolved_images(install) -> list[str]:
     config = subprocess.run(
-        ["docker", "compose", "--env-file", str(install.dir / "versions.env"),
-         "--env-file", str(install.env_file), "-f", str(install.dir / "docker-compose.yml"),
-         "config"],
-        capture_output=True, text=True, cwd=str(install.dir),
+        [
+            "docker",
+            "compose",
+            "--env-file",
+            str(install.dir / "versions.env"),
+            "--env-file",
+            str(install.env_file),
+            "-f",
+            str(install.dir / "docker-compose.yml"),
+            "config",
+        ],
+        capture_output=True,
+        text=True,
+        cwd=str(install.dir),
         check=False,
     ).stdout
     return re.findall(r"^\s*image:\s*(\S+)", config, re.MULTILINE)
 
 
 @needs_docker
-@pytest.mark.skipif(os.environ.get("CONKER_OFFLINE_TESTS") == "1",
-                    reason="asks the registry; set CONKER_OFFLINE_TESTS=1 to skip")
+@pytest.mark.skipif(
+    os.environ.get("CONKER_OFFLINE_TESTS") == "1",
+    reason="asks the registry; set CONKER_OFFLINE_TESTS=1 to skip",
+)
 def test_every_pinned_image_actually_exists(install):
     """A pin that resolves to nothing is worse than no pin.
 
@@ -446,15 +505,18 @@ def test_every_pinned_image_actually_exists(install):
     assert images, "no images in the resolved config"
 
     missing = [
-        image for image in images
-        if subprocess.run(["docker", "manifest", "inspect", image],
-                          capture_output=True, check=False).returncode != 0
+        image
+        for image in images
+        if subprocess.run(
+            ["docker", "manifest", "inspect", image], capture_output=True, check=False
+        ).returncode
+        != 0
     ]
     assert not missing, (
         "these pinned images do not exist in the registry:\n  "
         + "\n  ".join(missing)
         + "\n\nCheck versions.env against the tags the publish workflow really "
-          "produces - it strips a leading `v`."
+        "produces - it strips a leading `v`."
     )
 
 
@@ -464,10 +526,20 @@ def test_nothing_is_exposed_beyond_this_machine(install):
     0.0.0.0 would put someone's whole life on the open internet."""
     install("--yes", "--dry-run")
     config = subprocess.run(
-        ["docker", "compose", "--env-file", str(install.dir / "versions.env"),
-         "--env-file", str(install.env_file), "-f", str(install.dir / "docker-compose.yml"),
-         "config"],
-        capture_output=True, text=True, cwd=str(install.dir),
+        [
+            "docker",
+            "compose",
+            "--env-file",
+            str(install.dir / "versions.env"),
+            "--env-file",
+            str(install.env_file),
+            "-f",
+            str(install.dir / "docker-compose.yml"),
+            "config",
+        ],
+        capture_output=True,
+        text=True,
+        cwd=str(install.dir),
         check=False,
     ).stdout
 
@@ -480,6 +552,7 @@ def test_nothing_is_exposed_beyond_this_machine(install):
 
 
 # --- what it tells the owner ------------------------------------------------
+
 
 @needs_docker
 def test_the_backup_directory_is_named_twice(install):
@@ -516,6 +589,7 @@ def test_an_unknown_option_says_so_and_stops(install):
 
 # --- truthful status ---------------------------------------------------------
 
+
 def test_the_status_parser_reads_the_service_not_its_last_check():
     """`sed 's/.*"status".../'` looks right and is wrong: `.*` is greedy, so it
     walks to the LAST "status" in the body. A Pi reporting `degraded` because
@@ -526,10 +600,12 @@ def test_the_status_parser_reads_the_service_not_its_last_check():
     the worst possible place for it - the owner is told everything is fine at
     exactly the moment they need to know it is not.
     """
-    degraded = ('{"service":"pi","status":"degraded","degraded":["local_provider"],'
-                '"checks":{"store":{"status":"ok"},'
-                '"local_provider":{"status":"unavailable"},'
-                '"action_boundary":{"status":"ok"}}}')
+    degraded = (
+        '{"service":"pi","status":"degraded","degraded":["local_provider"],'
+        '"checks":{"store":{"status":"ok"},'
+        '"local_provider":{"status":"unavailable"},'
+        '"action_boundary":{"status":"ok"}}}'
+    )
 
     for script in ("conker", "install.sh"):
         body = (ROOT / script).read_text()
@@ -547,9 +623,15 @@ def test_the_status_parser_reads_the_service_not_its_last_check():
 
         helper = body.split("top_level_status() {", 1)[1].split("}", 1)[0]
         result = subprocess.run(
-            ["bash", "-c", f"top_level_status() {{{helper}}}\nprintf '%s' \"$1\" | top_level_status",
-             "_", degraded],
-            capture_output=True, text=True,
+            [
+                "bash",
+                "-c",
+                f"top_level_status() {{{helper}}}\nprintf '%s' \"$1\" | top_level_status",
+                "_",
+                degraded,
+            ],
+            capture_output=True,
+            text=True,
             check=False,
         )
         assert result.stdout.strip() == "degraded", (
@@ -564,9 +646,7 @@ def test_installer_selects_sandbox_overlay_only_when_active():
     launcher = (ROOT / "conker").read_text()
 
     for source, name in ((installer, "install.sh"), (launcher, "conker")):
-        assert "agent_sandbox_active()" in source, (
-            f"{name} does not define agent_sandbox_active()"
-        )
+        assert "agent_sandbox_active()" in source, f"{name} does not define agent_sandbox_active()"
         assert "AGENT_SANDBOX_STATE=active" in source, (
             f"{name} does not check AGENT_SANDBOX_STATE=active"
         )

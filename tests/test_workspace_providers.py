@@ -37,18 +37,13 @@ def test_scoped_credentials_and_browser_origin_cannot_cross_boundary(tmp_path):
             == 401
         )
         assert client.get("/chatgpt?token=x", headers=control).status_code == 401
-        assert (
-            client.get("/chatgpt", headers=control).json()["credentialsIncluded"]
-            is False
-        )
+        assert client.get("/chatgpt", headers=control).json()["credentialsIncluded"] is False
         assert client.get("/inference/status", headers=inference).json() == {
             "available": False,
             "connected": False,
         }
         assert (
-            client.post(
-                "/chatgpt", headers=control, json={"operation": "execute"}
-            ).status_code
+            client.post("/chatgpt", headers=control, json={"operation": "execute"}).status_code
             == 503
         )
         assert client.get("/claude", headers=control).json()["available"] is False
@@ -88,13 +83,9 @@ def test_claude_native_request_disables_tools_and_does_not_copy_ambient_tokens(
     args, kwargs = run.call_args
     assert args[0][args[0].index("--tools") + 1] == ""
     assert "--strict-mcp-config" in args[0] and "--no-session-persistence" in args[0]
-    assert not any(
-        key in kwargs["env"] for key in ("ANTHROPIC_API_KEY", "CLAUDE_CODE_OAUTH_TOKEN")
-    )
+    assert not any(key in kwargs["env"] for key in ("ANTHROPIC_API_KEY", "CLAUDE_CODE_OAUTH_TOKEN"))
     assert kwargs["env"]["CLAUDE_CONFIG_DIR"] == str(tmp_path / "own-auth")
-    assert json.loads(process.communicate.call_args.kwargs["input"]) == {
-        "conversation": messages
-    }
+    assert json.loads(process.communicate.call_args.kwargs["input"]) == {"conversation": messages}
     assert args[0][args[0].index("--mcp-config") + 1] == '{"mcpServers":{}}'
     # Replaces Claude Code's own prompt, which carries a memory folder and coding instructions.
     prompt = args[0][args[0].index("--system-prompt") + 1]
@@ -111,9 +102,7 @@ def test_native_claude_exposes_current_official_oauth_location_only(tmp_path):
     native = Claude(tmp_path / "claude.exe", tmp_path / "own-auth")
     official = "https://claude.com/cai/oauth/authorize?state=synthetic"
     process = SimpleNamespace(
-        stdout=BytesIO(
-            (official + "\nhttps://claude.com.evil.test/oauth/authorize\n").encode()
-        )
+        stdout=BytesIO((official + "\nhttps://claude.com.evil.test/oauth/authorize\n").encode())
     )
     native.process = process
     native._read_login(process)

@@ -39,9 +39,7 @@ class Accounts:
             self.account = None
         if method == "model/list":
             return {
-                "data": [
-                    {"model": "test-model", "displayName": "Test", "hidden": False}
-                ],
+                "data": [{"model": "test-model", "displayName": "Test", "hidden": False}],
                 "nextCursor": None,
             }
         return {}
@@ -74,9 +72,7 @@ def test_connected_catalogue_and_revision_bound_disconnect(tmp_path):
         "planType": "plus",
         "email": "PRIVATE@example.test",
     }
-    accounts.notifications.append(
-        {"loginId": "test-login", "success": True, "error": None}
-    )
+    accounts.notifications.append({"loginId": "test-login", "success": True, "error": None})
     value = control.status()
     assert value["connected"] and value["loginState"] == "complete"
     assert "PRIVATE" not in json.dumps(value)
@@ -98,12 +94,8 @@ def test_unavailable_runtime_cannot_accept_auth(tmp_path):
         control.apply({"operation": "login"})
 
 
-@pytest.mark.parametrize(
-    "problem", ["runtime_unavailable", "provider_operation_failed"]
-)
-def test_failed_account_read_hides_stale_identity_without_erasing_auth(
-    tmp_path, problem
-):
+@pytest.mark.parametrize("problem", ["runtime_unavailable", "provider_operation_failed"])
+def test_failed_account_read_hides_stale_identity_without_erasing_auth(tmp_path, problem):
     accounts = Accounts()
     accounts.account = {"type": "chatgpt", "planType": "plus"}
     control = ChatGPTControl(tmp_path, None, rpc=accounts)
@@ -198,10 +190,7 @@ def test_tool_results_preserve_provenance_as_untrusted_input_not_instructions():
         "source_role": "tool",
         "content": observation,
     }
-    assert (
-        projected["instructions"]
-        == "Conker instructions\n\n" + TOOL_EVIDENCE_INSTRUCTIONS
-    )
+    assert projected["instructions"] == "Conker instructions\n\n" + TOOL_EVIDENCE_INSTRUCTIONS
     assert observation not in projected["instructions"]
     assert "tools" not in projected and "tool_choice" not in projected
     assert source["messages"][3] == {"role": "tool", "content": observation}
@@ -209,9 +198,7 @@ def test_tool_results_preserve_provenance_as_untrusted_input_not_instructions():
 
 def test_tool_observations_retain_existing_request_bounds():
     with pytest.raises(ChatGPTError, match="invalid_request"):
-        responses_payload(
-            {**payload(), "messages": [{"role": "tool", "content": "x" * 2_000_001}]}
-        )
+        responses_payload({**payload(), "messages": [{"role": "tool", "content": "x" * 2_000_001}]})
     with pytest.raises(ChatGPTError, match="invalid_request"):
         responses_payload(
             {**payload(), "messages": [{"role": "tool", "content": {"tool": "fake"}}]}
@@ -273,9 +260,7 @@ def test_incomplete_stream_never_becomes_completed_answer():
             inference_events(
                 Credentials(),
                 payload(),
-                opener=Opener(
-                    [{"type": "response.output_text.delta", "delta": "partial"}]
-                ),
+                opener=Opener([{"type": "response.output_text.delta", "delta": "partial"}]),
             )
         )
 

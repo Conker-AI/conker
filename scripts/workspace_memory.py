@@ -21,18 +21,14 @@ FIELDS = {
 
 def _environment(config):
     envs = config.get("environments")
-    if not isinstance(envs, dict) or any(
-        not isinstance(envs.get(name), dict) for name in FIELDS
-    ):
+    if not isinstance(envs, dict) or any(not isinstance(envs.get(name), dict) for name in FIELDS):
         raise ValueError("Local MemoryGate and Pi environments are required.")
     return envs
 
 
 def _origin(value, port):
     if not isinstance(value, str):
-        raise TypeError(
-            "Memory correction setup needs the configured local MemoryGate endpoint."
-        )
+        raise TypeError("Memory correction setup needs the configured local MemoryGate endpoint.")
     try:
         url = urlsplit(value)
         valid = (
@@ -44,16 +40,12 @@ def _origin(value, port):
             and not url.password
             and not url.query
             and not url.fragment
-            and not any(
-                character.isspace() or ord(character) < 32 for character in value
-            )
+            and not any(character.isspace() or ord(character) < 32 for character in value)
         )
     except ValueError:
         valid = False
     if not valid:
-        raise ValueError(
-            "Memory correction setup needs the configured local MemoryGate endpoint."
-        )
+        raise ValueError("Memory correction setup needs the configured local MemoryGate endpoint.")
     return url.scheme, url.hostname, url.port
 
 
@@ -70,9 +62,7 @@ def _context(config, envs):
         or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}", agent)
         or agent != envs["memorygate"].get("MEMORYGATE_CONVERSATION_AGENT_ID")
     ):
-        raise ValueError(
-            "Pi and local MemoryGate companion namespaces must already match."
-        )
+        raise ValueError("Pi and local MemoryGate companion namespaces must already match.")
     url = envs["pi"].get("PI_MEMORYGATE_URL")
     _origin(url, port)
     return agent, url, port
@@ -122,9 +112,7 @@ def prepare(config):
     """Return an independent config and changed flag. Existing choices are never replaced."""
     envs = _environment(config)
     agent, url, port = _context(config, envs)
-    presence = [
-        field in envs[name] for name, fields in FIELDS.items() for field in fields
-    ]
+    presence = [field in envs[name] for name, fields in FIELDS.items() for field in fields]
     if any(presence):
         if not all(presence):
             raise ValueError(
@@ -157,9 +145,7 @@ def status(config):
     """Configuration evidence only: never claim running services accepted the key."""
     try:
         envs = _environment(config)
-        present = [
-            field in envs[name] for name, fields in FIELDS.items() for field in fields
-        ]
+        present = [field in envs[name] for name, fields in FIELDS.items() for field in fields]
         if not any(present):
             return "not configured"
         if not all(present):

@@ -62,7 +62,13 @@ def events(gate: FirstRunSteps) -> list[dict[str, Any]]:
 
 
 def candidate(**overrides: Any) -> dict[str, Any]:
-    return {"id": "local-answer", "route": ROUTE, "execution": "local", "status": "ready", **overrides}
+    return {
+        "id": "local-answer",
+        "route": ROUTE,
+        "execution": "local",
+        "status": "ready",
+        **overrides,
+    }
 
 
 # --- browser sign-in -------------------------------------------------------------------------
@@ -385,7 +391,10 @@ def test_conversation_records_a_digest_not_the_reply(tmp_path):
     reply = "assembled release accepted"
     gate, posts = conversation_gate(
         tmp_path,
-        [{"session_id": "s1"}, {"turn_id": "t1", "status": "complete", "message": {"content": reply}}],
+        [
+            {"session_id": "s1"},
+            {"turn_id": "t1", "status": "complete", "message": {"content": reply}},
+        ],
     )
 
     gate.rehearse_conversation()

@@ -14,14 +14,29 @@ MAP = ROOT / "docs" / "reference" / "product-map.md"
 PILLARS = {"Prompt", "Context", "Model", "Character", "Access", "Output", "Review", "Interaction"}
 # Pi's subpackages (pi/ in the Pi repository); checked against a Pi checkout beside this one.
 PI_PACKAGES = {
-    "actions", "agents", "api", "calls", "content", "context", "conversation", "core", "host",
-    "memory", "models", "owner", "schedule", "setup", "turns",
+    "actions",
+    "agents",
+    "api",
+    "calls",
+    "content",
+    "context",
+    "conversation",
+    "core",
+    "host",
+    "memory",
+    "models",
+    "owner",
+    "schedule",
+    "setup",
+    "turns",
 }
 COLUMNS = ["Domain", "Pillars", "Capability families", "Settings topics", "Pi packages"]
 
 
 def rows(page: Path = MAP) -> list[dict[str, list[str]]]:
-    lines = [line for line in page.read_text(encoding="utf-8").splitlines() if line.startswith("| ")]
+    lines = [
+        line for line in page.read_text(encoding="utf-8").splitlines() if line.startswith("| ")
+    ]
     assert [cell.strip() for cell in lines[0].strip("|").split("|")] == COLUMNS
     table = []
     for line in lines[1:]:
@@ -73,7 +88,9 @@ def test_the_pi_package_list_matches_a_pi_checkout():
     source = next((path for path in candidates if path.is_dir()), None)
     if source is None:
         pytest.skip("no Pi checkout beside this repository")
-    assert {path.name for path in source.iterdir() if (path / "__init__.py").is_file()} == PI_PACKAGES
+    assert {
+        path.name for path in source.iterdir() if (path / "__init__.py").is_file()
+    } == PI_PACKAGES
 
 
 @pytest.mark.parametrize(

@@ -1,4 +1,5 @@
 """Validate and normalize Conker's authoritative release manifest."""
+
 from __future__ import annotations
 
 import argparse
@@ -44,6 +45,7 @@ class ReleaseManifest(TypedDict):
     gates: dict[str, str]
     third_party_images: dict[str, str]
     capabilities: Capabilities
+
 
 GATE_VERSION_KEYS = {
     "pi": "PI_VERSION",
@@ -188,9 +190,7 @@ def validate_manifest(
                 "active owner terminal requires OWNER_TERMINAL_IMAGE as repository@sha256:<digest>"
             )
         if not terminal_acceptance or not re.fullmatch(r"[0-9a-f]{64}", terminal_acceptance):
-            raise ManifestError(
-                "active owner terminal requires OWNER_TERMINAL_ACCEPTANCE_SHA256"
-            )
+            raise ManifestError("active owner terminal requires OWNER_TERMINAL_ACCEPTANCE_SHA256")
 
     # Agent sandbox validation
     sandbox_state = values["AGENT_SANDBOX_STATE"]
@@ -215,9 +215,7 @@ def validate_manifest(
         # TOOLGATE_VERSION must be at least 0.6.0
         toolgate_version = values.get("TOOLGATE_VERSION", "")
         if not _version_at_least(toolgate_version, "0.6.0"):
-            raise ManifestError(
-                "active agent sandbox requires TOOLGATE_VERSION at least 0.6.0"
-            )
+            raise ManifestError("active agent sandbox requires TOOLGATE_VERSION at least 0.6.0")
 
     # The Claude plan runtime: our own image, published by .github/workflows/publish-subscriptions.yml.
     subscriptions_state = values["SUBSCRIPTIONS_STATE"]

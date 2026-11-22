@@ -44,11 +44,7 @@ def _now():
 
 
 def _percent(value):
-    if (
-        isinstance(value, bool)
-        or not isinstance(value, (int, float))
-        or not math.isfinite(value)
-    ):
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
         return None
     return max(0, min(100, round(value)))
 
@@ -59,9 +55,7 @@ def _when(value):
         if isinstance(value, (int, float)) and not isinstance(value, bool):
             moment = datetime.fromtimestamp(value, UTC)
         elif isinstance(value, str) and len(value) <= 64:
-            moment = datetime.fromisoformat(value.replace("Z", "+00:00")).astimezone(
-                UTC
-            )
+            moment = datetime.fromisoformat(value.replace("Z", "+00:00")).astimezone(UTC)
         else:
             return None
     except (ValueError, OverflowError, OSError):
@@ -84,9 +78,7 @@ def _window(identity, label, used, resets, minutes=None):
         "usedPercent": used,
         "leftPercent": 100 - used,
         "resetsAt": _when(resets),
-        "minutes": minutes
-        if isinstance(minutes, int) and 0 < minutes <= 525_600
-        else None,
+        "minutes": minutes if isinstance(minutes, int) and 0 < minutes <= 525_600 else None,
     }
 
 
@@ -145,9 +137,7 @@ def chatgpt(result):
         "available": True,
         "plan": plan,
         "windows": windows[:MAX_WINDOWS],
-        "resetCredits": credits
-        if isinstance(credits, int) and 0 <= credits < 1000
-        else None,
+        "resetCredits": credits if isinstance(credits, int) and 0 <= credits < 1000 else None,
         "checkedAt": _now(),
     }
 
@@ -156,11 +146,7 @@ def claude(output):
     """Normalize the `usage_report` that `claude -p /usage --output-format stream-json` prints."""
     if not isinstance(output, (bytes, str)) or len(output) > MAX_OUTPUT:
         return unavailable("claude", "invalid_provider_response")
-    text = (
-        output.decode("utf-8", errors="replace")
-        if isinstance(output, bytes)
-        else output
-    )
+    text = output.decode("utf-8", errors="replace") if isinstance(output, bytes) else output
     report = None
     for line in text.splitlines():
         try:
@@ -207,9 +193,7 @@ def claude(output):
         "available": True,
         "plan": None,
         "windows": windows,
-        "extraUsageEnabled": bool(extra.get("is_enabled"))
-        if isinstance(extra, dict)
-        else None,
+        "extraUsageEnabled": bool(extra.get("is_enabled")) if isinstance(extra, dict) else None,
         "checkedAt": _now(),
     }
 
@@ -227,16 +211,12 @@ def read_chatgpt(control):
             if not isinstance(account, dict) or account.get("type") != "chatgpt":
                 return unavailable("chatgpt", "sign_in_required")
             return chatgpt(
-                control.rpc.call(
-                    "account/rateLimits/read", {"excludeResetCreditDetails": True}
-                )
+                control.rpc.call("account/rateLimits/read", {"excludeResetCreditDetails": True})
             )
         except (ValueError, OSError) as error:
             # ChatGPTError is a ValueError whose message is a fixed code, never provider text.
             code = str(error)
-            return unavailable(
-                "chatgpt", code if LABEL.fullmatch(code) else "runtime_unavailable"
-            )
+            return unavailable("chatgpt", code if LABEL.fullmatch(code) else "runtime_unavailable")
 
 
 def read_claude(runtime):
@@ -267,9 +247,7 @@ def read_plans(request, config, provider=None) -> dict:
     for name in [provider] if provider else ["chatgpt", "claude"]:
         if "native_providers" not in config:
             # A workspace installed without subscription runtimes (no `enhance`).
-            plans.append(
-                {"provider": name, "available": False, "problem": "not_configured"}
-            )
+            plans.append({"provider": name, "available": False, "problem": "not_configured"})
             continue
         try:
             plans.append(request(config, "providers", f"/{name}/limits"))
@@ -277,9 +255,7 @@ def read_plans(request, config, provider=None) -> dict:
             if exc.code != 404:
                 raise
             # This installation does not run that subscription's runtime.
-            plans.append(
-                {"provider": name, "available": False, "problem": "not_configured"}
-            )
+            plans.append({"provider": name, "available": False, "problem": "not_configured"})
     return {"plans": plans}
 
 

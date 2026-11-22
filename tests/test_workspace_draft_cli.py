@@ -61,9 +61,7 @@ def test_new_draft_keeps_exact_intent_and_start_identity(invoke, tmp_path):
     assert run("draft", "show", "new") == 0
     assert calls[-1] == ("pi-owner", "/drafts/new", None)
     request_id = "draft_creation_request_0001"
-    assert (
-        run("draft", "start", "--request-id", request_id, "--expected-revision", 4) == 0
-    )
+    assert run("draft", "start", "--request-id", request_id, "--expected-revision", 4) == 0
     original = calls[-1]
     assert original == (
         "pi-owner",
@@ -72,12 +70,8 @@ def test_new_draft_keeps_exact_intent_and_start_identity(invoke, tmp_path):
     )
     assert run("draft", "start-status", request_id) == 0
     assert calls[-1] == ("pi-owner", f"/drafts/new/start/{request_id}", None)
-    assert (
-        run("draft", "start", "--request-id", request_id, "--expected-revision", 4) == 0
-    )
-    assert calls[-1] == original, (
-        "An exact retry cannot create a different request identity."
-    )
+    assert run("draft", "start", "--request-id", request_id, "--expected-revision", 4) == 0
+    assert calls[-1] == original, "An exact retry cannot create a different request identity."
 
 
 def test_task_drafts_use_separate_path_and_clear_is_revision_bound(invoke, tmp_path):
@@ -184,9 +178,7 @@ def test_invalid_identity_or_revision_never_reaches_server(invoke, args):
         ("new", {"text": "\x01" * 16000}),
     ],
 )
-def test_invalid_intent_or_oversized_body_does_not_write(
-    invoke, tmp_path, target, value
-):
+def test_invalid_intent_or_oversized_body_does_not_write(invoke, tmp_path, target, value):
     run, calls = invoke
     assert (
         run(

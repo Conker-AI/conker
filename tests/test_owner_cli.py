@@ -149,9 +149,7 @@ def test_memory_beliefs_reaches_pi_through_the_relay(monkeypatch, capsys):
         "items": [],
         "nextAfter": None,
     }
-    relay = Relay(
-        monkeypatch, {("GET", "/memory/beliefs?limit=5&state=needs_review"): (200, page)}
-    )
+    relay = Relay(monkeypatch, {("GET", "/memory/beliefs?limit=5&state=needs_review"): (200, page)})
     assert main("memory", "beliefs", "--review", "--limit", "5", "--json") == 0
     assert relay.sent == [("GET", "/memory/beliefs?limit=5&state=needs_review", None)]
     assert json.loads(capsys.readouterr().out) == page
@@ -215,15 +213,26 @@ def test_loops_reach_pi_through_the_relay(monkeypatch, capsys):
         (
             "POST",
             "/open-loops",
-            {"session_id": "chat_1", "text": "Send the essay", "promised_by": "owner",
-             "due_on": "2026-11-20"},
+            {
+                "session_id": "chat_1",
+                "text": "Send the essay",
+                "promised_by": "owner",
+                "due_on": "2026-11-20",
+            },
         ),
         ("POST", state, {"state": "done"}),
     ]
 
 
 def test_memory_used_reaches_pi_through_the_relay_for_a_checked_id_only(monkeypatch, capsys):
-    page = {"memoryId": "mem_1", "since": None, "total": 0, "chats": 0, "items": [], "nextAfter": None}
+    page = {
+        "memoryId": "mem_1",
+        "since": None,
+        "total": 0,
+        "chats": 0,
+        "items": [],
+        "nextAfter": None,
+    }
     relay = Relay(monkeypatch, {("GET", "/memory/mem_1/uses?limit=5"): (200, page)})
     assert main("memory", "used", "mem_1", "--limit", "5", "--json") == 0
     assert relay.sent == [("GET", "/memory/mem_1/uses?limit=5", None)]
@@ -318,7 +327,9 @@ def test_the_owner_cli_passes_a_slow_routes_timeout_to_the_relay(monkeypatch):
         return {}
 
     monkeypatch.setattr(config_cli, "request", request)
-    owner_cli.caller(["docker", "compose"])(None, "pi", "/prompts/enhance", {"text": "x"}, timeout=660)
+    owner_cli.caller(["docker", "compose"])(
+        None, "pi", "/prompts/enhance", {"text": "x"}, timeout=660
+    )
     assert sent == {"timeout": 660}
 
 

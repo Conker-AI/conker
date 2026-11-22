@@ -132,9 +132,7 @@ def request(
     encoded here, after the path is checked, so it can never change the path. `timeout` is how long
     the relay waits for the service; the host waits 90 s longer for the relay itself."""
     if service not in RELAYS:
-        raise NotConfirmed(
-            f"Settings kept by {service} cannot be reached from this host yet."
-        )
+        raise NotConfirmed(f"Settings kept by {service} cannot be reached from this host yet.")
     container, relay, name = RELAYS[service]
     if not HOME.fullmatch(path):
         raise ValueError(f"{path!r} is not a settings home in {name}.")
@@ -156,17 +154,13 @@ def request(
                 method or ("GET" if body is None else "POST"),
                 path,
             ],
-            input=b""
-            if body is None
-            else json.dumps(body, ensure_ascii=False).encode(),
+            input=b"" if body is None else json.dumps(body, ensure_ascii=False).encode(),
             capture_output=True,
             timeout=timeout + 90,
             check=False,
         )
     except (OSError, subprocess.TimeoutExpired):
-        raise NotConfirmed(
-            f"{name} did not answer. Check it with: conker status"
-        ) from None
+        raise NotConfirmed(f"{name} did not answer. Check it with: conker status") from None
     status, _, content = result.stdout.partition(b"\n")
     if result.returncode or not status.isdigit():
         said = result.stderr.decode("utf-8", "replace").strip().splitlines()
@@ -202,9 +196,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"The settings registry is missing: {REGISTRY}", file=sys.stderr)
         return 1
     try:
-        return config_operation(
-            args, compose(installed.root, installed.layout), request
-        )
+        return config_operation(args, compose(installed.root, installed.layout), request)
     except NotConfirmed as error:
         print(str(error), file=sys.stderr)
         return 1

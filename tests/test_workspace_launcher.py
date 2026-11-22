@@ -35,9 +35,7 @@ def test_existing_install_does_not_rotate_credentials(tmp_path, monkeypatch):
     monkeypatch.setattr(
         workspace,
         "run",
-        lambda *a, **kw: pytest.fail(
-            "Existing install must not execute setup commands"
-        ),
+        lambda *a, **kw: pytest.fail("Existing install must not execute setup commands"),
     )
     workspace.install("another-model")
     assert configuration.read_text() == original
@@ -46,6 +44,7 @@ def test_existing_install_does_not_rotate_credentials(tmp_path, monkeypatch):
 def test_enhancement_refuses_a_running_memorygate_before_source_changes(monkeypatch):
     monkeypatch.syspath_prepend(str(Path(__file__).resolve().parents[1] / "scripts"))
     from scripts import workspace_setup
+
     inspected = []
 
     def owned(config, service):
@@ -105,9 +104,7 @@ def test_same_label_with_another_volume_is_rejected(tmp_path, monkeypatch):
                 "State": {"Running": True},
                 "Config": {"Labels": {"conker.local-integration": "true"}},
                 "HostConfig": {
-                    "PortBindings": {
-                        "5432/tcp": [{"HostIp": "127.0.0.1", "HostPort": str(port)}]
-                    }
+                    "PortBindings": {"5432/tcp": [{"HostIp": "127.0.0.1", "HostPort": str(port)}]}
                 },
                 "Mounts": [
                     {
@@ -248,6 +245,7 @@ def test_maintenance_refuses_owned_process_before_bind(
 ):
     monkeypatch.syspath_prepend(str(Path(__file__).resolve().parents[1] / "scripts"))
     from scripts import workspace_setup
+
     config, process, _reserved = starting_service
     config["ports"] = {key: workspace_setup.PORTS[key] for key in ("pi", "memorygate")}
     monkeypatch.setattr(workspace_setup, "owned_process", workspace.owned_process)
@@ -278,9 +276,7 @@ def test_shutdown_failure_cannot_claim_workspace_stopped(monkeypatch, capsys):
 
 
 @pytest.mark.parametrize("verified", [True, False])
-def test_start_checks_owner_again_after_health_wait(
-    tmp_path, monkeypatch, capsys, verified
-):
+def test_start_checks_owner_again_after_health_wait(tmp_path, monkeypatch, capsys, verified):
     (tmp_path / "dashboard/dist").mkdir(parents=True)
     (tmp_path / "dashboard/dist/index.html").write_text("synthetic dashboard")
     monkeypatch.setattr(workspace, "ROOT", tmp_path)
@@ -337,9 +333,7 @@ def test_postgres_ownership_does_not_depend_on_published_port(
                     ]
                 }
             },
-            "Mounts": [
-                {"Destination": "/var/lib/postgresql/data", "Name": "owned-volume"}
-            ],
+            "Mounts": [{"Destination": "/var/lib/postgresql/data", "Name": "owned-volume"}],
         }
     ]
     monkeypatch.setattr(workspace, "port_listening", lambda _service: listening)
@@ -365,15 +359,9 @@ def test_uninspectable_container_is_not_reported_stopped(monkeypatch):
 @pytest.mark.parametrize("listening", [True, False])
 def test_missing_container_is_stopped_only_without_listener(monkeypatch, listening):
     monkeypatch.setattr(workspace, "port_listening", lambda _service: listening)
-    monkeypatch.setattr(
-        workspace, "run", lambda *_a, **_kw: "similarly-named-container"
-    )
+    monkeypatch.setattr(workspace, "run", lambda *_a, **_kw: "similarly-named-container")
     if listening:
         with pytest.raises(SystemExit, match="unrelated process"):
-            workspace.owned_process(
-                {"postgres_container": "owned-postgres"}, "postgres"
-            )
+            workspace.owned_process({"postgres_container": "owned-postgres"}, "postgres")
     else:
-        assert not workspace.owned_process(
-            {"postgres_container": "owned-postgres"}, "postgres"
-        )
+        assert not workspace.owned_process({"postgres_container": "owned-postgres"}, "postgres")

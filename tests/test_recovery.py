@@ -163,9 +163,17 @@ def test_restored_execution_keys_and_spending_authority_are_revoked(tmp_path):
     assert result["revoked_execution_keys"] == 1
     assert result["revoked_spending_allowances"] == 1 and result["spending_disabled"]
     with sqlite3.connect(path) as db:
-        assert db.execute("SELECT count(*) FROM v2_agent_keys WHERE status='active'").fetchone()[0] == 0
+        assert (
+            db.execute("SELECT count(*) FROM v2_agent_keys WHERE status='active'").fetchone()[0]
+            == 0
+        )
         assert db.execute("SELECT enabled FROM v2_spend_policy").fetchone()[0] == 0
-        assert db.execute("SELECT revoked_at FROM v2_spend_allowance_revocations WHERE allowance_id='first'").fetchone()[0] == 123
+        assert (
+            db.execute(
+                "SELECT revoked_at FROM v2_spend_allowance_revocations WHERE allowance_id='first'"
+            ).fetchone()[0]
+            == 123
+        )
     repeated = recovery_data.invalidate_approvals(path)
     assert repeated["revoked_execution_keys"] == repeated["revoked_spending_allowances"] == 0
 
@@ -202,7 +210,10 @@ def test_snapshot_restores_vault_models_and_holds_actions(installed, tmp_path):
     assert (gateway / "tls.key").read_text() == "local-tls-private-key"
     with sqlite3.connect(gateway / "auth.db") as db:
         assert db.execute("SELECT count(*) FROM sessions").fetchone()[0] == 0
-        assert db.execute("SELECT verifier,generation FROM owner").fetchone() == ("password-verifier", 2)
+        assert db.execute("SELECT verifier,generation FROM owner").fetchone() == (
+            "password-verifier",
+            2,
+        )
     with sqlite3.connect(engine.volumes["original-gateway"] / "auth.db") as db:
         assert db.execute("SELECT count(*) FROM sessions").fetchone()[0] == 1
     assert {turn["recovery_disposition"] for turn in state["unfinished_turns"]} == {
@@ -218,18 +229,14 @@ def test_snapshot_restores_vault_models_and_holds_actions(installed, tmp_path):
             db.execute("SELECT body FROM v2_objects WHERE id='approval'").fetchone()[0]
         )
         settings = json.loads(
-            db.execute("SELECT body FROM v2_objects WHERE kind='settings'").fetchone()[
-                0
-            ]
+            db.execute("SELECT body FROM v2_objects WHERE kind='settings'").fetchone()[0]
         )
     assert request["status"] == "cancelled"
     assert settings["lockdown"] is True
     # Recovery must not modify the source approval or the source's availability.
     with sqlite3.connect(engine.volumes["original-toolgate"] / "toolgate.db") as db:
         assert (
-            json.loads(db.execute("SELECT body FROM v2_objects").fetchone()[0])[
-                "status"
-            ]
+            json.loads(db.execute("SELECT body FROM v2_objects").fetchone()[0])["status"]
             == "approved"
         )
 
@@ -250,9 +257,7 @@ def test_backup_refuses_legacy_plaintext_provider_credentials(installed):
 
 
 @pytest.mark.parametrize("damage", ["missing", "changed", "unlisted", "legacy"])
-def test_incomplete_or_changed_snapshots_fail_before_docker(
-    installed, tmp_path, damage
-):
+def test_incomplete_or_changed_snapshots_fail_before_docker(installed, tmp_path, damage):
     root, engine = installed
     snapshot = recovery.backup(root, None, engine)
     if damage == "missing":
@@ -286,9 +291,7 @@ def test_dump_failure_never_publishes_success_and_restarts_only_previous_writers
     assert not (root / ".conker-backup.lock").exists()
 
 
-def test_interrupted_restore_stays_isolated_and_keeps_recovery_hold(
-    installed, tmp_path
-):
+def test_interrupted_restore_stays_isolated_and_keeps_recovery_hold(installed, tmp_path):
     root, engine = installed
     snapshot = recovery.backup(root, None, engine)
     engine.calls.clear()
@@ -304,15 +307,9 @@ def test_interrupted_restore_stays_isolated_and_keeps_recovery_hold(
         if call[0] == "run":
             assert call[call.index("--network") + 1] == "none"
             assert call[call.index("--log-driver") + 1] == "local"
-            assert (
-                "-p" not in call
-                and "--publish" not in call
-                and "--privileged" not in call
-            )
+            assert "-p" not in call and "--publish" not in call and "--privileged" not in call
         assert call[0] not in {"compose", "start"}
-    assert all(
-        name.startswith("conker-recovery-") for name in state["volumes"].values()
-    )
+    assert all(name.startswith("conker-recovery-") for name in state["volumes"].values())
 
 
 @pytest.mark.parametrize(
@@ -379,20 +376,21 @@ except ImportError:
 def test_current_toolgate_rejects_restored_approval(tmp_path):
     gate = Path(os.environ.get("CONKER_TEST_TOOLGATE", ROOT.parent / "gates/toolgate"))
     if not (gate / "toolgate/core/control_plane.py").exists():
-        pytest.skip(
-            "set CONKER_TEST_TOOLGATE to run compatibility against the actual gate"
-        )
+        pytest.skip("set CONKER_TEST_TOOLGATE to run compatibility against the actual gate")
     env = {
         **os.environ,
         "PYTHONPATH": str(gate),
         "PYTHONDONTWRITEBYTECODE": "1",
         "TOOLGATE_DATA_DIR": str(tmp_path),
     }
-    create = APPROVALS + """
+    create = (
+        APPROVALS
+        + """
 r = approvals.create_verification_request('Run echo','test','agent','tool','echo',{},1,900,'agent-id')
 approvals.decide_request(r['id'],'approved','owner')
 print(r['id'])
 """
+    )
     result = subprocess.run(
         [sys.executable, "-c", create],
         env=env,
@@ -402,12 +400,15 @@ print(r['id'])
     )
     request = result.stdout.strip()
     recovery_data.invalidate_approvals(tmp_path / "toolgate.db")
-    consume = APPROVALS + """
+    consume = (
+        APPROVALS
+        + """
 import sys
 allowed, reason = approvals.consume_verification(sys.argv[1],'tool','echo',{},1,'agent','agent-id')
 assert not allowed, 'restored approval executed'
 assert cp.settings()['lockdown'] is True
 """
+    )
     subprocess.run(
         [sys.executable, "-c", consume, request],
         env=env,
@@ -417,9 +418,7 @@ assert cp.settings()['lockdown'] is True
     )
 
 
-def test_cli_dump_failure_exits_nonzero_without_success_message(
-    installed, monkeypatch, capsys
-):
+def test_cli_dump_failure_exits_nonzero_without_success_message(installed, monkeypatch, capsys):
     root, engine = installed
     engine.fail_dump = True
     monkeypatch.setattr(recovery, "Docker", lambda: engine)
@@ -434,9 +433,7 @@ def test_cli_dump_failure_exits_nonzero_without_success_message(
     assert "Recovery failed" in output.err
 
 
-def test_cli_restore_reports_hold_with_nonzero_exit(
-    installed, tmp_path, monkeypatch, capsys
-):
+def test_cli_restore_reports_hold_with_nonzero_exit(installed, tmp_path, monkeypatch, capsys):
     root, engine = installed
     snapshot = recovery.backup(root, None, engine)
     monkeypatch.setattr(recovery, "Docker", lambda: engine)
@@ -500,9 +497,7 @@ def test_image_declared_volume_is_inventoried_and_restored(installed, tmp_path):
     snapshot = recovery.backup(root, None, engine)
     state = recovery_restore.restore(snapshot, tmp_path / "recovered", engine)
     extra = state["volumes"]["extra-searxng-0"]
-    assert (
-        engine.volumes[extra] / "settings.yml"
-    ).read_text() == "owner configured sources"
+    assert (engine.volumes[extra] / "settings.yml").read_text() == "owner configured sources"
 
 
 @pytest.mark.parametrize("destination", ["/var/run/docker.sock", "/host/root"])

@@ -55,15 +55,11 @@ def validate_workspace(
     ):
         raise TerminalWorkspaceError("terminal workspace selection is invalid")
     if _has_symlink_component(workspace):
-        raise TerminalWorkspaceError(
-            "terminal workspace must not resolve through a symlink"
-        )
+        raise TerminalWorkspaceError("terminal workspace must not resolve through a symlink")
     try:
         resolved = workspace.resolve(strict=True)
     except (OSError, RuntimeError) as exc:
-        raise TerminalWorkspaceError(
-            "terminal workspace must be an existing directory"
-        ) from exc
+        raise TerminalWorkspaceError("terminal workspace must be an existing directory") from exc
     if not resolved.is_dir():
         raise TerminalWorkspaceError("terminal workspace must be an existing directory")
     if resolved == Path(resolved.anchor):
@@ -79,9 +75,7 @@ def validate_workspace(
     for label, path in protected.items():
         candidate = path.resolve(strict=False)
         if _overlaps(resolved, candidate):
-            raise TerminalWorkspaceError(
-                f"terminal workspace overlaps protected {label} data"
-            )
+            raise TerminalWorkspaceError(f"terminal workspace overlaps protected {label} data")
     home_path = home.resolve(strict=False)
     if resolved == home_path or home_path.is_relative_to(resolved):
         raise TerminalWorkspaceError(

@@ -129,9 +129,7 @@ def backups(root: Path, policy: dict | None) -> dict:
         "retentionCopies": policy["retentionCopies"],
         "ready": ready,
         # A second disk survives the system disk failing, not this computer dying.
-        "separateDisk": os.stat(root).st_dev != os.stat(destination).st_dev
-        if ready
-        else None,
+        "separateDisk": os.stat(root).st_dev != os.stat(destination).st_dev if ready else None,
         "freeBytes": shutil.disk_usage(destination).free if ready else None,
         "snapshots": snapshots[:100],
         "partialSnapshots": sum(1 for name in names if PARTIAL.fullmatch(name)),

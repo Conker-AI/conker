@@ -96,9 +96,7 @@ def test_unicode_boundary_and_explicit_empty_query(invoke):
     assert run("sessions", "--query", "🦔" * 200, "--limit", 1) == 0
     assert parse_qs(urlsplit(calls[-1].full_url).query)["q"] == ["🦔" * 200]
     assert run("sessions", "--query", "") == 0
-    assert parse_qs(urlsplit(calls[-1].full_url).query, keep_blank_values=True)[
-        "q"
-    ] == [""]
+    assert parse_qs(urlsplit(calls[-1].full_url).query, keep_blank_values=True)["q"] == [""]
 
 
 @pytest.mark.parametrize(
@@ -115,20 +113,14 @@ def test_unicode_boundary_and_explicit_empty_query(invoke):
         ("pi", "/sessions/history", None, {"cursor": None}),
     ],
 )
-def test_structured_query_cannot_widen_other_requests(
-    monkeypatch, service, path, body, query
-):
-    monkeypatch.setattr(
-        cli, "build_opener", lambda *_: pytest.fail("Unexpected network")
-    )
+def test_structured_query_cannot_widen_other_requests(monkeypatch, service, path, body, query):
+    monkeypatch.setattr(cli, "build_opener", lambda *_: pytest.fail("Unexpected network"))
     with pytest.raises(ValueError):
         cli.request({}, service, path, body, query=query)
 
 
 @pytest.mark.parametrize("status", [401, 422, 503])
-def test_history_error_is_read_specific_safe_and_never_retried(
-    invoke, monkeypatch, capsys, status
-):
+def test_history_error_is_read_specific_safe_and_never_retried(invoke, monkeypatch, capsys, status):
     run, _, _ = invoke
     attempts = []
 

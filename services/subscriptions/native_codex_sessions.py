@@ -69,9 +69,7 @@ def list_query(values):
         archived = archived == "true"
     if type(archived) is not bool:
         raise invalid()
-    if cursor is not None and (
-        not isinstance(cursor, str) or not CURSOR.fullmatch(cursor)
-    ):
+    if cursor is not None and (not isinstance(cursor, str) or not CURSOR.fullmatch(cursor)):
         raise invalid()
     return {"limit": limit, "archived": archived, "cursor": cursor}
 
@@ -144,10 +142,7 @@ def _row(value):
     if value.get("ephemeral") is not False:
         raise SessionError()
     created, updated = value.get("createdAt"), value.get("updatedAt")
-    if any(
-        type(item) is not int or not 0 <= item <= MAX_INTEGER
-        for item in (created, updated)
-    ):
+    if any(type(item) is not int or not 0 <= item <= MAX_INTEGER for item in (created, updated)):
         raise SessionError()
     cwd, provider = value.get("cwd"), value.get("modelProvider")
     if (
@@ -209,10 +204,7 @@ class _Command:
             time.sleep(min(0.01, max(0, self.deadline - time.monotonic())))
 
     def write(self, value):
-        raw = (
-            json.dumps(value, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
-            + b"\n"
-        )
+        raw = json.dumps(value, ensure_ascii=False, separators=(",", ":")).encode("utf-8") + b"\n"
         while raw:
             self.check()
             try:
@@ -312,11 +304,7 @@ class Sessions:
                     stdin=subprocess.PIPE,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
-                    **(
-                        {"creationflags": subprocess.CREATE_NO_WINDOW}
-                        if os.name == "nt"
-                        else {}
-                    ),
+                    **({"creationflags": subprocess.CREATE_NO_WINDOW} if os.name == "nt" else {}),
                 )
                 self.process = process
             yield _Command(self, process, deadline)
@@ -360,10 +348,7 @@ class Sessions:
                 raise SessionError()
             deadline = time.monotonic() + OPERATION_SECONDS
             with self._command(["--version"], deadline) as command:
-                if (
-                    command.all_output().decode("utf-8").strip()
-                    != f"codex-cli {CODEX_VERSION}"
-                ):
+                if command.all_output().decode("utf-8").strip() != f"codex-cli {CODEX_VERSION}":
                     raise SessionError()
             with self._command(
                 ["app-server", "--stdio", "-c", 'cli_auth_credentials_store="file"'],
@@ -399,9 +384,7 @@ class Sessions:
             "archived": query["archived"],
             "cursor": native,
         }
-        raw = json.dumps(value, ensure_ascii=False, separators=(",", ":")).encode(
-            "utf-8"
-        )
+        raw = json.dumps(value, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
         result = base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")
         if not CURSOR.fullmatch(result):
             raise SessionError()
@@ -412,9 +395,7 @@ class Sessions:
         if cursor is None:
             return None
         try:
-            raw = base64.b64decode(
-                cursor + "=" * (-len(cursor) % 4), altchars=b"-_", validate=True
-            )
+            raw = base64.b64decode(cursor + "=" * (-len(cursor) % 4), altchars=b"-_", validate=True)
             value = _json(raw)
             if (
                 not isinstance(value, dict)
@@ -475,9 +456,7 @@ class Sessions:
     def status(self, identity):
         identity = thread_id(identity)
         with self._observer() as observer:
-            result = observer.call(
-                "thread/read", {"threadId": identity, "includeTurns": False}
-            )
+            result = observer.call("thread/read", {"threadId": identity, "includeTurns": False})
             value = _row(result.get("thread"))
             if value["id"] != identity:
                 raise SessionError()

@@ -65,8 +65,7 @@ def test_allowlisted_file_growing_past_its_entry_fails(tmp_path):
     result = run_guard(tmp_path)
     assert result.returncode == 1
     assert (
-        "big.py: grew to 701 lines; it is allowlisted at 700 and may only shrink."
-        in result.stdout
+        "big.py: grew to 701 lines; it is allowlisted at 700 and may only shrink." in result.stdout
     )
 
 

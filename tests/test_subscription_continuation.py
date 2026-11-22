@@ -20,9 +20,7 @@ from scripts.chatgpt_provider import RESPONSES_URL, ChatGPTError, inference_even
 @pytest.fixture
 def runtime(monkeypatch):
     source = Path(
-        os.environ.get(
-            "CONKER_TEST_PI_SOURCE", Path(__file__).resolve().parents[2] / "conker-pi"
-        )
+        os.environ.get("CONKER_TEST_PI_SOURCE", Path(__file__).resolve().parents[2] / "conker-pi")
     )
     if not (source / "pi/turns/loop.py").is_file():
         pytest.skip("Set CONKER_TEST_PI_SOURCE for the Pi/host integration suite.")
@@ -67,17 +65,13 @@ def test_approved_action_narrates_and_later_turn_preserves_recorded_result(
     replies = ['{"tool":"test.echo","args":{"text":"hello"}}']
     if fail_narration:
         replies.append(None)
-    replies.extend(
-        ["The saved action returned hello.", "It was the same recorded result."]
-    )
+    replies.extend(["The saved action returned hello.", "It was the same recorded result."])
 
     class Upstream:
         def open(self, request, timeout):
             projected.append(json.loads(request.data))
             reply = replies.pop(0)
-            events = [
-                {"type": "response.output_text.delta", "delta": reply or "partial"}
-            ]
+            events = [{"type": "response.output_text.delta", "delta": reply or "partial"}]
             if reply is not None:
                 events.append(
                     {
@@ -89,9 +83,7 @@ def test_approved_action_narrates_and_later_turn_preserves_recorded_result(
                     }
                 )
             return Stream(
-                b"".join(
-                    b"data: " + json.dumps(row).encode() + b"\n\n" for row in events
-                )
+                b"".join(b"data: " + json.dumps(row).encode() + b"\n\n" for row in events)
             )
 
     def bridge(request):
@@ -135,14 +127,10 @@ def test_approved_action_narrates_and_later_turn_preserves_recorded_result(
             self.invocations.append((action_id, approval_request_id))
             if not self.approved:
                 assert approval_request_id is None
-                return Approval(
-                    "test-approval", None, "Approve exact action", tool_id, args
-                )
+                return Approval("test-approval", None, "Approve exact action", tool_id, args)
             assert approval_request_id == "test-approval" and self.effects == 0
             self.effects += 1
-            return Result(
-                True, {"echo": args["text"], "source": "saved-fixture"}, tool_id
-            )
+            return Result(True, {"echo": args["text"], "source": "saved-fixture"}, tool_id)
 
     provider = Provider("/synthetic/socket", transport=httpx.MockTransport(bridge))
     gate = Gate()
@@ -160,13 +148,11 @@ def test_approved_action_narrates_and_later_turn_preserves_recorded_result(
             with pytest.raises(ActedWithoutReply):
                 loop.resume_turn(parked["turn_id"])
             assert store.get_turn(parked["turn_id"])["status"] == "acted_no_reply"
-            result = loop.recover_reply(
-                parked["turn_id"], "subscription-reply-recovery-001"
-            )
+            result = loop.recover_reply(parked["turn_id"], "subscription-reply-recovery-001")
             before = len(requests)
-            assert loop.recover_reply(
-                parked["turn_id"], "subscription-reply-recovery-001"
-            )["replayed"]
+            assert loop.recover_reply(parked["turn_id"], "subscription-reply-recovery-001")[
+                "replayed"
+            ]
             assert len(requests) == before
         else:
             result = loop.resume_turn(parked["turn_id"])

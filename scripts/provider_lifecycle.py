@@ -23,9 +23,7 @@ def graceful_stop(config, port):
                 "Content-Type": "application/json",
             },
         )
-        with build_opener(ProxyHandler({}), NoRedirect()).open(
-            request, timeout=3
-        ) as response:
+        with build_opener(ProxyHandler({}), NoRedirect()).open(request, timeout=3) as response:
             return json.loads(response.read(1025)) == {"status": "stopping"}
     except (ValueError, OSError, URLError):
         # A legacy/unresponsive service falls back only to exact service processes.
@@ -63,9 +61,7 @@ def stop(process, config, port, launcher):
         except (psutil.AccessDenied, psutil.ZombieProcess, psutil.NoSuchProcess):
             continue
     acknowledged = graceful_stop(config, port)
-    _gone, alive = psutil.wait_procs(
-        [item for item, _ in owned], timeout=15 if acknowledged else 0
-    )
+    _gone, alive = psutil.wait_procs([item for item, _ in owned], timeout=15 if acknowledged else 0)
 
     def signal(candidate, created, method):
         try:
@@ -73,9 +69,7 @@ def stop(process, config, port, launcher):
             # identity before signaling rather than trusting that cached value.
             current = psutil.Process(candidate.pid)
             if current.create_time() != created or not matches(current):
-                raise SystemExit(
-                    "Provider process identity changed; nothing else stopped."
-                )
+                raise SystemExit("Provider process identity changed; nothing else stopped.")
             getattr(current, method)()
         except psutil.NoSuchProcess:
             pass

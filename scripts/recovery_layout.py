@@ -150,9 +150,20 @@ REPOSITORY_PROFILE = LayoutProfile(
     database_name="memorygate",
     memory_key_name="runtime-fernet.key",
     writers=(
-        "gateway", "pi", "toolgate", "memorygate", "embeddings", "systemgate",
-        "searxng", "ollama", "qdrant", "owner-terminal",
-        "sandbox-runner", "package-proxy", "subscriptions", "data-owner",
+        "gateway",
+        "pi",
+        "toolgate",
+        "memorygate",
+        "embeddings",
+        "systemgate",
+        "searxng",
+        "ollama",
+        "qdrant",
+        "owner-terminal",
+        "sandbox-runner",
+        "package-proxy",
+        "subscriptions",
+        "data-owner",
     ),
     excluded_mounts={
         "gateway": frozenset({"/run/conker-terminal", "/run/conker-providers"}),
@@ -182,9 +193,19 @@ UBUNTU_PROFILE = LayoutProfile(
     database_name="conker",
     memory_key_name="runtime.key",
     writers=(
-        "gateway", "pi", "toolgate", "memorygate", "embeddings", "systemgate",
-        "decisions", "subscriptions", "ollama", "qdrant", "owner-terminal",
-        "sandbox-runner", "package-proxy",
+        "gateway",
+        "pi",
+        "toolgate",
+        "memorygate",
+        "embeddings",
+        "systemgate",
+        "decisions",
+        "subscriptions",
+        "ollama",
+        "qdrant",
+        "owner-terminal",
+        "sandbox-runner",
+        "package-proxy",
     ),
     excluded_mounts={
         "gateway": frozenset({"/dashboard", "/run/conker-terminal", "/run/conker-providers"}),
@@ -217,10 +238,14 @@ SERVICES = REPOSITORY_SERVICES
 STORES = REPOSITORY_STORES
 
 
-REQUIRED = COMMON_REQUIRED | REPOSITORY_CONFIG_REQUIRED | {
-    *(name + ".tar" for name in REPOSITORY_STORES),
-    "memorygate-backups.tar",
-}
+REQUIRED = (
+    COMMON_REQUIRED
+    | REPOSITORY_CONFIG_REQUIRED
+    | {
+        *(name + ".tar" for name in REPOSITORY_STORES),
+        "memorygate-backups.tar",
+    }
+)
 
 
 BLOCKERS = [
@@ -282,8 +307,7 @@ def sync_directory(path: Path) -> None:
 
 def detect_layout(root: Path) -> LayoutProfile:
     repository = all(
-        (root / name).is_file()
-        for name in (".env", "versions.env", "docker-compose.yml")
+        (root / name).is_file() for name in (".env", "versions.env", "docker-compose.yml")
     )
     ubuntu = all(
         path.is_file()
@@ -306,9 +330,12 @@ def compose_command(root: Path, profile: LayoutProfile) -> list[str]:
     if profile.name == "repository":
         command.extend(
             [
-                "--env-file", str(root / "versions.env"),
-                "--env-file", str(root / ".env"),
-                "-f", str(root / "docker-compose.yml"),
+                "--env-file",
+                str(root / "versions.env"),
+                "--env-file",
+                str(root / ".env"),
+                "-f",
+                str(root / "docker-compose.yml"),
             ]
         )
         # The overlays the launcher runs, so their services are inventoried and stopped too.
@@ -373,5 +400,7 @@ def _bounded_text(value: Any, field: str, limit: int = 1000) -> str:
         or len(value) > limit
         or any(ord(character) < 32 for character in value)
     ):
-        raise RecoveryError(f"Review {field} must be non-empty bounded text without control characters.")
+        raise RecoveryError(
+            f"Review {field} must be non-empty bounded text without control characters."
+        )
     return value

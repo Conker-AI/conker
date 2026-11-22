@@ -24,21 +24,15 @@ def check(args) -> None:
         if args.expected_digest is not None:
             identity(args.expected_digest, r"[a-f0-9]{64}", "exact saved digest")
             if args.enabled is None:
-                raise ValueError(
-                    "Use --enabled together with --expected-digest to change access."
-                )
+                raise ValueError("Use --enabled together with --expected-digest to change access.")
     if args.command == "tool-card":
         identity(args.id, TOOL_ID, "tool ID")
         if args.template is not None and args.template not in CARD_TEMPLATES:
-            raise ValueError(
-                "Unknown card template; choose one of: " + ", ".join(CARD_TEMPLATES)
-            )
+            raise ValueError("Unknown card template; choose one of: " + ", ".join(CARD_TEMPLATES))
     if args.command == "tool-access":
         identity(args.id, TOOL_ID, "tool ID")
         if (args.enabled is None) != (args.expected_digest is None):
-            raise ValueError(
-                "Use --enabled together with --expected-digest to change access."
-            )
+            raise ValueError("Use --enabled together with --expected-digest to change access.")
         if args.expected_digest is not None:
             identity(args.expected_digest, r"[a-f0-9]{64}", "exact saved digest")
 
@@ -52,9 +46,7 @@ def operation(args, config, request):
                 f"/v2/owner/tools/{args.id}/card",
                 {"template": args.template},
             )
-        cards = (request(config, "toolgate-owner", "/v2/owner/access", None) or {}).get(
-            "cards", {}
-        )
+        cards = (request(config, "toolgate-owner", "/v2/owner/access", None) or {}).get("cards", {})
         return {"id": args.id, "template": cards.get(args.id, "do")}
     if args.command == "tool-access":
         body = (
@@ -62,9 +54,7 @@ def operation(args, config, request):
             if args.enabled is not None
             else None
         )
-        return request(
-            config, "toolgate-owner", f"/v2/owner/tools/{args.id}/access", body
-        )
+        return request(config, "toolgate-owner", f"/v2/owner/tools/{args.id}/access", body)
     path, body = "/v2/owner/mcp/tools", None
     if args.operation == "discover":
         path = "/v2/owner/mcp/discover"

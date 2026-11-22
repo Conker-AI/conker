@@ -39,8 +39,9 @@ def versions(active: bool) -> str:
     return "\n".join(lines) + "\n"
 
 
-def prepare(tmp_path: Path, *, active: bool, workspaces: Path | None = None,
-            accept_folder: bool = False) -> subprocess.CompletedProcess:
+def prepare(
+    tmp_path: Path, *, active: bool, workspaces: Path | None = None, accept_folder: bool = False
+) -> subprocess.CompletedProcess:
     dashboard = tmp_path / "sources" / "companion" / "dashboard" / "dist"
     dashboard.mkdir(parents=True)
     (dashboard / "index.html").write_text("<!doctype html>", encoding="utf-8")
@@ -149,7 +150,10 @@ def test_ubuntu_generator_emits_exact_active_sandbox_boundary(tmp_path):
         ],
         "healthcheck": {
             "test": ["CMD", "python", "-m", "toolgate.sandbox.runner", "health"],
-            "interval": "10s", "timeout": "5s", "retries": 6, "start_period": "120s",
+            "interval": "10s",
+            "timeout": "5s",
+            "retries": 6,
+            "start_period": "120s",
         },
         "logging": LOGGING,
     }
@@ -169,7 +173,9 @@ def test_ubuntu_generator_emits_exact_active_sandbox_boundary(tmp_path):
         "volumes": ["sandbox_proxy:/run/conker-proxy"],
         "healthcheck": {
             "test": ["CMD", "python", "-m", "toolgate.sandbox.proxy", "health"],
-            "interval": "10s", "timeout": "5s", "retries": 6,
+            "interval": "10s",
+            "timeout": "5s",
+            "retries": 6,
         },
         "logging": LOGGING,
     }
@@ -199,15 +205,25 @@ def test_ubuntu_sandbox_services_keep_the_repository_overlay_settings(tmp_path):
     folder.mkdir()
     assert prepare(tmp_path, active=True, workspaces=folder, accept_folder=True).returncode == 0
     services = generated(tmp_path)[0]["services"]
-    overlay = yaml.safe_load(
-        (ROOT / "docker-compose.sandbox.yml").read_text(encoding="utf-8")
-    )["services"]
+    overlay = yaml.safe_load((ROOT / "docker-compose.sandbox.yml").read_text(encoding="utf-8"))[
+        "services"
+    ]
 
     for name in ("sandbox-runner", "package-proxy"):
         ubuntu, repository = services[name], overlay[name]
         for key in (
-            "command", "user", "network_mode", "networks", "read_only", "init", "cap_drop",
-            "security_opt", "pids_limit", "mem_limit", "stop_grace_period", "healthcheck",
+            "command",
+            "user",
+            "network_mode",
+            "networks",
+            "read_only",
+            "init",
+            "cap_drop",
+            "security_opt",
+            "pids_limit",
+            "mem_limit",
+            "stop_grace_period",
+            "healthcheck",
         ):
             assert ubuntu.get(key) == repository.get(key), (name, key)
         assert ubuntu["environment"].keys() == repository["environment"].keys()
@@ -217,7 +233,8 @@ def test_ubuntu_sandbox_services_keep_the_repository_overlay_settings(tmp_path):
         ]
     # Only the image and ToolGate's UID differ: 1000 here, 0 in the repository layout.
     differing = {
-        key for key, value in services["sandbox-runner"]["environment"].items()
+        key
+        for key, value in services["sandbox-runner"]["environment"].items()
         if value != overlay["sandbox-runner"]["environment"][key]
     }
     assert differing == {"SANDBOX_IMAGE", "SANDBOX_CLIENT_UIDS"}

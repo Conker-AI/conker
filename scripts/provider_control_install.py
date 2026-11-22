@@ -13,9 +13,7 @@ from pathlib import Path
 def quoted(value: str) -> str:
     if any(char in value for char in "\x00\r\n"):
         raise ValueError("Service arguments must be one line.")
-    return (
-        '"' + value.replace("\\", "\\\\").replace('"', '\\"').replace("%", "%%") + '"'
-    )
+    return '"' + value.replace("\\", "\\\\").replace('"', '\\"').replace("%", "%%") + '"'
 
 
 def working_directory(source: Path) -> str:
@@ -43,11 +41,7 @@ def install(root: Path, source: Path, layout: str):
     socket = directory / "control.sock"
     inference.mkdir(parents=True, exist_ok=True, mode=0o700)
     inference.chmod(0o700)
-    name = (
-        "conker-providers-"
-        + hashlib.sha256(str(root).encode()).hexdigest()[:12]
-        + ".service"
-    )
+    name = "conker-providers-" + hashlib.sha256(str(root).encode()).hexdigest()[:12] + ".service"
     unit_directory = Path.home() / ".config/systemd/user"
     unit_directory.mkdir(parents=True, exist_ok=True)
     arguments = [
@@ -77,13 +71,9 @@ def install(root: Path, source: Path, layout: str):
     path.write_text(unit, encoding="utf-8")
     path.chmod(0o600)
     environment = {**os.environ, "XDG_RUNTIME_DIR": f"/run/user/{os.getuid()}"}
-    subprocess.run(
-        ["systemctl", "--user", "daemon-reload"], env=environment, check=True
-    )
+    subprocess.run(["systemctl", "--user", "daemon-reload"], env=environment, check=True)
     subprocess.run(["systemctl", "--user", "enable", name], env=environment, check=True)
-    subprocess.run(
-        ["systemctl", "--user", "restart", name], env=environment, check=True
-    )
+    subprocess.run(["systemctl", "--user", "restart", name], env=environment, check=True)
     return {"service": name, "socket": str(socket)}
 
 

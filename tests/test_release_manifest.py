@@ -35,17 +35,22 @@ def test_repository_release_manifest_is_complete_and_matches_dashboard():
     )
 
     assert normalized["manifest_version"] == 2
-    assert set(normalized["gates"]) == {
-        "pi", "toolgate", "memorygate", "systemgate", "embeddings"
-    }
+    assert set(normalized["gates"]) == {"pi", "toolgate", "memorygate", "systemgate", "embeddings"}
     assert set(normalized["third_party_images"]) == {
-        "postgres", "qdrant", "ollama", "searxng", "node_build"
+        "postgres",
+        "qdrant",
+        "ollama",
+        "searxng",
+        "node_build",
     }
     assert normalized["capabilities"]["owner-terminal"] == {
-        "state": "deferred", "image": None, "acceptance_sha256": None,
+        "state": "deferred",
+        "image": None,
+        "acceptance_sha256": None,
     }
     assert normalized["capabilities"]["agent-sandbox"] == {
-        "state": "active", "image": parse_env(MANIFEST)["AGENT_SANDBOX_IMAGE"],
+        "state": "active",
+        "image": parse_env(MANIFEST)["AGENT_SANDBOX_IMAGE"],
     }
 
 
@@ -143,7 +148,11 @@ def test_changelog_pins_match_the_manifest():
     """The release notes' "Pinned in this release" table says what versions.env pins."""
     text = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
     # The table sits in the newest section that has one: Unreleased, or the version a release PR just cut.
-    section = next(s for s in re.split(r"^## ", text, flags=re.MULTILINE) if "\n### Pinned in this release\n" in s)
+    section = next(
+        s
+        for s in re.split(r"^## ", text, flags=re.MULTILINE)
+        if "\n### Pinned in this release\n" in s
+    )
     table = section.split("\n### Pinned in this release\n", 1)[1]
     rows = dict(re.findall(r"^\| (\w+) \| v(\S+) \|$", table, flags=re.MULTILINE))
     values = parse_env(MANIFEST)

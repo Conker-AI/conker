@@ -81,8 +81,7 @@ def test_chatgpt_windows_are_percent_left_with_reset_times():
     assert value["available"] is True and value["plan"] == "plus"
     assert value["resetCredits"] == 1
     assert [
-        (w["label"], w["usedPercent"], w["leftPercent"], w["minutes"])
-        for w in value["windows"]
+        (w["label"], w["usedPercent"], w["leftPercent"], w["minutes"]) for w in value["windows"]
     ] == [("5-hour", 19, 81, 300), ("weekly", 3, 97, 10080)]
     assert value["windows"][0]["resetsAt"] == "2025-10-20T18:19:59Z"
 
@@ -103,10 +102,7 @@ def test_chatgpt_named_buckets_keep_their_name_and_bad_values_are_dropped():
     )
     labels = [w["label"] for w in value["windows"]]
     assert labels == ["5-hour", "weekly", "GPT-5 Pro 1-day"]
-    assert (
-        value["windows"][2]["usedPercent"] == 50
-        and value["windows"][2]["resetsAt"] is None
-    )
+    assert value["windows"][2]["usedPercent"] == 50 and value["windows"][2]["resetsAt"] is None
     assert plan_limits.chatgpt({"rateLimits": {}}) == {
         "provider": "chatgpt",
         "available": False,
@@ -118,9 +114,7 @@ def test_chatgpt_named_buckets_keep_their_name_and_bad_values_are_dropped():
 def test_claude_usage_report_becomes_the_same_shape():
     value = plan_limits.claude(CLAUDE_STREAM.encode())
     assert value["available"] is True and value["extraUsageEnabled"] is False
-    assert [
-        (w["label"], w["usedPercent"], w["leftPercent"]) for w in value["windows"]
-    ] == [
+    assert [(w["label"], w["usedPercent"], w["leftPercent"]) for w in value["windows"]] == [
         ("5-hour", 19, 81),
         ("weekly", 3, 97),
         ("weekly Opus", 100, 0),
@@ -133,9 +127,7 @@ def test_claude_scope_of_an_unexpected_shape_keeps_a_plain_label():
         {"kind": "weekly_scoped", "percent": 5, "scope": "Opus"},
         {"kind": "weekly_scoped", "percent": 6, "scope": {"model": "Opus"}},
     ]
-    stream = json.dumps(
-        {"type": "assistant", "usage_report": {"rate_limits": {"limits": rows}}}
-    )
+    stream = json.dumps({"type": "assistant", "usage_report": {"rate_limits": {"limits": rows}}})
     value = plan_limits.claude(stream.encode())
     assert [w["label"] for w in value["windows"]] == ["weekly scoped", "weekly scoped"]
 
@@ -175,19 +167,13 @@ def test_read_chatgpt_asks_codex_only_when_signed_in():
     )
 
     signed_out = FakeRPC(None, CODEX)
-    assert (
-        plan_limits.read_chatgpt(control(signed_out))["problem"] == "sign_in_required"
-    )
+    assert plan_limits.read_chatgpt(control(signed_out))["problem"] == "sign_in_required"
     assert [method for method, _ in signed_out.calls] == ["account/read"]
 
     failing = FakeRPC({"type": "chatgpt"}, error=ValueError("runtime_unavailable"))
-    assert (
-        plan_limits.read_chatgpt(control(failing))["problem"] == "runtime_unavailable"
-    )
+    assert plan_limits.read_chatgpt(control(failing))["problem"] == "runtime_unavailable"
     leaking = FakeRPC({"type": "chatgpt"}, error=ValueError("token=secret value!\n"))
-    assert (
-        plan_limits.read_chatgpt(control(leaking))["problem"] == "runtime_unavailable"
-    )
+    assert plan_limits.read_chatgpt(control(leaking))["problem"] == "runtime_unavailable"
     assert plan_limits.read_chatgpt(control(None))["problem"] == "runtime_unavailable"
 
 
@@ -252,6 +238,7 @@ def test_cli_lists_both_plans_and_marks_a_missing_runtime(monkeypatch, capsys):
     from urllib.error import HTTPError
 
     from scripts import conker as cli
+
     asked = []
 
     def request(config, service, path, body=None, **_):
@@ -317,9 +304,7 @@ def test_the_inference_socket_serves_plan_usage_and_status_only():
 
     class Rpc:
         def call(self, method, params):
-            return (
-                {"account": {"type": "chatgpt"}} if method == "account/read" else CODEX
-            )
+            return {"account": {"type": "chatgpt"}} if method == "account/read" else CODEX
 
     control = SimpleNamespace(
         rpc=Rpc(),
@@ -369,6 +354,7 @@ def test_a_malformed_responses_body_gets_a_422_not_a_closed_connection():
 
 def test_cli_reads_pis_alerts_and_dismisses_one(monkeypatch, capsys):
     from scripts import conker as cli
+
     asked = []
 
     def request(config, service, path, body=None, **_):
@@ -390,10 +376,9 @@ def test_cli_reads_pis_alerts_and_dismisses_one(monkeypatch, capsys):
     assert "conker limits --alerts" in capsys.readouterr().err
 
 
-def test_a_workspace_without_subscription_runtimes_reports_not_configured(
-    monkeypatch, capsys
-):
+def test_a_workspace_without_subscription_runtimes_reports_not_configured(monkeypatch, capsys):
     from scripts import conker as cli
+
     def request(*_args, **_options):
         raise AssertionError("no runtime to ask")
 

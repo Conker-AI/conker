@@ -123,9 +123,7 @@ def test_claude_sign_in_rejects_unknown_operations(ubuntu_cli):
     assert not ubuntu_cli.docker_log.exists()
 
 
-def repository_launcher(
-    ubuntu_cli, versions: str | None, env: str = "CONKER_PORT=8050\n"
-):
+def repository_launcher(ubuntu_cli, versions: str | None, env: str = "CONKER_PORT=8050\n"):
     """The same launcher as a repository installation, against the recording Docker."""
     companion = ubuntu_cli.deployment / "sources/companion"
     (companion / ".env").write_text(env, encoding="utf-8")
@@ -175,10 +173,7 @@ def test_the_repository_layout_asks_for_the_runtime_before_signing_in(ubuntu_cli
 
     assert result.returncode == 1
     assert "./install.sh --claude-plan" in result.stderr
-    assert (
-        "status|login|logout [after ./install.sh --claude-plan]"
-        in launcher("help").stdout
-    )
+    assert "status|login|logout [after ./install.sh --claude-plan]" in launcher("help").stdout
     assert not ubuntu_cli.docker_log.exists()
 
 

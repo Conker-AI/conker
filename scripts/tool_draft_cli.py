@@ -37,9 +37,7 @@ def caller(command: list[str]):
         try:
             result = subprocess.run(
                 [*command, "exec", "-T", "pi", "python", "-c", RELAY, method, path],
-                input=b""
-                if body is None
-                else json.dumps(body, ensure_ascii=False).encode(),
+                input=b"" if body is None else json.dumps(body, ensure_ascii=False).encode(),
                 capture_output=True,
                 timeout=120,
                 check=False,
@@ -48,9 +46,7 @@ def caller(command: list[str]):
             raise OSError("Pi did not answer in its container.") from None
         status, _, content = result.stdout.partition(b"\n")
         if result.returncode or not status.isdigit():
-            raise OSError(
-                "Pi did not answer in its container. Check it with: conker status"
-            )
+            raise OSError("Pi did not answer in its container. Check it with: conker status")
         code = int(status)
         if 400 <= code < 500:
             raise Refused(f"Pi refused it (HTTP {code}){reason(content)}.")

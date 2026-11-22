@@ -63,8 +63,13 @@ def correction_file(tmp_path, text):
 
 def apply_args(path, revision=7, memory_id=MEMORY_ID, request_id=REQUEST_ID):
     return (
-        "apply", memory_id, path, "--expected-revision", revision,
-        "--request-id", request_id,
+        "apply",
+        memory_id,
+        path,
+        "--expected-revision",
+        revision,
+        "--request-id",
+        request_id,
     )
 
 
@@ -118,9 +123,7 @@ def test_explicit_retry_uses_only_the_original_request_and_reviewed_hash(invoke)
 
 @pytest.mark.parametrize("operation", ["apply", "retry"])
 @pytest.mark.parametrize("failure", ["http", "timeout", "invalid-json", "oversize"])
-def test_uncertain_writes_are_not_replayed_or_echoed(
-    invoke, tmp_path, capsys, operation, failure
-):
+def test_uncertain_writes_are_not_replayed_or_echoed(invoke, tmp_path, capsys, operation, failure):
     run, calls, _, state = invoke
     if failure == "http":
         state["failure"] = HTTPError(

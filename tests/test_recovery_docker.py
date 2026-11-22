@@ -140,9 +140,7 @@ def live_stack(tmp_path):
             "r=approvals.create_verification_request('echo','fixture','agent','tool','echo',{},1,900,'agent-id'); "
             "approvals.decide_request(r['id'],'approved','owner'); print(r['id'])"
         )
-        approval = (
-            docker.run("exec", gate, "python", "-c", create).stdout.decode().strip()
-        )
+        approval = docker.run("exec", gate, "python", "-c", create).stdout.decode().strip()
         yield root, docker, gate_image, approval
     finally:
         # The reports are written before allocation. Even an interrupted drill
@@ -222,9 +220,7 @@ def test_real_backup_restore_and_interruption(live_stack, tmp_path):
         def run(self, *args, **kwargs):
             result = super().run(*args, **kwargs)
             if "pg_restore" in args:
-                raise KeyboardInterrupt(
-                    "interrupt after PostgreSQL accepted the restore"
-                )
+                raise KeyboardInterrupt("interrupt after PostgreSQL accepted the restore")
             return result
 
     with pytest.raises(KeyboardInterrupt):
@@ -246,7 +242,9 @@ def test_real_restore_drill_checks_the_copy_and_leaves_nothing(live_stack):
     project = json.loads((root / "docker-compose.yml").read_text())["name"]
     workspace = root / ".conker/backup-schedule"
     workspace.mkdir(parents=True)
-    running = docker.run("ps", "--quiet", "--filter", "label=com.docker.compose.project=" + project).stdout
+    running = docker.run(
+        "ps", "--quiet", "--filter", "label=com.docker.compose.project=" + project
+    ).stdout
 
     receipt = backup_drill.drill(
         root,
@@ -261,4 +259,9 @@ def test_real_restore_drill_checks_the_copy_and_leaves_nothing(live_stack):
     assert receipt["checks"] == list(backup_drill.CHECKS)
     assert receipt["leftovers"] is None and list(workspace.iterdir()) == []
     # The fixture's live services kept running, untouched, through the drill.
-    assert docker.run("ps", "--quiet", "--filter", "label=com.docker.compose.project=" + project).stdout == running
+    assert (
+        docker.run(
+            "ps", "--quiet", "--filter", "label=com.docker.compose.project=" + project
+        ).stdout
+        == running
+    )

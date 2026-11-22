@@ -96,15 +96,11 @@ def test_waits_until_ready_and_prints_steps_and_issues():
     assert (method, path) == ("POST", "/tool-drafts")
     assert body["description"] == "Show free disk space"
     assert tool_drafts.REQUEST_ID.fullmatch(body["request_id"])
-    assert [call[:2] for call in pi.calls[1:]] == [
-        ("GET", f"/change-requests/{IDENTITY}")
-    ] * 2
+    assert [call[:2] for call in pi.calls[1:]] == [("GET", f"/change-requests/{IDENTITY}")] * 2
 
 
 def test_a_failed_draft_prints_the_reason_and_fails():
-    code, out = run(
-        Pi(request("failed", error="Pi restarted while drafting. Try again."))
-    )
+    code, out = run(Pi(request("failed", error="Pi restarted while drafting. Try again.")))
     assert code == 1
     assert "The draft failed: Pi restarted while drafting. Try again." in out
 
@@ -199,9 +195,7 @@ def test_development_cli_shows_pis_refusal(monkeypatch, capsys):
                 "message": "This request_id was already used.",
             }
         }
-        raise HTTPError(
-            "http://pi", 409, "conflict", {}, io.BytesIO(json.dumps(detail).encode())
-        )
+        raise HTTPError("http://pi", 409, "conflict", {}, io.BytesIO(json.dumps(detail).encode()))
 
     monkeypatch.setattr(cli, "read_config", dict)
     monkeypatch.setattr(cli, "request", refuse)
@@ -267,9 +261,7 @@ def test_development_cli_answers_through_retry(monkeypatch, capsys):
 
     monkeypatch.setattr(cli, "read_config", dict)
     monkeypatch.setattr(cli, "request", fake)
-    monkeypatch.setattr(
-        sys, "argv", ["conker.py", "tool", "answer", IDENTITY, "Bing", "--no-wait"]
-    )
+    monkeypatch.setattr(sys, "argv", ["conker.py", "tool", "answer", IDENTITY, "Bing", "--no-wait"])
     assert cli.main() == 0
     assert calls == [("POST", f"/change-requests/{IDENTITY}/retry", {"answer": "Bing"})]
     assert "Drafting." in capsys.readouterr().out
