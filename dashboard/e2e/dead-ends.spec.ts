@@ -34,9 +34,15 @@ test('update: a held update says what to do, and Update is switched off', async 
   expect(errors).toEqual([])
 })
 
-for (const [scenario, cause] of [['turn-failed-cap', /Today’s spending limit is reached, so paid models are paused until tomorrow/], ['turn-failed-plain', /The model did not send back an answer\. It may be offline or overloaded\./]] as const) {
+for (const [scenario, cause] of [
+  ['turn-failed-cap', /Today’s spending limit is reached, so paid models are paused until tomorrow/],
+  ['turn-failed-plain', /The model did not send back an answer\. It may be offline or overloaded\./],
+] as const) {
   test(`chat: a failed answer says why (${scenario}) and Try again sends the same message`, async ({ page }) => {
-    await page.addInitScript(name => { sessionStorage.setItem('conker-fake-fail', name); sessionStorage.setItem('conker-fake-resume', 'empty') }, scenario)
+    await page.addInitScript(name => {
+      sessionStorage.setItem('conker-fake-fail', name)
+      sessionStorage.setItem('conker-fake-resume', 'empty')
+    }, scenario)
     const errors = await open(page, CHAT)
     const failure = page.getByRole('region', { name: 'Conker couldn’t finish the reply' })
     await expect(failure.getByText(cause)).toBeVisible()
@@ -56,7 +62,10 @@ for (const [scenario, cause] of [['turn-failed-cap', /Today’s spending limit i
 }
 
 test('chat: an interrupted answer that ran nothing can be tried again', async ({ page }) => {
-  await page.addInitScript(() => { sessionStorage.setItem('conker-fake-fail', 'turn-interrupted'); sessionStorage.setItem('conker-fake-resume', 'empty') })
+  await page.addInitScript(() => {
+    sessionStorage.setItem('conker-fake-fail', 'turn-interrupted')
+    sessionStorage.setItem('conker-fake-resume', 'empty')
+  })
   const errors = await open(page, CHAT)
   const stopped = page.getByRole('region', { name: 'This turn was interrupted' })
   await expect(stopped.getByText(/Nothing ran\. Try again to get the answer\./)).toBeVisible()
@@ -66,7 +75,10 @@ test('chat: an interrupted answer that ran nothing can be tried again', async ({
 })
 
 test('chat: Try again is not offered once an action ran', async ({ page }) => {
-  await page.addInitScript(() => { sessionStorage.setItem('conker-fake-fail', 'turn-interrupted-acted'); sessionStorage.setItem('conker-fake-resume', 'empty') })
+  await page.addInitScript(() => {
+    sessionStorage.setItem('conker-fake-fail', 'turn-interrupted-acted')
+    sessionStorage.setItem('conker-fake-resume', 'empty')
+  })
   const errors = await open(page, CHAT)
   await expect(page.getByRole('region', { name: 'This turn was interrupted' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Try again' })).toHaveCount(0)

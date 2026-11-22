@@ -49,6 +49,9 @@ jobs:
           PI_SOURCE: ${{ github.workspace }}/pinned-pi
         run: npm run answer-ui:prompt:check
       - run: npm run lint
+      # Types for the app and for the e2e/config files, and Prettier over the files it owns (e2e, configs, unit tests).
+      - run: npm run typecheck
+      - run: npm run format:check
       - run: npm run design:check:test
       - run: npm run build
       - run: npm run check

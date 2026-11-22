@@ -27,8 +27,12 @@ describe('dueLabel', () => {
 })
 
 describe('isQueryEdit', () => {
-  it('counts typing and clearing', () => { for (const reason of ['input-change', 'input-clear', 'clear-press']) expect(isQueryEdit(reason)).toBe(true) })
-  it('ignores picks and navigation', () => { for (const reason of ['item-press', 'list-navigation']) expect(isQueryEdit(reason)).toBe(false) })
+  it('counts typing and clearing', () => {
+    for (const reason of ['input-change', 'input-clear', 'clear-press']) expect(isQueryEdit(reason)).toBe(true)
+  })
+  it('ignores picks and navigation', () => {
+    for (const reason of ['item-press', 'list-navigation']) expect(isQueryEdit(reason)).toBe(false)
+  })
 })
 
 describe('splitActionLabel', () => {
