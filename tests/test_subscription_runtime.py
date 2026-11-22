@@ -150,9 +150,7 @@ def test_the_relay_runtime_keeps_no_chatgpt_or_codex_control(tmp_path, worker):
         assert client.get("/claude", headers=CONTROL).json()["available"] is False
         # The keys stay apart: the inference key cannot reach control routes, and back.
         assert client.get("/claude", headers=INFERENCE).status_code == 401
-        assert (
-            client.get("/inference/claude/status", headers=CONTROL).status_code == 401
-        )
+        assert client.get("/inference/claude/status", headers=CONTROL).status_code == 401
         assert client.get("/inference/claude/status", headers=INFERENCE).json() == {
             "available": False,
             "connected": False,
@@ -195,9 +193,7 @@ def test_status_never_shows_the_sign_in_itself(tmp_path, monkeypatch, capsys):
     assert subscription_runtime.main(["export"]) == 2
 
 
-def test_login_is_the_official_cli_sign_in_with_the_runtimes_own_folder(
-    tmp_path, monkeypatch
-):
+def test_login_is_the_official_cli_sign_in_with_the_runtimes_own_folder(tmp_path, monkeypatch):
     calls = []
     monkeypatch.setenv("SUBSCRIPTIONS_STATE", str(tmp_path))
     monkeypatch.setenv("SUBSCRIPTIONS_CLAUDE", str(tmp_path / "claude"))
@@ -254,16 +250,9 @@ def test_every_platform_is_pinned_to_one_version():
     fetch = fetcher()
     assert set(fetch.PACKAGES) == {"amd64", "arm64"}
     for platform, integrity in fetch.PACKAGES.values():
-        assert (
-            integrity.startswith("sha512-")
-            and len(base64.b64decode(integrity[7:])) == 64
-        )
-        assert fetch.url(platform).endswith(
-            f"/claude-code-{platform}-{fetch.VERSION}.tgz"
-        )
-    dockerfile = (ROOT / "services/subscriptions/Dockerfile").read_text(
-        encoding="utf-8"
-    )
+        assert integrity.startswith("sha512-") and len(base64.b64decode(integrity[7:])) == 64
+        assert fetch.url(platform).endswith(f"/claude-code-{platform}-{fetch.VERSION}.tgz")
+    dockerfile = (ROOT / "services/subscriptions/Dockerfile").read_text(encoding="utf-8")
     assert (
         "@sha256:"
         in dockerfile.splitlines()[
@@ -271,9 +260,7 @@ def test_every_platform_is_pinned_to_one_version():
         ]
     )
     assert "USER 1000:1000" in dockerfile
-    ignored = (ROOT / "services/subscriptions/Dockerfile.dockerignore").read_text(
-        encoding="utf-8"
-    )
+    ignored = (ROOT / "services/subscriptions/Dockerfile.dockerignore").read_text(encoding="utf-8")
     copied = {
         word
         for word in dockerfile.replace("\\\n", " ").split()

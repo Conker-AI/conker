@@ -20,9 +20,7 @@ MAX_TASK = 8000
 
 def register(team_commands):
     """Add run, next, show and finish to the `team` area."""
-    run = team_commands.add_parser(
-        "run", help="Start a run of a saved team and run its first role"
-    )
+    run = team_commands.add_parser("run", help="Start a run of a saved team and run its first role")
     run.add_argument("team_id", help="The team's id (team_...)")
     run.add_argument("--chat", required=True, help="The chat the run starts from (ses_...)")
     run.add_argument("--task", required=True, help="What the team should do, 1-8000 characters")

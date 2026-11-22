@@ -46,9 +46,7 @@ def register(commands):
     )
     dismiss.add_argument("request", help="The request's id (creq_...)")
     operations.add_parser("list", help="Saved workflow drafts")
-    show = operations.add_parser(
-        "show", help="One draft: its steps and whether it is valid"
-    )
+    show = operations.add_parser("show", help="One draft: its steps and whether it is valid")
     show.add_argument("id")
     publish = operations.add_parser("publish", help="Publish a reviewed draft")
     publish.add_argument("id")
@@ -93,9 +91,7 @@ def refusal(exc: HTTPError, service: str) -> ValueError:
             detail.get("code"),
         )
     if isinstance(detail, list) and detail and isinstance(detail[0], dict):
-        return ValueError(
-            f"{service} refused this: {str(detail[0].get('msg', ''))[:300]}"
-        )
+        return ValueError(f"{service} refused this: {str(detail[0].get('msg', ''))[:300]}")
     return ValueError(f"{service} refused this (HTTP {exc.code}).")
 
 
@@ -184,15 +180,11 @@ def message_text(args, config, request) -> str:
 def tool_request(args, config, request, pi, *, emit=print) -> int:
     """`draft` and `from-chat`: a tool request in Pi, waited for as `conker tool draft` does."""
     description = (
-        message_text(args, config, request)
-        if args.operation == "from-chat"
-        else args.description
+        message_text(args, config, request) if args.operation == "from-chat" else args.description
     )
     if args.operation == "draft" and not 1 <= len(description.strip()) <= 4000:
         raise ValueError("Use a description of 1 to 4,000 characters.")
-    drafting = SimpleNamespace(
-        **{**vars(args), "operation": "draft", "description": description}
-    )
+    drafting = SimpleNamespace(**{**vars(args), "operation": "draft", "description": description})
     return tool_drafts.run(pi, drafting, emit=emit)
 
 
@@ -211,21 +203,15 @@ def workflow_operation(args, config, request) -> dict:
     if args.operation == "list":
         return call(request, config, "toolgate-owner", EDITOR.rstrip("/"))
     if not DRAFT_ID.fullmatch(args.id):
-        raise ValueError(
-            "A draft id starts with a letter and uses letters, digits, - and _."
-        )
+        raise ValueError("A draft id starts with a letter and uses letters, digits, - and _.")
     path = EDITOR + args.id
     if args.operation == "show":
         record = call(request, config, "toolgate-owner", path)
         check = call(request, config, "toolgate-owner", path + "/validation")
-        published = call(request, config, "toolgate-owner", path + "/publications")[
-            "items"
-        ]
+        published = call(request, config, "toolgate-owner", path + "/publications")["items"]
         document = record["document"]
         asks = {
-            item["id"]
-            for item in capabilities(request, config)
-            if item["authorization"] != "auto"
+            item["id"] for item in capabilities(request, config) if item["authorization"] != "auto"
         }
         return {
             "draft": args.id,
@@ -242,9 +228,7 @@ def workflow_operation(args, config, request) -> dict:
             "issues": [problem(item) for item in check["issues"]],
             "publications": published,
         }
-    if args.request is not None and not tool_drafts.CHANGE_REQUEST.fullmatch(
-        args.request
-    ):
+    if args.request is not None and not tool_drafts.CHANGE_REQUEST.fullmatch(args.request):
         raise ValueError("Use the tool request's id, which starts with creq_.")
     published = call(request, config, "toolgate-owner", path + "/publications")["items"]
     result = call(
@@ -254,9 +238,7 @@ def workflow_operation(args, config, request) -> dict:
         path + "/publish",
         {
             "expected_revision": args.expected_revision,
-            "expected_publication_version": max(
-                (item["version"] for item in published), default=0
-            ),
+            "expected_publication_version": max((item["version"] for item in published), default=0),
             "authorization": args.authorization,
         },
         changes=True,
@@ -271,9 +253,7 @@ def told(request, config, args, result) -> dict:
     if not isinstance(result.get("toolId"), str):
         return {"note": "ToolGate did not say the tool's id, so Pi was not told."}
     try:
-        name = call(request, config, "toolgate-owner", EDITOR + args.id)["document"][
-            "name"
-        ]
+        name = call(request, config, "toolgate-owner", EDITOR + args.id)["document"]["name"]
         return call(
             request,
             config,

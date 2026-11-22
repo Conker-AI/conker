@@ -40,15 +40,11 @@ def register(commands):
     retry.add_argument("--model", required=True)
     retry.add_argument("--request-id")
 
-    retry_status = subparsers.add_parser(
-        "retry-status", help="Check a retry request status"
-    )
+    retry_status = subparsers.add_parser("retry-status", help="Check a retry request status")
     retry_status.add_argument("session")
     retry_status.add_argument("request_id")
 
-    compare = subparsers.add_parser(
-        "compare", help="Compare answers from multiple models"
-    )
+    compare = subparsers.add_parser("compare", help="Compare answers from multiple models")
     compare.add_argument("session")
     compare.add_argument("message")
     compare.add_argument("--models", required=True)
@@ -84,9 +80,7 @@ def register(commands):
     votes.add_argument("session")
     votes.add_argument("root")
 
-    fact_check = subparsers.add_parser(
-        "fact-check", help="Check the claims in this answer"
-    )
+    fact_check = subparsers.add_parser("fact-check", help="Check the claims in this answer")
     fact_check.add_argument("session")
     fact_check.add_argument("message")
     fact_check.add_argument("--model")
@@ -183,9 +177,7 @@ def operation(args, config, request):
         models_str = args.models
         models = [model.strip() for model in models_str.split(",") if model.strip()]
         if len(models) < 1 or len(models) > 3 or len(set(models)) != len(models):
-            raise ValueError(
-                "Compare with 1-3 distinct model IDs, separated by commas."
-            )
+            raise ValueError("Compare with 1-3 distinct model IDs, separated by commas.")
         for model in models:
             if not (1 <= len(model) <= 200):
                 raise ValueError("Use a model ID of 1 to 200 characters.")
@@ -202,9 +194,7 @@ def operation(args, config, request):
             request_id = f"{base_id}_{i}"
             body = {"request_id": request_id, "model_id": model}
             try:
-                receipt = pi_call(
-                    request, config, f"/sessions/{s}/messages/{m}/retry", body
-                )
+                receipt = pi_call(request, config, f"/sessions/{s}/messages/{m}/retry", body)
                 results.append(receipt)
             except (ValueError, OSError, HTTPError) as exc:
                 raise ValueError(
@@ -231,9 +221,7 @@ def operation(args, config, request):
             raise ValueError("That message is not a version of this answer.")
 
         body = {"message_id": m, "expected_revision": family["revision"]}
-        return pi_call(
-            request, config, f"/sessions/{s}/response-families/{root}/select", body
-        )
+        return pi_call(request, config, f"/sessions/{s}/response-families/{root}/select", body)
 
     elif args.operation == "judge":
         root = args.root
@@ -262,16 +250,12 @@ def operation(args, config, request):
             )
 
         print(f"Request id: {request_id}", file=sys.stderr)
-        return pi_call(
-            request, config, f"/sessions/{s}/response-families/{root}/judge", body
-        )
+        return pi_call(request, config, f"/sessions/{s}/response-families/{root}/judge", body)
 
     elif args.operation == "judgements":
         root = args.root
         identity(root, MESSAGE, "root message identity")
-        return pi_call(
-            request, config, f"/sessions/{s}/response-families/{root}/judgements"
-        )
+        return pi_call(request, config, f"/sessions/{s}/response-families/{root}/judgements")
 
     elif args.operation == "vote":
         root = args.root
@@ -280,9 +264,7 @@ def operation(args, config, request):
         identity(m, MESSAGE, "message identity")
 
         body = {"message_id": m, "vote": args.vote}
-        return pi_call(
-            request, config, f"/sessions/{s}/response-families/{root}/vote", body
-        )
+        return pi_call(request, config, f"/sessions/{s}/response-families/{root}/vote", body)
 
     elif args.operation == "votes":
         root = args.root

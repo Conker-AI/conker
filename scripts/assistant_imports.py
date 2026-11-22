@@ -50,9 +50,7 @@ def register(commands):
             source,
             help=f"A {name} data export: the zip, its folder, or its {MEMBER}",
         )
-        item.add_argument(
-            "path", type=Path, help=f"The {name} export zip, folder or {MEMBER}"
-        )
+        item.add_argument("path", type=Path, help=f"The {name} export zip, folder or {MEMBER}")
         mode = item.add_mutually_exclusive_group()
         mode.add_argument(
             "--preview",
@@ -64,9 +62,7 @@ def register(commands):
             action="store_true",
             help="Import it: read-only chats, your words offered to memory as outside content",
         )
-        item.add_argument(
-            "--json", action="store_true", help="Print Pi's answer as JSON"
-        )
+        item.add_argument("--json", action="store_true", help="Print Pi's answer as JSON")
 
 
 def clean(text) -> str:
@@ -97,9 +93,7 @@ def read_export(path: Path) -> bytes:
                     info
                     for info in archive.infolist()
                     if not info.is_dir()
-                    and (
-                        info.filename == MEMBER or info.filename.endswith("/" + MEMBER)
-                    )
+                    and (info.filename == MEMBER or info.filename.endswith("/" + MEMBER))
                     and info.filename.count("/") <= 1
                 ]
                 if len(names) != 1:
@@ -108,9 +102,7 @@ def read_export(path: Path) -> bytes:
                 if info.flag_bits & 0x1:
                     raise ValueError(f"The {MEMBER} in the zip is encrypted.")
                 if info.file_size > MAX_BYTES:
-                    raise ValueError(
-                        f"{MEMBER} is larger than {MAX_BYTES // (1024 * 1024)} MB."
-                    )
+                    raise ValueError(f"{MEMBER} is larger than {MAX_BYTES // (1024 * 1024)} MB.")
                 with archive.open(info) as stream:
                     return _bounded(stream, MEMBER)
         except (zipfile.BadZipFile, NotImplementedError, RuntimeError, EOFError) as exc:
@@ -124,11 +116,7 @@ def _day(seconds) -> str:
 
 
 def _left_out(skipped: dict) -> list[str]:
-    parts = [
-        f"{skipped[key]:,} {words}"
-        for key, words in LEFT_OUT.items()
-        if skipped.get(key)
-    ]
+    parts = [f"{skipped[key]:,} {words}" for key, words in LEFT_OUT.items() if skipped.get(key)]
     lines = ["Left out: " + "; ".join(parts) + "."] if parts else []
     if skipped.get("shortenedMessages"):
         lines.append(

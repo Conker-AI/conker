@@ -70,9 +70,7 @@ def caller(command: list[str]):
             ) from None
         status, _, content = result.stdout.partition(b"\n")
         if result.returncode or not status.isdigit():
-            raise OSError(
-                "Pi did not answer in its container. Check it with: conker status"
-            )
+            raise OSError("Pi did not answer in its container. Check it with: conker status")
         code = int(status)
         if 400 <= code < 500:
             raise Refused(f"Pi refused it (HTTP {code}){reason(content)}.")

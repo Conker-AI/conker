@@ -36,9 +36,7 @@ def main(argv: list[str] | None = None) -> int:
     commands.add_parser("list", help="recent server actions, newest first")
     show = commands.add_parser("show", help="one receipt as JSON")
     show.add_argument("id")
-    run = commands.add_parser(
-        "run", help="run one allowlisted operation, with a receipt"
-    )
+    run = commands.add_parser("run", help="run one allowlisted operation, with a receipt")
     run.add_argument("operation", choices=sorted(OPERATIONS))
     run.add_argument("arguments", nargs="*", metavar="NAME=VALUE")
     args = parser.parse_args(argv)
@@ -64,9 +62,7 @@ def main(argv: list[str] | None = None) -> int:
             if OPERATIONS[args.operation].read:
                 print(json.dumps(host.read(body, wait=True), indent=2))
                 return 0
-            receipt = host.start(
-                {"id": f"cli-{uuid.uuid4().hex}", **body}, source="cli", wait=True
-            )
+            receipt = host.start({"id": f"cli-{uuid.uuid4().hex}", **body}, source="cli", wait=True)
             print(json.dumps(receipt, indent=2))
             return 0 if receipt["outcome"] == "done" else 1
         value = host.receipts()
@@ -75,9 +71,7 @@ def main(argv: list[str] | None = None) -> int:
         if not value["operations"]:
             print("No server actions yet.")
         if value["damagedRecords"]:
-            print(
-                f"{value['damagedRecords']} journal lines could not be read and were skipped."
-            )
+            print(f"{value['damagedRecords']} journal lines could not be read and were skipped.")
         return 0
     except HostOpsError as error:
         print(str(error), file=sys.stderr)

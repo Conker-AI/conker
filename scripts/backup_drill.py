@@ -202,7 +202,9 @@ def refuse_when_busy(
 ) -> None:
     state = holds(root)
     if state["recoveryHeld"]:
-        raise DrillRefused("A recovery is held. Finish or abort it with conker recovery-status first.")
+        raise DrillRefused(
+            "A recovery is held. Finish or abort it with conker recovery-status first."
+        )
     if state["backupLock"]:
         raise DrillRefused("A backup is running or was cut off. Check the backup folder first.")
     if update_busy(root, *checkouts):

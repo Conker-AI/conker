@@ -67,10 +67,7 @@ def test_list_sends_get_with_query_params(invoke, capsys):
     assert run("list", "ses_a") == 0
     assert len(calls) == 1
     check_headers(0)
-    assert (
-        calls[0][0].full_url
-        == "http://127.0.0.1:18551/sessions/ses_a/branch-history?limit=100"
-    )
+    assert calls[0][0].full_url == "http://127.0.0.1:18551/sessions/ses_a/branch-history?limit=100"
 
     # Test with limit and cursor
     calls.clear()
@@ -112,10 +109,7 @@ def test_branch_without_summary_makes_three_gets_then_post(invoke, capsys):
     assert calls[0][0].full_url == "http://127.0.0.1:18551/sessions/ses_a/settings"
     assert calls[1][0].full_url == "http://127.0.0.1:18551/context/ses_a"
     assert calls[2][0].full_url == "http://127.0.0.1:18551/context/ses_a/summary"
-    assert (
-        calls[3][0].full_url
-        == "http://127.0.0.1:18551/sessions/ses_a/messages/msg_b/fork"
-    )
+    assert calls[3][0].full_url == "http://127.0.0.1:18551/sessions/ses_a/messages/msg_b/fork"
     body = json.loads(calls[3][0].data)
     assert body["expected_settings_revision"] == 3
     assert body["expected_context_revision"] == 1
@@ -206,10 +200,7 @@ def test_retry_posts_with_model_and_prints_request_id(invoke, capsys):
     )
     assert len(calls) == 1
     check_headers(0)
-    assert (
-        calls[0][0].full_url
-        == "http://127.0.0.1:18551/sessions/ses_a/messages/msg_b/retry"
-    )
+    assert calls[0][0].full_url == "http://127.0.0.1:18551/sessions/ses_a/messages/msg_b/retry"
     body = json.loads(calls[0][0].data)
     assert body["model_id"] == "b"
     assert body["request_id"] == "custom_retry_id_12345678"
@@ -278,10 +269,7 @@ def test_compare_posts_two_retries_sequentially(invoke, capsys):
     assert len(calls) == 2
     check_headers(0)
     check_headers(1)
-    assert (
-        calls[0][0].full_url
-        == "http://127.0.0.1:18551/sessions/ses_a/messages/msg_b/retry"
-    )
+    assert calls[0][0].full_url == "http://127.0.0.1:18551/sessions/ses_a/messages/msg_b/retry"
     body1 = json.loads(calls[0][0].data)
     assert body1["model_id"] == "b"
     assert body1["request_id"].endswith("_1")
@@ -354,8 +342,7 @@ def test_versions_and_select(invoke, capsys):
     assert len(calls) == 1
     check_headers(0)
     assert (
-        calls[0][0].full_url
-        == "http://127.0.0.1:18551/sessions/ses_a/response-families/msg_root"
+        calls[0][0].full_url == "http://127.0.0.1:18551/sessions/ses_a/response-families/msg_root"
     )
 
     # Test select with valid version
@@ -477,9 +464,7 @@ def test_judge_validation_exits_without_request(invoke, capsys):
 
 def test_judgements_gets_results(invoke):
     run, calls, _, state, check_headers = invoke
-    state["responses"] = [
-        {"results": [{"request_id": "judge_1", "winner": "msg_1", "scores": []}]}
-    ]
+    state["responses"] = [{"results": [{"request_id": "judge_1", "winner": "msg_1", "scores": []}]}]
     assert run("judgements", "ses_a", "root_msg") == 0
     assert len(calls) == 1
     check_headers(0)

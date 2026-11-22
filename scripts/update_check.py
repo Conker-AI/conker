@@ -295,8 +295,7 @@ def render(result: dict) -> str:
         return f"Conker {running} is running. No release is published yet."
     if not result["newer"]:
         return (
-            f"Conker {running} is running. It is up to date "
-            f"(latest release {latest['version']})."
+            f"Conker {running} is running. It is up to date (latest release {latest['version']})."
         )
     published = f" (published {latest['publishedAt'][:10]})" if latest["publishedAt"] else ""
     return "\n".join(

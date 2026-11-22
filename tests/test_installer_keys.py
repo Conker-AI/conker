@@ -22,7 +22,11 @@ def test_generated_secrets_are_always_32_characters():
     '=' made most keys shorter; the gateway refuses any key under 32 and
     stopped a fresh install from starting."""
     script = (
-        re.search(r"^random_secret\(\) \{.*?^\}\n", (ROOT / "install.sh").read_text(), re.MULTILINE | re.DOTALL)[0]
+        re.search(
+            r"^random_secret\(\) \{.*?^\}\n",
+            (ROOT / "install.sh").read_text(),
+            re.MULTILINE | re.DOTALL,
+        )[0]
         + 'for _ in $(seq 200); do s=$(random_secret); [ "${#s}" -eq 32 ] || { echo "short:${#s}"; exit 1; }; done'
     )
     proc = subprocess.run(["bash", "-c", script], capture_output=True, text=True, check=False)
@@ -38,8 +42,12 @@ def test_a_short_gateway_key_from_an_older_install_is_replaced(install):
     values = env_values(install.env_file)
     body = install.env_file.read_text()
     install.env_file.write_text(
-        body.replace(f"PI_GATEWAY_KEY={values['PI_GATEWAY_KEY']}", "PI_GATEWAY_KEY=only31charactersxxxxxxxxxxxxxxx")
-        .replace(f"GATEWAY_PI_OWNER_KEY={values['GATEWAY_PI_OWNER_KEY']}", "GATEWAY_PI_OWNER_KEY=short")
+        body.replace(
+            f"PI_GATEWAY_KEY={values['PI_GATEWAY_KEY']}",
+            "PI_GATEWAY_KEY=only31charactersxxxxxxxxxxxxxxx",
+        ).replace(
+            f"GATEWAY_PI_OWNER_KEY={values['GATEWAY_PI_OWNER_KEY']}", "GATEWAY_PI_OWNER_KEY=short"
+        )
     )
 
     install("--yes", "--dry-run")
@@ -47,8 +55,14 @@ def test_a_short_gateway_key_from_an_older_install_is_replaced(install):
 
     for name in ("PI_GATEWAY_KEY", "GATEWAY_PI_OWNER_KEY"):
         assert len(after[name]) >= 32, name
-    assert after["PI_GATEWAY_KEY_SHA256"] == hashlib.sha256(after["PI_GATEWAY_KEY"].encode()).hexdigest()
-    assert after["PI_OWNER_KEY_SHA256"] == hashlib.sha256(after["GATEWAY_PI_OWNER_KEY"].encode()).hexdigest()
+    assert (
+        after["PI_GATEWAY_KEY_SHA256"]
+        == hashlib.sha256(after["PI_GATEWAY_KEY"].encode()).hexdigest()
+    )
+    assert (
+        after["PI_OWNER_KEY_SHA256"]
+        == hashlib.sha256(after["GATEWAY_PI_OWNER_KEY"].encode()).hexdigest()
+    )
     # Keys that protect stored data are kept exactly.
     assert after["MEMORYGATE_DB_PASSWORD"] == values["MEMORYGATE_DB_PASSWORD"]
     assert after["TOOLGATE_VAULT_SALT"] == values["TOOLGATE_VAULT_SALT"]
@@ -79,10 +93,18 @@ def test_memorygate_and_toolgate_get_their_own_pi_keys_and_pi_the_hashes(install
 
     assert len(after["MEMORYGATE_PI_SERVICE_KEY"]) >= 32
     assert len(after["TOOLGATE_PI_SERVICE_KEY"]) >= 32
-    assert json.loads(after["PI_SERVICE_KEYS_SHA256"])["toolgate"] == hashlib.sha256(
-        after["TOOLGATE_PI_SERVICE_KEY"].encode()
-    ).hexdigest()
-    for name in ("MEMORYGATE_DB_PASSWORD", "TOOLGATE_VAULT_SALT", "CONKER_ADMIN_KEY", "PI_TOOLGATE_KEY"):
+    assert (
+        json.loads(after["PI_SERVICE_KEYS_SHA256"])["toolgate"]
+        == hashlib.sha256(after["TOOLGATE_PI_SERVICE_KEY"].encode()).hexdigest()
+    )
+    for name in (
+        "MEMORYGATE_DB_PASSWORD",
+        "TOOLGATE_VAULT_SALT",
+        "CONKER_ADMIN_KEY",
+        "PI_TOOLGATE_KEY",
+    ):
         assert after[name] == values[name]
     install("--yes", "--dry-run")
-    assert env_values(install.env_file)["TOOLGATE_PI_SERVICE_KEY"] == after["TOOLGATE_PI_SERVICE_KEY"]
+    assert (
+        env_values(install.env_file)["TOOLGATE_PI_SERVICE_KEY"] == after["TOOLGATE_PI_SERVICE_KEY"]
+    )

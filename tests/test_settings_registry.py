@@ -127,9 +127,7 @@ PROPER = {
 def sentence_case(text: str) -> bool:
     """First letter capital; later words lower case unless they are names or acronyms."""
     words = text.replace("/", " ").split()
-    if not words or not (
-        words[0][0].isupper() or words[0][0].isdigit() or words[0][0] in '"('
-    ):
+    if not words or not (words[0][0].isupper() or words[0][0].isdigit() or words[0][0] in '"('):
         return False
     for word in words[1:]:
         bare = word.strip('()",.:;!?')
@@ -142,20 +140,14 @@ def test_every_topic_file_is_complete_and_ordered():
     assert len({group["id"] for group in GROUPS}) == len(GROUPS)
     assert len({group["order"] for group in GROUPS}) == len(GROUPS)
     for group in GROUPS:
-        assert group["schemaVersion"] == 2 and group["category"] in CATEGORIES, group[
-            "id"
-        ]
+        assert group["schemaVersion"] == 2 and group["category"] in CATEGORIES, group["id"]
         assert group["title"] and sentence_case(group["title"]), group["id"]
         assert group["description"].endswith(".") and len(group["description"]) <= 100
         assert group["sections"] and group["icon"], group["id"]
-        titles = [
-            s["title"] for section in group["sections"] for s in section["settings"]
-        ]
+        titles = [s["title"] for section in group["sections"] for s in section["settings"]]
         assert len(titles) == len(set(titles)), (group["id"], "repeated title")
         for section in group["sections"]:
-            assert section["settings"] and sentence_case(section["title"]), section[
-                "id"
-            ]
+            assert section["settings"] and sentence_case(section["title"]), section["id"]
 
 
 def test_every_setting_is_complete_and_consistent():
@@ -170,25 +162,17 @@ def test_every_setting_is_complete_and_consistent():
         }, name
         home = setting.get("home")
         if setting["type"] == "custom":
-            assert setting["component"] in COMPONENTS and setting["effect"] == "live", (
-                name
-            )
+            assert setting["component"] in COMPONENTS and setting["effect"] == "live", name
             assert home is None and setting["default"] is None, name
         else:
             assert home["service"] in {"pi", "browser", "toolgate"}, name
-            assert (home["service"] == "browser") == (setting["scope"] == "device"), (
-                name
-            )
+            assert (home["service"] == "browser") == (setting["scope"] == "device"), name
             if home["service"] == "pi":
-                assert home["path"].startswith("/") and home["key"] and home["field"], (
-                    name
-                )
+                assert home["path"].startswith("/") and home["key"] and home["field"], name
                 assert ("{chat}" in home["path"]) == (setting["scope"] == "chat"), name
             if home["service"] == "toolgate":
                 # ToolGate's settings document, or its lockdown switch; both ask for the password.
-                assert home["path"] in {"/v2/owner/settings", "/v2/owner/lockdown"}, (
-                    name
-                )
+                assert home["path"] in {"/v2/owner/settings", "/v2/owner/lockdown"}, name
                 assert home["key"] and home["field"] and home["verify"] is True, name
                 assert setting["scope"] == "global", name
         for other in setting["related"] + [setting.get("dependsOn", {}).get("id")]:
@@ -201,9 +185,7 @@ def test_every_setting_is_complete_and_consistent():
         if setting["type"] in {"number", "slider"} and default is not None:
             assert setting["min"] <= default <= setting["max"], name
         if setting["type"] in {"tags", "models"}:
-            assert isinstance(default, list) and setting["max_items"] >= len(default), (
-                name
-            )
+            assert isinstance(default, list) and setting["max_items"] >= len(default), name
         if setting["type"] == "toggle":
             assert isinstance(default, bool), name
         # Secrets keep their own write-only flow and never enter the registry.
@@ -226,14 +208,12 @@ def test_every_setting_speaks_the_same_way():
             setting["title"],
             setting["description"],
         )
-        assert len(title) <= 40 and not title.endswith(".") and sentence_case(title), (
-            name
-        )
+        assert len(title) <= 40 and not title.endswith(".") and sentence_case(title), name
         assert description.endswith(".") and 20 <= len(description) <= 140, name
         assert description[0].isupper() and description.count(". ") == 0, name
-        assert not description.lower().startswith(
-            ("this setting", "enable", "toggle", "allows")
-        ), name
+        assert not description.lower().startswith(("this setting", "enable", "toggle", "allows")), (
+            name
+        )
         for option in setting.get("options", []):
             assert len(option["label"]) <= 32 and sentence_case(option["label"]), (
                 name,
@@ -395,9 +375,7 @@ def run(fake, capsys, operation, **arguments):
 
 def test_set_changes_one_field_and_keeps_the_rest(capsys):
     fake = pi()
-    saved = run(
-        fake, capsys, "set", id="notifications.quiet_hours.start", value="23:00"
-    )
+    saved = run(fake, capsys, "set", id="notifications.quiet_hours.start", value="23:00")
     assert saved == {
         "id": "notifications.quiet_hours.start",
         "value": "23:00",
@@ -410,9 +388,7 @@ def test_set_changes_one_field_and_keeps_the_rest(capsys):
         k: v for k, v in PREFERENCES.items() if k != "quietHours"
     }
 
-    chat = run(
-        fake, capsys, "set", id="chat.privacy.memory_off", value="on", chat="ses_1"
-    )
+    chat = run(fake, capsys, "set", id="chat.privacy.memory_off", value="on", chat="ses_1")
     assert chat["value"] is True
     assert fake.calls[-1][2]["settings"]["projectId"] == "p"
 
@@ -421,9 +397,7 @@ def test_list_reads_each_home_once_and_shows_what_changed(capsys):
     fake = pi()
     rows = run(fake, capsys, "list")["settings"]
     assert {row["scope"] for row in rows} == {"global"}
-    assert not any(
-        row["id"] == "appearance.theme" for row in rows
-    )  # kept in each browser
+    assert not any(row["id"] == "appearance.theme" for row in rows)  # kept in each browser
     paths = [path for _, path, _ in fake.calls]
     assert sorted(paths) == [
         "/owner/preferences",
@@ -439,9 +413,7 @@ def test_list_reads_each_home_once_and_shows_what_changed(capsys):
 
 
 def test_planned_settings_are_listed_only_on_request_and_still_scriptable(capsys):
-    planned = {
-        setting["id"] for setting in config.load_registry() if setting["effect"] == "stored"
-    }
+    planned = {setting["id"] for setting in config.load_registry() if setting["effect"] == "stored"}
     assert "appearance.contrast" in planned
     rows = run(pi(), capsys, "list")["settings"]
     assert rows and not any(row["id"] in planned for row in rows)
@@ -470,9 +442,7 @@ def test_planned_settings_are_listed_only_on_request_and_still_scriptable(capsys
 def test_reset_get_and_the_errors_the_owner_sees(capsys):
     fake = pi()
     run(fake, capsys, "set", id="companion.proactivity", value="off")
-    assert (
-        run(fake, capsys, "reset", id="companion.proactivity")["value"] == "meaningful"
-    )
+    assert run(fake, capsys, "reset", id="companion.proactivity")["value"] == "meaningful"
     got = run(fake, capsys, "get", id="chat.output.length", chat="ses_1")
     assert got["value"] == "auto" and got["description"]
     with pytest.raises(ValueError, match="--chat"):
@@ -497,9 +467,7 @@ def test_reset_get_and_the_errors_the_owner_sees(capsys):
 def test_settings_without_a_home_live_in_the_owner_settings_document(capsys):
     fake = pi()
     saved = run(fake, capsys, "set", id="appearance.accent", value="Blue")
-    assert saved["value"] == "blue" and fake.calls[-1][2]["values"] == {
-        "appearance.accent": "blue"
-    }
+    assert saved["value"] == "blue" and fake.calls[-1][2]["values"] == {"appearance.accent": "blue"}
     got = run(fake, capsys, "get", id="appearance.accent")
     assert got["value"] == "blue" and got["modified"] is True
     reset = run(fake, capsys, "reset", id="appearance.accent")

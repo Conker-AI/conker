@@ -8,9 +8,7 @@ import pytest
 
 SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
 sys.path.insert(0, str(SCRIPTS))
-SPEC = importlib.util.spec_from_file_location(
-    "workspace_models", SCRIPTS / "workspace_models.py"
-)
+SPEC = importlib.util.spec_from_file_location("workspace_models", SCRIPTS / "workspace_models.py")
 models = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(models)
 ROLES = (
@@ -43,9 +41,7 @@ def test_custom_installed_model_is_primary_and_summarizes():
 
 
 def test_optional_analysis_model_is_installed_and_never_replaces_primary():
-    value = models.configuration_for(
-        "qwen2.5:3b", {"qwen2.5:3b", "qwen3:4b", "unrelated"}, ROLES
-    )
+    value = models.configuration_for("qwen2.5:3b", {"qwen2.5:3b", "qwen3:4b", "unrelated"}, ROLES)
     roles = value["roleSettings"]["roles"]
     assert roles["answer"]["modelId"] == "local-answer"
     assert roles["answer"]["eligibleModelIds"] == ["local-answer", "local-thinking"]
@@ -56,9 +52,7 @@ def test_optional_analysis_model_is_installed_and_never_replaces_primary():
 def test_selected_analysis_model_is_not_duplicated():
     value = models.configuration_for("qwen3:4b", {"qwen3:4b"}, ROLES)
     assert len(value["models"]) == 2
-    assert value["roleSettings"]["roles"]["answer"]["eligibleModelIds"] == [
-        "local-answer"
-    ]
+    assert value["roleSettings"]["roles"]["answer"]["eligibleModelIds"] == ["local-answer"]
 
 
 @pytest.mark.parametrize(

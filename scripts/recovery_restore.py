@@ -79,9 +79,7 @@ def restore(snapshot: Path, destination: Path, docker: Docker) -> dict:
             volume = project + "-" + store
             state["volumes"][store] = volume
             write_json(state_path, state)
-            docker.run(
-                "volume", "create", "--label", "conker.recovery=" + project, volume
-            )
+            docker.run("volume", "create", "--label", "conker.recovery=" + project, volume)
         for store in manifest["stores"]:
             with (snapshot / (store + ".tar")).open("rb") as source:
                 helper(
@@ -92,10 +90,16 @@ def restore(snapshot: Path, destination: Path, docker: Docker) -> dict:
                     input=source,
                 )
         if "gateway" in manifest["stores"]:
-            state.update(json.loads(helper(
-                docker, images["pi"]["id"], "hold-gateway",
-                {"type": "volume", "source": state["volumes"]["gateway"]},
-            ).stdout))
+            state.update(
+                json.loads(
+                    helper(
+                        docker,
+                        images["pi"]["id"],
+                        "hold-gateway",
+                        {"type": "volume", "source": state["volumes"]["gateway"]},
+                    ).stdout
+                )
+            )
             write_json(state_path, state)
         # Runtime recovery material gets its own volume; never recreate the
         # original container before extracting this currently unmounted key.
@@ -115,9 +119,7 @@ def restore(snapshot: Path, destination: Path, docker: Docker) -> dict:
         toolgate_mount = {"type": "volume", "source": state["volumes"]["toolgate"]}
         state.update(
             json.loads(
-                helper(
-                    docker, images["toolgate"]["id"], "hold-toolgate", toolgate_mount
-                ).stdout
+                helper(docker, images["toolgate"]["id"], "hold-toolgate", toolgate_mount).stdout
             )
         )
         state["unfinished_turns"] = json.loads(
@@ -158,8 +160,10 @@ def restore(snapshot: Path, destination: Path, docker: Docker) -> dict:
         write_json(state_path, state)
         credential = destination / "postgres.env"
         credential.write_text(
-            "POSTGRES_USER=" + database["user"]
-            + "\nPOSTGRES_DB=" + database["name"]
+            "POSTGRES_USER="
+            + database["user"]
+            + "\nPOSTGRES_DB="
+            + database["name"]
             + "\nPOSTGRES_PASSWORD="
             + uuid.uuid4().hex
             + "\n"
@@ -183,9 +187,7 @@ def restore(snapshot: Path, destination: Path, docker: Docker) -> dict:
             "--env-file",
             str(credential),
             "--mount",
-            "type=volume,src="
-            + state["volumes"]["postgres"]
-            + ",dst=/var/lib/postgresql/data",
+            "type=volume,src=" + state["volumes"]["postgres"] + ",dst=/var/lib/postgresql/data",
             images["postgres"]["id"],
         )
         wait_postgres(docker, postgres, database["user"], database["name"])
@@ -330,7 +332,9 @@ def _inspect_isolated_resources(state: dict[str, Any], docker: Docker) -> dict[s
     for store, name in sorted(state["volumes"].items()):
         details = docker.json("volume", "inspect", name)
         if len(details) != 1 or details[0].get("Labels", {}).get("conker.recovery") != project:
-            raise RecoveryError(f"Recovery volume for {store} is missing or has an invalid ownership label.")
+            raise RecoveryError(
+                f"Recovery volume for {store} is missing or has an invalid ownership label."
+            )
         volumes[store] = name
     containers: dict[str, str] = {}
     for name in state["containers"]:
@@ -374,7 +378,9 @@ def prove_service_ready(directory: Path, docker: Docker) -> dict[str, Any]:
                 receipts_directory(directory) / "service-ready.json", "Service-ready receipt"
             )
             if canonical_sha256(receipt) != state.get("service_ready_receipt_sha256"):
-                raise RecoveryError("Service-ready receipt was changed; keep the hold and investigate.")
+                raise RecoveryError(
+                    "Service-ready receipt was changed; keep the hold and investigate."
+                )
             return state
         if state["status"] not in {"reviewed", "readiness_interrupted"}:
             raise RecoveryError("Recovery requires a valid operator review before readiness proof.")
@@ -388,9 +394,10 @@ def prove_service_ready(directory: Path, docker: Docker) -> dict[str, Any]:
             manifest = verify_snapshot(snapshot)
             profile = snapshot_profile(manifest)
             database = snapshot_database(manifest, profile)
-            if state.get("source_layout", profile.name) != profile.name or state.get(
-                "database", database
-            ) != database:
+            if (
+                state.get("source_layout", profile.name) != profile.name
+                or state.get("database", database) != database
+            ):
                 raise RecoveryError("Recovery hold database identity changed after restore.")
             if sha256(snapshot / "manifest.json") != state["snapshot_manifest_sha256"]:
                 raise RecoveryError("Snapshot manifest no longer matches this restore.")
@@ -399,8 +406,7 @@ def prove_service_ready(directory: Path, docker: Docker) -> dict[str, Any]:
             resources = _inspect_isolated_resources(state, docker)
             if (
                 postgres is None
-                or resources["containers"].get(postgres)
-                != manifest["images"]["postgres"]["id"]
+                or resources["containers"].get(postgres) != manifest["images"]["postgres"]["id"]
             ):
                 raise RecoveryError("Recovery PostgreSQL container image identity changed.")
             toolgate_mount = {
@@ -445,9 +451,7 @@ def prove_service_ready(directory: Path, docker: Docker) -> dict[str, Any]:
                 raise RecoveryError("Recovered Pi unfinished-work evidence changed after restore.")
             docker.run("start", postgres)
             try:
-                wait_postgres(
-                    docker, postgres, database["user"], database["name"]
-                )
+                wait_postgres(docker, postgres, database["user"], database["name"])
                 unheld = docker.run(
                     "exec",
                     postgres,
@@ -487,7 +491,9 @@ def prove_service_ready(directory: Path, docker: Docker) -> dict[str, Any]:
             write_json(state_path, state)
             return state
         except BaseException as exc:
-            state["status"] = "readiness_interrupted" if not isinstance(exc, Exception) else "reviewed"
+            state["status"] = (
+                "readiness_interrupted" if not isinstance(exc, Exception) else "reviewed"
+            )
             state["last_failure"] = (
                 str(exc)[:500] if isinstance(exc, RecoveryError) else type(exc).__name__
             )
@@ -526,7 +532,9 @@ def abort_recovery(directory: Path, reason: str, docker: Docker) -> dict[str, An
                 details = json.loads(result.stdout)
                 labels = details[0].get("Config", {}).get("Labels") or {}
                 if labels.get("conker.recovery") != project:
-                    raise RecoveryError("Refusing to remove a container without the exact recovery label.")
+                    raise RecoveryError(
+                        "Refusing to remove a container without the exact recovery label."
+                    )
                 docker.run("rm", "-f", name)
                 state["removed_containers"].append(name)
                 write_json(state_path, state)
@@ -542,7 +550,9 @@ def abort_recovery(directory: Path, reason: str, docker: Docker) -> dict[str, An
                     continue
                 details = json.loads(result.stdout)
                 if details[0].get("Labels", {}).get("conker.recovery") != project:
-                    raise RecoveryError("Refusing to remove a volume without the exact recovery label.")
+                    raise RecoveryError(
+                        "Refusing to remove a volume without the exact recovery label."
+                    )
                 docker.run("volume", "rm", name)
                 state["removed_volumes"].append(name)
                 write_json(state_path, state)

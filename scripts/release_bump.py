@@ -23,7 +23,13 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 VERSION = re.compile(r"[0-9]{1,4}\.[0-9]{1,4}\.[0-9]{1,4}")
-MODULES = (("Pi", "PI"), ("ToolGate", "TOOLGATE"), ("MemoryGate", "MEMORYGATE"), ("SystemGate", "SYSTEMGATE"), ("Embeddings", "EMBEDDINGS"))
+MODULES = (
+    ("Pi", "PI"),
+    ("ToolGate", "TOOLGATE"),
+    ("MemoryGate", "MEMORYGATE"),
+    ("SystemGate", "SYSTEMGATE"),
+    ("Embeddings", "EMBEDDINGS"),
+)
 
 
 class BumpError(RuntimeError):
@@ -56,7 +62,7 @@ def bump_changelog(text: str, version: str, pins: dict[str, str]) -> str:
     table += [f"| {label} | v{pins[key + '_VERSION']} |" for label, key in MODULES]
     body = match.group(1).strip("\n")
     section = f"## Unreleased\n\n## {version}\n\n{body}\n\n" + "\n".join(table) + "\n\n"
-    return text[: match.start()] + section + text[match.end():]
+    return text[: match.start()] + section + text[match.end() :]
 
 
 def run(*command: str) -> str:
@@ -67,10 +73,14 @@ def run(*command: str) -> str:
 
 
 def main(argv: list[str]) -> int:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     parser.add_argument("version")
     parser.add_argument("--pi-sha", help="Pi commit to pin in scripts/workspace-sources.json")
-    parser.add_argument("--dry-run", action="store_true", help="print what would change, write nothing")
+    parser.add_argument(
+        "--dry-run", action="store_true", help="print what would change, write nothing"
+    )
     args = parser.parse_args(argv)
     try:
         if not VERSION.fullmatch(args.version):
@@ -92,7 +102,14 @@ def main(argv: list[str]) -> int:
             data["pi"] = args.pi_sha
             sources = (path, json.dumps(data, indent=2) + "\n")
         if args.dry_run:
-            print(f"Would prepare {args.version}; pins: " + ", ".join(f"{k}={v}" for k, v in pins.items() if k.endswith("_VERSION") and k != "CONKER_VERSION"))
+            print(
+                f"Would prepare {args.version}; pins: "
+                + ", ".join(
+                    f"{k}={v}"
+                    for k, v in pins.items()
+                    if k.endswith("_VERSION") and k != "CONKER_VERSION"
+                )
+            )
             return 0
         env_path.write_text(env, encoding="utf-8", newline="\n")
         log_path.write_text(log, encoding="utf-8", newline="\n")
@@ -104,7 +121,9 @@ def main(argv: list[str]) -> int:
     except BumpError as error:
         print(error, file=sys.stderr)
         return 1
-    print(f"Prepared {args.version}. Commit, open the PR, merge on green, then tag v{args.version} on the merge commit.")
+    print(
+        f"Prepared {args.version}. Commit, open the PR, merge on green, then tag v{args.version} on the merge commit."
+    )
     return 0
 
 

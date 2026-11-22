@@ -109,16 +109,12 @@ def render(request: dict) -> str:
             f'conker tool answer {request["id"]} "your answer"'
         )
     elif state == "failed":
-        lines.append(
-            "The draft failed: " + clean(payload.get("error") or "no reason given.")
-        )
+        lines.append("The draft failed: " + clean(payload.get("error") or "no reason given."))
         lines.append("Try it again from its Inbox card, or describe it again here.")
     else:
         steps = payload.get("steps") or []
         lines.append("Steps:" if steps else "No steps were drafted.")
-        lines.extend(
-            f"  {number}. {clean(step)}" for number, step in enumerate(steps, 1)
-        )
+        lines.extend(f"  {number}. {clean(step)}" for number, step in enumerate(steps, 1))
         issues = payload.get("issues") or []
         if issues:
             lines.append("Issues:")
@@ -127,9 +123,7 @@ def render(request: dict) -> str:
                 lines.append(f"  - {clean(text)}")
         if payload.get("note"):
             lines.append(clean(payload["note"]))
-        lines.append(
-            "It is in the Inbox: review it there, then save or publish it in Tools."
-        )
+        lines.append("It is in the Inbox: review it there, then save or publish it in Tools.")
     return "\n".join(lines)
 
 
@@ -139,12 +133,8 @@ def start(call, description: str, request_id: str) -> dict:
     if not 1 <= len(text) <= 4000:
         raise ValueError("Describe the tool in 1 to 4,000 characters.")
     if not REQUEST_ID.fullmatch(request_id):
-        raise ValueError(
-            "Use a request id of 16-128 letters, digits, '_', '.', ':' or '-'."
-        )
-    return checked(
-        call("POST", "/tool-drafts", {"description": text, "request_id": request_id})
-    )
+        raise ValueError("Use a request id of 16-128 letters, digits, '_', '.', ':' or '-'.")
+    return checked(call("POST", "/tool-drafts", {"description": text, "request_id": request_id}))
 
 
 def wait(
@@ -198,19 +188,13 @@ def run(call, args, *, emit=print, clock=time.monotonic, sleep=time.sleep) -> in
             ) from None
     if not args.no_wait:
         try:
-            request = wait(
-                call, request, timeout=args.timeout, clock=clock, sleep=sleep
-            )
+            request = wait(call, request, timeout=args.timeout, clock=clock, sleep=sleep)
         except OSError:
             raise OSError(
                 f"Pi stopped answering while the tool was drafting. Request {request['id']} "
                 "goes on in the Inbox."
             ) from None
-    emit(
-        json.dumps(request, indent=2, ensure_ascii=False)
-        if args.json
-        else render(request)
-    )
+    emit(json.dumps(request, indent=2, ensure_ascii=False) if args.json else render(request))
     state = status(request)
     if state == "failed":
         return 1

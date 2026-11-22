@@ -55,10 +55,7 @@ class Docker:
                 safe_prefix = b"Recovery data operation failed: "
                 if result.stderr.startswith(safe_prefix):
                     reason = (
-                        result.stderr.decode("utf-8", errors="replace").splitlines()[0][
-                            :500
-                        ]
-                        + ". "
+                        result.stderr.decode("utf-8", errors="replace").splitlines()[0][:500] + ". "
                     )
             raise RecoveryError(
                 f"Docker {operation} failed (exit {result.returncode}). {reason}"
@@ -134,10 +131,7 @@ def wait_postgres(
         + database_name
     )
     for _ in range(60):
-        if (
-            docker.run("exec", container, "sh", "-c", probe, check=False).returncode
-            == 0
-        ):
+        if docker.run("exec", container, "sh", "-c", probe, check=False).returncode == 0:
             return
         time.sleep(0.5)
     raise RecoveryError(
@@ -146,9 +140,7 @@ def wait_postgres(
 
 
 def mount_at(container: dict, destination: str) -> dict:
-    matches = [
-        mount for mount in container["Mounts"] if mount["Destination"] == destination
-    ]
+    matches = [mount for mount in container["Mounts"] if mount["Destination"] == destination]
     if len(matches) != 1:
         raise RecoveryError(
             f"No unambiguous persistent store at {destination}; review the Compose storage layout."

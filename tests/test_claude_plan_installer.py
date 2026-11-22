@@ -100,21 +100,15 @@ def test_the_owner_turns_it_on_and_compose_wires_its_keys(install):
     assert folder.is_dir() and not folder.is_symlink()
     assert folder.stat().st_mode & 0o777 == 0o700
 
-    config = resolved(
-        install, "docker-compose.sandbox.yml", "docker-compose.subscriptions.yml"
-    )
+    config = resolved(install, "docker-compose.sandbox.yml", "docker-compose.subscriptions.yml")
     runtime = config["services"]["subscriptions"]
     assert runtime["image"] == PINNED
     assert (
-        runtime["environment"]["SUBSCRIPTIONS_CONTROL_KEY"]
-        == values["SUBSCRIPTIONS_CONTROL_KEY"]
+        runtime["environment"]["SUBSCRIPTIONS_CONTROL_KEY"] == values["SUBSCRIPTIONS_CONTROL_KEY"]
     )
     pi = config["services"]["pi"]
     assert pi["environment"]["PI_SUBSCRIPTION_URL"] == "http://127.0.0.1:8070"
-    assert (
-        pi["environment"]["PI_SUBSCRIPTION_KEY"]
-        == values["SUBSCRIPTIONS_INFERENCE_KEY"]
-    )
+    assert pi["environment"]["PI_SUBSCRIPTION_KEY"] == values["SUBSCRIPTIONS_INFERENCE_KEY"]
     assert values["SUBSCRIPTIONS_CONTROL_KEY"] not in json.dumps(pi)
 
     # A re-run keeps the choice and the keys; the other flag turns it off.
@@ -145,6 +139,4 @@ def test_an_active_pin_exists_in_the_registry():
         capture_output=True,
         check=False,
     )
-    assert result.returncode == 0, (
-        "the pinned Claude plan runtime image is not in the registry"
-    )
+    assert result.returncode == 0, "the pinned Claude plan runtime image is not in the registry"

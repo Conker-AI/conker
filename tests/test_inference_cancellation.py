@@ -74,9 +74,7 @@ def test_cancel_tombstones_are_bounded_and_provider_scoped():
         requests.cancel("claude", "123")
 
 
-def test_stream_keeps_the_last_event_when_the_worker_finishes_during_a_poll(
-    tmp_path, monkeypatch
-):
+def test_stream_keeps_the_last_event_when_the_worker_finishes_during_a_poll(tmp_path, monkeypatch):
     class LateQueue(queue.Queue):
         polled = False
 
@@ -107,9 +105,7 @@ def test_stream_keeps_the_last_event_when_the_worker_finishes_during_a_poll(
     assert '"delta": "last"' in answer.text
 
 
-def test_worker_cancel_is_private_exact_and_releases_chatgpt_stream(
-    tmp_path, monkeypatch
-):
+def test_worker_cancel_is_private_exact_and_releases_chatgpt_stream(tmp_path, monkeypatch):
     started, aborted = threading.Event(), threading.Event()
 
     def blocked(_control, _value, *, cancellation):
@@ -129,14 +125,9 @@ def test_worker_cancel_is_private_exact_and_releases_chatgpt_stream(
             {"Authorization": "Bearer " + "c" * 32},
             {**headers, "Origin": "https://evil.test"},
         ):
-            assert (
-                client.post("/inference/cancel", headers=wrong, json=body).status_code
-                == 401
-            )
+            assert client.post("/inference/cancel", headers=wrong, json=body).status_code == 401
         assert (
-            client.post(
-                "/inference/cancel", headers=headers, json={**body, "pid": 1}
-            ).status_code
+            client.post("/inference/cancel", headers=headers, json={**body, "pid": 1}).status_code
             == 422
         )
         pending = pool.submit(
@@ -154,9 +145,7 @@ def test_worker_cancel_is_private_exact_and_releases_chatgpt_stream(
             ).status_code
             == 409
         )
-        wrong_provider = client.post(
-            "/inference/claude/cancel", headers=headers, json=body
-        )
+        wrong_provider = client.post("/inference/claude/cancel", headers=headers, json=body)
         assert wrong_provider.json()["status"] == "not_found" and not aborted.is_set()
         canceled = client.post("/inference/cancel", headers=headers, json=body)
         assert canceled.json() == {"request_id": IDENTITY, "status": "cancel_requested"}
@@ -177,9 +166,9 @@ def test_cancel_before_worker_admission_prevents_provider_call(tmp_path, monkeyp
     headers = {"Authorization": "Bearer " + "i" * 32}
     with TestClient(workspace_providers.create_app(config(tmp_path))) as client:
         assert (
-            client.post(
-                "/inference/cancel", headers=headers, json={"request_id": IDENTITY}
-            ).json()["status"]
+            client.post("/inference/cancel", headers=headers, json={"request_id": IDENTITY}).json()[
+                "status"
+            ]
             == "not_found"
         )
         assert (
@@ -239,10 +228,7 @@ def test_legacy_inference_payload_still_works_and_invalid_cancel_ids_are_rejecte
     monkeypatch.setattr(workspace_providers, "inference_events", complete)
     headers = {"Authorization": "Bearer " + "i" * 32}
     with TestClient(workspace_providers.create_app(config(tmp_path))) as client:
-        assert (
-            "hello"
-            in client.post("/inference/responses", headers=headers, json=PAYLOAD).text
-        )
+        assert "hello" in client.post("/inference/responses", headers=headers, json=PAYLOAD).text
         for identity in (None, "short", 123, "x" * 129):
             assert (
                 client.post(
@@ -286,9 +272,7 @@ def test_chatgpt_cancel_interrupts_a_real_blocked_socket_read():
         with pytest.raises(ChatGPTError):
             list(
                 inference_events(
-                    SimpleNamespace(
-                        credentials=lambda: ("synthetic-token", "synthetic-account")
-                    ),
+                    SimpleNamespace(credentials=lambda: ("synthetic-token", "synthetic-account")),
                     PAYLOAD,
                     opener=SimpleNamespace(open=lambda *_a, **_k: Response()),
                     cancellation=control,
@@ -309,9 +293,7 @@ def test_chatgpt_cancel_interrupts_a_real_blocked_socket_read():
         client_socket.close()
 
 
-def test_claude_cancel_kills_owned_process_and_reaps_before_return(
-    tmp_path, monkeypatch
-):
+def test_claude_cancel_kills_owned_process_and_reaps_before_return(tmp_path, monkeypatch):
     import native_claude
 
     control = RequestControl()

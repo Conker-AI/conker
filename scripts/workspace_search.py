@@ -95,18 +95,14 @@ def enable(config: dict) -> None:
                 f"Ollama does not have the embedding model yet. Run: ollama pull {MODEL}"
             )
     except OSError:
-        raise SystemExit(
-            "Start Ollama first; meaning search uses it for embeddings."
-        ) from None
+        raise SystemExit("Start Ollama first; meaning search uses it for embeddings.") from None
     try:
         original = CONFIG.read_bytes()
         if json.loads(original) != config:
             raise ValueError(
                 "Workspace configuration changed; reload before turning on meaning search."
             )
-        revision = json.loads((ROOT / "scripts/workspace-sources.json").read_text())[
-            "embeddings"
-        ]
+        revision = json.loads((ROOT / "scripts/workspace-sources.json").read_text())["embeddings"]
         python = prepare_source("embeddings", revision)
         (STATE / "embeddings").mkdir(exist_ok=True)
         prepared, changed = prepare(

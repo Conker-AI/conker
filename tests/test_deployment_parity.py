@@ -21,9 +21,7 @@ def ubuntu_deployment(tmp_path: Path) -> tuple[dict, dict[str, dict[str, str]]]:
     manifest = json.loads((tmp_path / "compose.json").read_text())
     environments = {}
     for path in (tmp_path / "state").glob("*.env"):
-        environments[path.stem] = dict(
-            line.split("=", 1) for line in path.read_text().splitlines()
-        )
+        environments[path.stem] = dict(line.split("=", 1) for line in path.read_text().splitlines())
     return manifest, environments
 
 
@@ -38,10 +36,13 @@ def test_both_layouts_serve_compiled_dashboard_assets(tmp_path):
     assert "GATEWAY_DASHBOARD_DIR: /dashboard" in root
     assert "./dashboard/dist:/dashboard:ro" in root
     assert env["gateway"]["GATEWAY_DASHBOARD_DIR"] == "/dashboard"
-    assert "./sources/companion/dashboard/dist:/dashboard:ro" in manifest["services"]["gateway"]["volumes"]
+    assert (
+        "./sources/companion/dashboard/dist:/dashboard:ro"
+        in manifest["services"]["gateway"]["volumes"]
+    )
     installer = (ROOT / "install.sh").read_text()
     assert "NODE_BUILD_IMAGE" in installer
-    assert 'type=volume,dst=/workspace/node_modules' in installer
+    assert "type=volume,dst=/workspace/node_modules" in installer
     assert "npm ci --no-audit --no-fund && npm run build" in installer
 
 
@@ -49,21 +50,35 @@ def test_both_layouts_wire_memory_and_separate_tool_authorities(tmp_path):
     _, ubuntu = ubuntu_deployment(tmp_path)
     root = root_contract()
 
-    for key in ("PI_MEMORYGATE_URL", "PI_MEMORYGATE_INGEST_KEY",
-                "PI_MEMORYGATE_READ_KEY", "PI_MEMORYGATE_AGENT_ID"):
+    for key in (
+        "PI_MEMORYGATE_URL",
+        "PI_MEMORYGATE_INGEST_KEY",
+        "PI_MEMORYGATE_READ_KEY",
+        "PI_MEMORYGATE_AGENT_ID",
+    ):
         assert f"{key}:" in root
         assert key in ubuntu["pi"]
     assert "MEMORYGATE_CONVERSATION_KEY:" in root
-    assert ubuntu["pi"]["PI_MEMORYGATE_INGEST_KEY"] == ubuntu["memorygate"]["MEMORYGATE_CONVERSATION_KEY"]
-    assert ubuntu["pi"]["PI_MEMORYGATE_READ_KEY"] == ubuntu["memorygate"]["MEMORYGATE_BOOTSTRAP_READ_KEY"]
+    assert (
+        ubuntu["pi"]["PI_MEMORYGATE_INGEST_KEY"]
+        == ubuntu["memorygate"]["MEMORYGATE_CONVERSATION_KEY"]
+    )
+    assert (
+        ubuntu["pi"]["PI_MEMORYGATE_READ_KEY"]
+        == ubuntu["memorygate"]["MEMORYGATE_BOOTSTRAP_READ_KEY"]
+    )
 
     assert "GATEWAY_TOOLGATE_EXECUTION_KEY:" in root
     assert "TOOLGATE_OWNER_KEY_SHA256:" in root
     assert ubuntu["gateway"]["GATEWAY_TOOLGATE_EXECUTION_KEY"] == ubuntu["pi"]["PI_TOOLGATE_KEY"]
-    assert ubuntu["toolgate"]["TOOLGATE_OWNER_KEY_SHA256"] == hashlib.sha256(
-        ubuntu["gateway"]["GATEWAY_TOOLGATE_OWNER_KEY"].encode()
-    ).hexdigest()
-    assert ubuntu["gateway"]["GATEWAY_TOOLGATE_OWNER_KEY"] != ubuntu["gateway"]["GATEWAY_TOOLGATE_EXECUTION_KEY"]
+    assert (
+        ubuntu["toolgate"]["TOOLGATE_OWNER_KEY_SHA256"]
+        == hashlib.sha256(ubuntu["gateway"]["GATEWAY_TOOLGATE_OWNER_KEY"].encode()).hexdigest()
+    )
+    assert (
+        ubuntu["gateway"]["GATEWAY_TOOLGATE_OWNER_KEY"]
+        != ubuntu["gateway"]["GATEWAY_TOOLGATE_EXECUTION_KEY"]
+    )
 
 
 def test_both_layouts_enable_workers_but_decision_packaging_is_explicit(tmp_path):
@@ -91,7 +106,9 @@ def test_both_layouts_mount_speech_credentials_without_exposing_them(tmp_path):
     assert ubuntu["pi"]["PI_SPEECH_CHARACTER_VOICE"] == "unsupported"
     assert ubuntu["pi"]["PI_SPEECH_TIMEOUT_S"] == "30"
     assert "PI_SPEECH_KEY" not in ubuntu["pi"]
-    assert "./state/speech/speech.key:/run/secrets/speech:ro" in manifest["services"]["pi"]["volumes"]
+    assert (
+        "./state/speech/speech.key:/run/secrets/speech:ro" in manifest["services"]["pi"]["volumes"]
+    )
     assert (tmp_path / "state/speech/speech.key").read_bytes() == b""
     assert "/run/secrets/speech" in recovery_layout.UBUNTU_PROFILE.excluded_mounts["pi"]
 
@@ -125,7 +142,9 @@ def test_ubuntu_recovery_profile_matches_generated_deployment(tmp_path):
     # The repository pins the agent sandbox active; its two services are optional in the profile,
     # as is the Claude plan runtime, which older deployments lack.
     assert set(services) == recovery_layout.UBUNTU_SERVICES | {
-        "sandbox-runner", "package-proxy", "subscriptions"
+        "sandbox-runner",
+        "package-proxy",
+        "subscriptions",
     }
     assert set(services) - recovery_layout.UBUNTU_SERVICES <= (
         recovery_layout.UBUNTU_PROFILE.optional_services
@@ -134,10 +153,7 @@ def test_ubuntu_recovery_profile_matches_generated_deployment(tmp_path):
         recovery_layout.UBUNTU_ENV_FILES | recovery_layout.UBUNTU_OPTIONAL_ENV_FILES
     )
     for service, destination in recovery_layout.UBUNTU_STORES.items():
-        declared = {
-            volume.split(":", 2)[1]
-            for volume in services[service].get("volumes", [])
-        }
+        declared = {volume.split(":", 2)[1] for volume in services[service].get("volumes", [])}
         assert destination in declared
     assert environment["memorygate"]["RUNTIME_SECRET_PATH"] == "/data/runtime.key"
     assert environment["postgres"]["POSTGRES_USER"] == "conker"
@@ -159,8 +175,11 @@ def test_ubuntu_uses_authoritative_digest_pinned_images(tmp_path):
 
 def test_ubuntu_prepare_refuses_a_missing_dashboard(tmp_path):
     result = subprocess.run(
-        [sys.executable, str(ROOT / "deploy" / "ubuntu" / "prepare.py"),
-         "https://conker.test:8443"],
+        [
+            sys.executable,
+            str(ROOT / "deploy" / "ubuntu" / "prepare.py"),
+            "https://conker.test:8443",
+        ],
         cwd=tmp_path,
         check=False,
         capture_output=True,
@@ -174,17 +193,19 @@ def test_ubuntu_prepare_refuses_a_mutable_release_image(tmp_path):
     dashboard = tmp_path / "sources" / "companion" / "dashboard" / "dist"
     dashboard.mkdir(parents=True)
     (dashboard / "index.html").write_text("<!doctype html>")
-    versions = (ROOT / "versions.env").read_text(encoding="utf-8").replace(
-        next(
-            line
-            for line in (ROOT / "versions.env").read_text(encoding="utf-8").splitlines()
-            if line.startswith("POSTGRES_IMAGE=")
-        ),
-        "POSTGRES_IMAGE=postgres:16",
+    versions = (
+        (ROOT / "versions.env")
+        .read_text(encoding="utf-8")
+        .replace(
+            next(
+                line
+                for line in (ROOT / "versions.env").read_text(encoding="utf-8").splitlines()
+                if line.startswith("POSTGRES_IMAGE=")
+            ),
+            "POSTGRES_IMAGE=postgres:16",
+        )
     )
-    (tmp_path / "sources" / "companion" / "versions.env").write_text(
-        versions, encoding="utf-8"
-    )
+    (tmp_path / "sources" / "companion" / "versions.env").write_text(versions, encoding="utf-8")
 
     result = subprocess.run(
         [

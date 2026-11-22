@@ -23,11 +23,7 @@ def plain(text):
 
 
 def identity(value, pattern, label, maximum=128):
-    if (
-        not isinstance(value, str)
-        or len(value) > maximum
-        or not re.fullmatch(pattern, value)
-    ):
+    if not isinstance(value, str) or len(value) > maximum or not re.fullmatch(pattern, value):
         raise ValueError(f"Use a valid {label}.")
     return value
 
@@ -64,7 +60,9 @@ def read_json(path, maximum_bytes=1048576):
     except RecursionError:
         raise ValueError("JSON nesting exceeds the supported limit.") from None
     if not isinstance(value, dict):
-        raise ValueError("JSON must contain an object.")  # invalid file content, not a Python caller type
+        raise ValueError(
+            "JSON must contain an object."
+        )  # invalid file content, not a Python caller type
     return value
 
 
@@ -160,16 +158,12 @@ def draft_payload(path, target, revision):
     if target == "new":
         allowed.update({"title", "agent_id", "privacy"})
     if set(value) - allowed or not isinstance(value.get("text"), str):
-        raise ValueError(
-            "Draft JSON must contain text and only supported composer fields."
-        )
+        raise ValueError("Draft JSON must contain text and only supported composer fields.")
     if len(value["text"]) > 16000:
         raise ValueError("Draft text exceeds 16,000 characters.")
     model = value.get("model_id")
     if model is not None and (not isinstance(model, str) or not 1 <= len(model) <= 200):
-        raise ValueError(
-            "Use a model ID of 1 to 200 characters, or null for Automatic."
-        )
+        raise ValueError("Use a model ID of 1 to 200 characters, or null for Automatic.")
     skills = value.get("skill_ids", [])
     if not isinstance(skills, list) or len(skills) > 3:
         raise ValueError("Select at most three distinct skills.")
@@ -212,16 +206,12 @@ def imported_mcp(args):
         or not all(isinstance(tool, dict) for tool in tools)
         or not isinstance(server, dict)
     ):
-        raise ValueError(
-            "Select a saved MCP discovery response containing server and tools."
-        )
+        raise ValueError("Select a saved MCP discovery response containing server and tools.")
     matches = [tool for tool in tools if tool.get("name") == args.tool]
     if len(matches) != 1:
         raise ValueError("Select exactly one tool from the saved discovery.")
     tool = matches[0]
-    remote_name = identity(
-        tool.get("name"), r"[A-Za-z0-9_.-]{1,128}", "remote tool name"
-    )
+    remote_name = identity(tool.get("name"), r"[A-Za-z0-9_.-]{1,128}", "remote tool name")
     schema, digest = tool.get("inputSchema"), tool.get("schemaHash")
     identity(digest, r"[a-f0-9]{64}", "saved schema hash")
     if not isinstance(schema, dict) or schema.get("type") != "object":
@@ -235,13 +225,9 @@ def imported_mcp(args):
             allow_nan=False,
         ).encode()
     except (ValueError, UnicodeError, RecursionError):
-        raise ValueError(
-            "The saved MCP schema is not supported finite UTF-8 JSON."
-        ) from None
+        raise ValueError("The saved MCP schema is not supported finite UTF-8 JSON.") from None
     if len(encoded) > 32768 or hashlib.sha256(encoded).hexdigest() != digest:
-        raise ValueError(
-            "The saved MCP schema must match its exact discovery hash and size limit."
-        )
+        raise ValueError("The saved MCP schema must match its exact discovery hash and size limit.")
     name = args.name if args.name is not None else remote_name[:120]
     description = tool.get("description", "")
     if (
@@ -270,9 +256,7 @@ def history_query(values):
     """Keep the only query-enabled CLI route bounded and literal."""
     if not isinstance(values, dict) or set(values) - {"limit", "q", "cursor"}:
         raise ValueError("Use only limit, query and cursor for chat history.")
-    if "limit" in values and (
-        type(values["limit"]) is not int or not 1 <= values["limit"] <= 50
-    ):
+    if "limit" in values and (type(values["limit"]) is not int or not 1 <= values["limit"] <= 50):
         raise ValueError("Choose a chat page size from 1 to 50.")
     if "q" in values:
         query = values["q"]

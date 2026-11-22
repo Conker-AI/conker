@@ -1,4 +1,5 @@
 """Executable acceptance gate for the exact images declared by versions.env."""
+
 from __future__ import annotations
 
 import argparse
@@ -44,7 +45,9 @@ class AcceptanceGate(FirstRunSteps):
         require_conversation: bool,
         protection_root: Path | None = None,
         terminal_workspace: Path | None = None,
-        runner_factory: Callable[[Path, Evidence, Mapping[str, str]], CommandRunner] = CommandRunner,
+        runner_factory: Callable[
+            [Path, Evidence, Mapping[str, str]], CommandRunner
+        ] = CommandRunner,
     ):
         self.root = root
         self.evidence = evidence
@@ -53,9 +56,7 @@ class AcceptanceGate(FirstRunSteps):
         self.backups = self.work / "backups"
         self.recovery = self.work / "recovery"
         self.protection_root = protection_root.resolve() if protection_root else None
-        self.terminal_workspace = (
-            terminal_workspace.resolve() if terminal_workspace else None
-        )
+        self.terminal_workspace = terminal_workspace.resolve() if terminal_workspace else None
         self.snapshot_store = (
             self.protection_root / ("conker-release-acceptance-" + uuid.uuid4().hex[:12])
             if self.protection_root
@@ -116,7 +117,9 @@ class AcceptanceGate(FirstRunSteps):
                 "release promotion requires --require-conversation and the complete setup rehearsal"
             )
         if self.env_file.exists() or self.work.exists():
-            raise AcceptanceError("fresh-run precondition failed: .env or .release-acceptance-work exists")
+            raise AcceptanceError(
+                "fresh-run precondition failed: .env or .release-acceptance-work exists"
+            )
         self.runner.run(["docker", "info"], timeout=60, phase="docker-info")
         self.runner.run(["docker", "compose", "version"], timeout=60, phase="compose-version")
         for name in FIXED_CONTAINER_NAMES:
@@ -124,13 +127,29 @@ class AcceptanceGate(FirstRunSteps):
                 ["docker", "container", "inspect", name], capture_output=True, check=False
             )
             if result.returncode == 0:
-                raise AcceptanceError(f"fresh-run precondition failed: container {name} already exists")
+                raise AcceptanceError(
+                    f"fresh-run precondition failed: container {name} already exists"
+                )
         project_containers = self.runner.run(
-            ["docker", "ps", "--all", "--quiet", "--filter", "label=com.docker.compose.project=conker"],
+            [
+                "docker",
+                "ps",
+                "--all",
+                "--quiet",
+                "--filter",
+                "label=com.docker.compose.project=conker",
+            ],
             phase="preflight-containers",
         ).stdout.split()
         project_volumes = self.runner.run(
-            ["docker", "volume", "ls", "--quiet", "--filter", "label=com.docker.compose.project=conker"],
+            [
+                "docker",
+                "volume",
+                "ls",
+                "--quiet",
+                "--filter",
+                "label=com.docker.compose.project=conker",
+            ],
             phase="preflight-volumes",
         ).stdout.split()
         network = subprocess.run(
@@ -178,20 +197,22 @@ class AcceptanceGate(FirstRunSteps):
         self.plan = build_image_plan(manifest)
         if self.plan["capabilities"]["owner-terminal"]["state"] == "active":
             if self.terminal_workspace is None:
-                raise AcceptanceError(
-                    "active owner terminal requires --terminal-workspace"
-                )
-            self.runner.env.update({
-                "CONKER_TERMINAL_WORKSPACE": str(self.terminal_workspace),
-                "CONKER_TERMINAL_WORKSPACE_LABEL": "Release acceptance workspace",
-            })
+                raise AcceptanceError("active owner terminal requires --terminal-workspace")
+            self.runner.env.update(
+                {
+                    "CONKER_TERMINAL_WORKSPACE": str(self.terminal_workspace),
+                    "CONKER_TERMINAL_WORKSPACE_LABEL": "Release acceptance workspace",
+                }
+            )
         if self.plan["capabilities"]["agent-sandbox"]["state"] == "active":
             workspaces_dir = self.work / "agent-workspaces"
             workspaces_dir.mkdir(parents=True)
-            self.runner.env.update({
-                "CONKER_WORKSPACES_DIR": str(workspaces_dir),
-                "CONKER_DOCKER_GID": str(os.stat("/var/run/docker.sock").st_gid),
-            })
+            self.runner.env.update(
+                {
+                    "CONKER_WORKSPACES_DIR": str(workspaces_dir),
+                    "CONKER_DOCKER_GID": str(os.stat("/var/run/docker.sock").st_gid),
+                }
+            )
         self.evidence.artifact("manifest.normalized.json", manifest)
         self.evidence.artifact("image-plan.json", self.plan)
 
@@ -228,8 +249,13 @@ class AcceptanceGate(FirstRunSteps):
             files.extend(["-f", str(self.root / "docker-compose.sandbox.yml")])
         return self.runner.run(
             [
-                "docker", "compose", "--env-file", str(self.root / "versions.env"),
-                "--env-file", str(self.env_file), *files,
+                "docker",
+                "compose",
+                "--env-file",
+                str(self.root / "versions.env"),
+                "--env-file",
+                str(self.env_file),
+                *files,
                 *args,
             ],
             **kwargs,
@@ -238,9 +264,7 @@ class AcceptanceGate(FirstRunSteps):
     def install(self) -> None:
         self.mutated = True
         try:
-            self.runner.run(
-                ["bash", "./install.sh", "--yes"], timeout=3600, phase="fresh-install"
-            )
+            self.runner.run(["bash", "./install.sh", "--yes"], timeout=3600, phase="fresh-install")
         finally:
             self.owns_env = self.env_file.exists()
         images = self.compose("config", "--images", phase="compose-images").stdout.splitlines()
@@ -250,7 +274,9 @@ class AcceptanceGate(FirstRunSteps):
     def verify_running_identity(self) -> None:
         observed: dict[str, Any] = {}
         for service, reference in self.plan["services"].items():
-            container_id = self.compose("ps", "--all", "--quiet", service, phase="container-id").stdout.strip()
+            container_id = self.compose(
+                "ps", "--all", "--quiet", service, phase="container-id"
+            ).stdout.strip()
             if not container_id:
                 raise AcceptanceError(f"Compose created no container for {service}")
             inspected = self.runner.run(
@@ -299,7 +325,11 @@ class AcceptanceGate(FirstRunSteps):
         self.evidence.artifact("service-health.json", observed)
         if pending:
             raise AcceptanceError(f"health endpoints remained unavailable: {sorted(pending)}")
-        unhealthy = {name: body.get("status") for name, body in observed.items() if body.get("status") != "ok"}
+        unhealthy = {
+            name: body.get("status")
+            for name, body in observed.items()
+            if body.get("status") != "ok"
+        }
         if unhealthy:
             raise AcceptanceError(f"services did not report ok: {unhealthy}")
         self.evidence.event("service-health", "passed", services=sorted(observed))
@@ -317,7 +347,10 @@ class AcceptanceGate(FirstRunSteps):
             opener,
             "POST",
             "/auth/verify",
-            {"password": self.password, "operation": {"method": "POST", "path": path, "body": body}},
+            {
+                "password": self.password,
+                "operation": {"method": "POST", "path": path, "body": body},
+            },
             csrf=csrf,
         )
         token = verification.get("verification_token")
@@ -353,9 +386,7 @@ class AcceptanceGate(FirstRunSteps):
         if len(snapshots) != 1:
             raise AcceptanceError(f"backup produced {len(snapshots)} snapshots, expected one")
         snapshot = snapshots[0]
-        self.runner.run(
-            ["bash", "./conker", "verify-backup", str(snapshot)], phase="verify-backup"
-        )
+        self.runner.run(["bash", "./conker", "verify-backup", str(snapshot)], phase="verify-backup")
         self.recovery_started = True
         self.runner.run(
             ["bash", "./conker", "restore", str(snapshot), "--into", str(self.recovery)],
@@ -395,8 +426,12 @@ class AcceptanceGate(FirstRunSteps):
             try:
                 self.runner.run(
                     [
-                        "bash", "./conker", "recovery-status", str(self.recovery),
-                        "--abort", "release acceptance teardown",
+                        "bash",
+                        "./conker",
+                        "recovery-status",
+                        str(self.recovery),
+                        "--abort",
+                        "release acceptance teardown",
                     ],
                     expected=(3,),
                     timeout=600,
@@ -407,7 +442,11 @@ class AcceptanceGate(FirstRunSteps):
         if self.mutated and self.env_file.exists():
             try:
                 self.compose(
-                    "down", "--volumes", "--remove-orphans", "--timeout", "30",
+                    "down",
+                    "--volumes",
+                    "--remove-orphans",
+                    "--timeout",
+                    "30",
                     timeout=300,
                     phase="compose-teardown",
                 )
@@ -446,17 +485,11 @@ def main() -> int:
         default=Path(configured_protection_root) if configured_protection_root else None,
         help="existing separately mounted directory used for disposable protection evidence",
     )
-    configured_terminal_workspace = os.environ.get(
-        "CONKER_ACCEPTANCE_TERMINAL_WORKSPACE"
-    )
+    configured_terminal_workspace = os.environ.get("CONKER_ACCEPTANCE_TERMINAL_WORKSPACE")
     parser.add_argument(
         "--terminal-workspace",
         type=Path,
-        default=(
-            Path(configured_terminal_workspace)
-            if configured_terminal_workspace
-            else None
-        ),
+        default=(Path(configured_terminal_workspace) if configured_terminal_workspace else None),
         help="existing accepted project directory required by an active owner terminal",
     )
     args = parser.parse_args()

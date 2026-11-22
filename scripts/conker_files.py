@@ -21,9 +21,7 @@ def register(commands):
     upload.add_argument("path", type=Path)
     upload.add_argument("--type", help="MIME type (guessed from the name if not given)")
 
-    subparsers.add_parser("list", help="List the files shared in a chat").add_argument(
-        "session"
-    )
+    subparsers.add_parser("list", help="List the files shared in a chat").add_argument("session")
 
     show = subparsers.add_parser("show", help="Show one file's details")
     show.add_argument("session")
@@ -62,9 +60,7 @@ def operation(args, config, request):
         if not args.path.is_file():
             raise ValueError(f"File not found: {args.path}")
         mime_type = (
-            args.type
-            or mimetypes.guess_type(args.path.name)[0]
-            or "application/octet-stream"
+            args.type or mimetypes.guess_type(args.path.name)[0] or "application/octet-stream"
         )
         return pi_call(
             request,

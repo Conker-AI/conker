@@ -129,12 +129,8 @@ class CodexAccounts:
                     else {"start_new_session": True, "umask": 0o077}
                 ),
             )
-            threading.Thread(
-                target=self._read, args=(self.process,), daemon=True
-            ).start()
-            self.call(
-                "initialize", {"clientInfo": {"name": "conker", "version": "1.0.0"}}
-            )
+            threading.Thread(target=self._read, args=(self.process,), daemon=True).start()
+            self.call("initialize", {"clientInfo": {"name": "conker", "version": "1.0.0"}})
             self.process.stdin.write(b'{"method":"initialized"}\n')
             self.process.stdin.flush()
         except (OSError, subprocess.SubprocessError):
@@ -175,19 +171,14 @@ class CodexAccounts:
             identity = self.sequence
             try:
                 self.process.stdin.write(
-                    json.dumps(
-                        {"id": identity, "method": method, "params": params or {}}
-                    ).encode()
+                    json.dumps({"id": identity, "method": method, "params": params or {}}).encode()
                     + b"\n"
                 )
                 self.process.stdin.flush()
                 deadline = time.monotonic() + 30
                 with self.condition:
                     while identity not in self.responses:
-                        if (
-                            self.process.poll() is not None
-                            or time.monotonic() >= deadline
-                        ):
+                        if self.process.poll() is not None or time.monotonic() >= deadline:
                             self.close()
                             raise ChatGPTError("runtime_unavailable")
                         self.condition.wait(min(1, deadline - time.monotonic()))
@@ -224,9 +215,7 @@ class ChatGPTControl:
     def __init__(self, state: Path, executable: Path | None, *, rpc=None):
         self.home = state / "chatgpt-auth"
         self.rpc = rpc or (
-            CodexAccounts(executable, self.home)
-            if executable and executable.is_file()
-            else None
+            CodexAccounts(executable, self.home) if executable and executable.is_file() else None
         )
         self.lock = threading.RLock()
         self.login_id = None
@@ -241,28 +230,20 @@ class ChatGPTControl:
             account, problem = None, None
             if self.rpc:
                 try:
-                    account = self.rpc.call(
-                        "account/read", {"refreshToken": False}
-                    ).get("account")
+                    account = self.rpc.call("account/read", {"refreshToken": False}).get("account")
                     if account and account.get("type") != "chatgpt":
                         account = None
                     if self.login_id:
                         for event in self.rpc.notifications:
                             if event.get("loginId") == self.login_id:
-                                self.login_state = (
-                                    "complete" if event.get("success") else "failed"
-                                )
+                                self.login_state = "complete" if event.get("success") else "failed"
                                 self.login_id = None
                                 break
                         if self.login_id and time.monotonic() >= self.login_deadline:
-                            self.rpc.call(
-                                "account/login/cancel", {"loginId": self.login_id}
-                            )
+                            self.rpc.call("account/login/cancel", {"loginId": self.login_id})
                             self.login_id, self.login_state = None, "expired"
                     if account:
-                        self.connection_id = (
-                            self.connection_id or "connection_" + uuid.uuid4().hex
-                        )
+                        self.connection_id = self.connection_id or "connection_" + uuid.uuid4().hex
                     else:
                         self.connection_id = None
                         self.models, self.catalogue_complete = [], False
@@ -298,9 +279,7 @@ class ChatGPTControl:
             if operation == "login" and set(value) == {"operation"}:
                 if current["connected"] or self.login_id:
                     raise ChatGPTError("connection_changed")
-                result = self.rpc.call(
-                    "account/login/start", {"type": "chatgptDeviceCode"}
-                )
+                result = self.rpc.call("account/login/start", {"type": "chatgptDeviceCode"})
                 identity, code = result.get("loginId"), result.get("userCode")
                 if (
                     result.get("verificationUrl") != DEVICE_URL
@@ -342,14 +321,8 @@ class ChatGPTControl:
                     False,
                 )
                 self.login_state = "idle"
-            elif (
-                operation == "models"
-                and set(value) == {"operation"}
-                and current["connected"]
-            ):
-                result = self.rpc.call(
-                    "model/list", {"limit": 100, "includeHidden": False}
-                )
+            elif operation == "models" and set(value) == {"operation"} and current["connected"]:
+                result = self.rpc.call("model/list", {"limit": 100, "includeHidden": False})
                 rows = result.get("data", [])
                 self.models = [
                     {
@@ -440,9 +413,7 @@ def responses_payload(value):
                     "role": role,
                     "content": [
                         {
-                            "type": "output_text"
-                            if role == "assistant"
-                            else "input_text",
+                            "type": "output_text" if role == "assistant" else "input_text",
                             "text": content,
                         }
                     ],
@@ -564,9 +535,7 @@ def inference_events(control, value, *, opener=None, cancellation=None):
                         "inputTokens": count(usage.get("input_tokens")),
                         "outputTokens": count(usage.get("output_tokens")),
                         "cachedTokens": count(
-                            (usage.get("input_tokens_details") or {}).get(
-                                "cached_tokens"
-                            )
+                            (usage.get("input_tokens_details") or {}).get("cached_tokens")
                         ),
                     }
                     return

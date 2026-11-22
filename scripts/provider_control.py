@@ -68,11 +68,7 @@ class ProviderControl:
         self.root, self.source, self.layout = root.resolve(), source.resolve(), layout
         if layout not in {"ubuntu", "repository"}:
             raise ValueError("Unknown installation layout.")
-        directory = (
-            self.root
-            / ("state" if layout == "ubuntu" else ".conker")
-            / "provider-secrets"
-        )
+        directory = self.root / ("state" if layout == "ubuntu" else ".conker") / "provider-secrets"
         self.store = SecretStore(directory)
         self.runner, self.verifier = runner, verifier
         self.policy = PaidPolicy(self.root, layout, runner=runner)
@@ -101,32 +97,23 @@ class ProviderControl:
             raise ProviderSecretError("Supply a provider operation.")
         if value.get("operation") == "paid-policy":
             if set(value) != {"operation", "enabled", "expectedAllowed"}:
-                raise ProviderSecretError(
-                    "Supply only the spending policy and its expected state."
-                )
+                raise ProviderSecretError("Supply only the spending policy and its expected state.")
             self.policy.apply(value["enabled"], value["expectedAllowed"])
             return self.status()
         if value.get("operation") == "recover-paid-policy":
             if set(value) != {"operation"}:
-                raise ProviderSecretError(
-                    "Supply only the spending recovery operation."
-                )
+                raise ProviderSecretError("Supply only the spending recovery operation.")
             self.policy.recover()
             return self.status()
         if self.policy.status()["policyRecoveryRequired"]:
-            raise ProviderSecretError(
-                "Recover the spending policy before changing credentials."
-            )
+            raise ProviderSecretError("Recover the spending policy before changing credentials.")
         provider, operation = value.get("provider"), value.get("operation")
         if not isinstance(provider, str) or provider not in self.released():
             raise ProviderSecretError("Unsupported provider.")
         if any(
-            (self.root / name).exists()
-            for name in (".conker-recovery.json", ".conker-backup.lock")
+            (self.root / name).exists() for name in (".conker-recovery.json", ".conker-backup.lock")
         ):
-            raise ProviderSecretError(
-                "Installation recovery or backup must finish first."
-            )
+            raise ProviderSecretError("Installation recovery or backup must finish first.")
         if operation == "stage":
             if set(value) != {
                 "provider",
@@ -135,13 +122,10 @@ class ProviderControl:
                 "activeRevision",
                 "stagedRevision",
             }:
-                raise ProviderSecretError(
-                    "Supply only the key and expected credential revisions."
-                )
+                raise ProviderSecretError("Supply only the key and expected credential revisions.")
             for key in ("activeRevision", "stagedRevision"):
                 if value[key] is not None and (
-                    not isinstance(value[key], str)
-                    or not REVISION.fullmatch(value[key])
+                    not isinstance(value[key], str) or not REVISION.fullmatch(value[key])
                 ):
                     raise ProviderSecretError("Invalid expected credential revision.")
             if not isinstance(value["secret"], str):
@@ -171,13 +155,8 @@ class ProviderControl:
             elif operation == "discard":
                 self.store.discard(provider, revision)
             elif operation in {"activate", "recover", "record-revoked"}:
-                if (
-                    operation == "record-revoked"
-                    and value["issuerConfirmed"] is not True
-                ):
-                    raise ProviderSecretError(
-                        "Confirm revocation at the provider first."
-                    )
+                if operation == "record-revoked" and value["issuerConfirmed"] is not True:
+                    raise ProviderSecretError("Confirm revocation at the provider first.")
                 command = [
                     "bash",
                     str(self.source / "conker"),
@@ -343,8 +322,7 @@ def inference_handler(control):
                         self.wfile.flush()
                 except ChatGPTError as error:
                     self.wfile.write(
-                        json.dumps({"type": "error", "code": str(error)}).encode()
-                        + b"\n"
+                        json.dumps({"type": "error", "code": str(error)}).encode() + b"\n"
                     )
                 finally:
                     events.close()
@@ -423,9 +401,7 @@ def main():
     parser.add_argument("--codex", type=Path)
     args = parser.parse_args()
     if os.name != "posix" or not args.socket.is_absolute():
-        parser.error(
-            "Provider control requires an absolute Unix socket on a POSIX host."
-        )
+        parser.error("Provider control requires an absolute Unix socket on a POSIX host.")
     directory = args.socket.parent
     if directory.is_symlink() or (directory.exists() and not directory.is_dir()):
         parser.error("Socket directory must be a real private directory.")
@@ -451,14 +427,10 @@ def main():
     except (OSError, ValueError):
         host = None  # /host routes answer 503; provider control keeps working
     state = args.root / ("state" if args.layout == "ubuntu" else ".conker")
-    chatgpt = ChatGPTControl(
-        state, args.codex or Path.home() / "conker-model-runtime/bin/codex"
-    )
+    chatgpt = ChatGPTControl(state, args.codex or Path.home() / "conker-model-runtime/bin/codex")
     inference_socket = state / "chatgpt-inference/inference.sock"
     private_socket(inference_socket)
-    inference_server = ThreadedUnixServer(
-        str(inference_socket), inference_handler(chatgpt)
-    )
+    inference_server = ThreadedUnixServer(str(inference_socket), inference_handler(chatgpt))
     inference_socket.chmod(0o600)
     threading.Thread(target=inference_server.serve_forever, daemon=True).start()
     if host is not None:
@@ -470,9 +442,7 @@ def main():
         lock_path = host.lock_path if host else None
         return helper_restart.quiet(inference_server, lock_path, state / "update", held)
 
-    with socketserver.UnixStreamServer(
-        str(args.socket), handler(control, chatgpt, host)
-    ) as server:
+    with socketserver.UnixStreamServer(str(args.socket), handler(control, chatgpt, host)) as server:
         args.socket.chmod(0o600)
 
         def stop() -> None:

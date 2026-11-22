@@ -90,9 +90,7 @@ def test_files_upload_with_auto_mime_type(invoke, tmp_path, capsys):
     check_headers(0)
 
     request = calls[0][0]
-    assert request.full_url.startswith(
-        "http://127.0.0.1:18551/sessions/ses_a/attachments?"
-    )
+    assert request.full_url.startswith("http://127.0.0.1:18551/sessions/ses_a/attachments?")
     assert "name=photo.png" in request.full_url
     assert "type=image%2Fpng" in request.full_url
     assert "lastModified=" in request.full_url
@@ -119,10 +117,7 @@ def test_files_upload_with_custom_mime_type(invoke, tmp_path, capsys):
         }
     ]
 
-    assert (
-        run("files", "upload", "ses_a", str(test_file), "--type", "application/custom")
-        == 0
-    )
+    assert run("files", "upload", "ses_a", str(test_file), "--type", "application/custom") == 0
     assert len(calls) == 1
 
     request = calls[0][0]
@@ -168,10 +163,7 @@ def test_files_show(invoke, capsys):
         }
     ]
 
-    assert (
-        run("files", "show", "ses_a", "attachment_1234567890abcdef1234567890abcdef")
-        == 0
-    )
+    assert run("files", "show", "ses_a", "attachment_1234567890abcdef1234567890abcdef") == 0
     assert len(calls) == 1
     check_headers(0)
 
@@ -241,10 +233,7 @@ def test_files_remove(invoke, capsys):
 
     state["responses"] = [{"deleted": True}]
 
-    assert (
-        run("files", "remove", "ses_a", "attachment_1234567890abcdef1234567890abcdef")
-        == 0
-    )
+    assert run("files", "remove", "ses_a", "attachment_1234567890abcdef1234567890abcdef") == 0
     assert len(calls) == 1
     check_headers(0)
 
@@ -260,9 +249,7 @@ def test_chat_with_attachments(invoke, capsys):
     """Test chat command with attachments."""
     run, calls, _, state, check_headers = invoke
 
-    state["responses"] = [
-        {"id": "turn_123", "request_id": "req_456", "status": "pending"}
-    ]
+    state["responses"] = [{"id": "turn_123", "request_id": "req_456", "status": "pending"}]
 
     assert (
         run(
@@ -353,14 +340,7 @@ def test_files_upload_refusal_uses_the_shared_message(invoke, tmp_path, capsys):
     run, _, _, state, _ = invoke
     upload = tmp_path / "notes.txt"
     upload.write_bytes(b"hello")
-    body = (
-        b'{"detail": {"code": "session_closed", "message": "Conversation is closed."}}'
-    )
-    state["responses"] = [
-        HTTPError("http://private", 409, "Conflict", {}, io.BytesIO(body))
-    ]
+    body = b'{"detail": {"code": "session_closed", "message": "Conversation is closed."}}'
+    state["responses"] = [HTTPError("http://private", 409, "Conflict", {}, io.BytesIO(body))]
     assert run("files", "upload", "ses_a", str(upload)) == 1
-    assert (
-        "Pi refused this (session_closed): Conversation is closed."
-        in capsys.readouterr().err
-    )
+    assert "Pi refused this (session_closed): Conversation is closed." in capsys.readouterr().err

@@ -201,7 +201,9 @@ class FirstRunSteps:
             )
             return
         opener, csrf = self.browser
-        session = self._verified_post(opener, csrf, "/api/pi/sessions", {"title": "Release acceptance"})
+        session = self._verified_post(
+            opener, csrf, "/api/pi/sessions", {"title": "Release acceptance"}
+        )
         session_id = session.get("session_id")
         if not session_id:
             raise AcceptanceError("conversation rehearsal did not create a session")
@@ -232,9 +234,7 @@ class FirstRunSteps:
 
     def complete_rehearsal(self) -> None:
         if not self.require_conversation:
-            raise AcceptanceError(
-                "complete release acceptance requires the conversation rehearsal"
-            )
+            raise AcceptanceError("complete release acceptance requires the conversation rehearsal")
         self.runner.run(
             ["bash", "./conker", "setup", "run", "rehearsal", "--review-memory"],
             phase="setup-rehearsal-memory",

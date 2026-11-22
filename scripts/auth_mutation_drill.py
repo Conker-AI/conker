@@ -9,10 +9,10 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-DEPLOYMENT = "tests/test_browser_auth.py::test_compose_cannot_give_worker_owner_credentials_or_auth_storage"
-RESTORE = (
-    "tests/test_recovery.py::test_snapshot_restores_vault_models_and_holds_actions"
+DEPLOYMENT = (
+    "tests/test_browser_auth.py::test_compose_cannot_give_worker_owner_credentials_or_auth_storage"
 )
+RESTORE = "tests/test_recovery.py::test_snapshot_restores_vault_models_and_holds_actions"
 CASES = [
     (
         "worker-joins-owner-transport",
@@ -73,12 +73,24 @@ CASES = [
 
 
 INDEX = "tests/test_browser_auth.py::test_qdrant_network_is_shared_only_with_memorygate"
-CASES.extend([
-    ("qdrant-back-on-worker-network", "docker-compose.yml",
-     "    networks: [memory_index]", "    networks: [conker_net]", INDEX),
-    ("memorygate-loses-index-network", "docker-compose.yml",
-     "      memory_index: {}", "", INDEX),
-])
+CASES.extend(
+    [
+        (
+            "qdrant-back-on-worker-network",
+            "docker-compose.yml",
+            "    networks: [memory_index]",
+            "    networks: [conker_net]",
+            INDEX,
+        ),
+        (
+            "memorygate-loses-index-network",
+            "docker-compose.yml",
+            "      memory_index: {}",
+            "",
+            INDEX,
+        ),
+    ]
+)
 
 
 def main() -> int:
@@ -102,9 +114,7 @@ def main() -> int:
             file = target / filename
             source = file.read_text(encoding="utf-8")
             if source.count(old) != 1:
-                raise RuntimeError(
-                    f"{name}: expected exactly one mutation site; update the drill"
-                )
+                raise RuntimeError(f"{name}: expected exactly one mutation site; update the drill")
             file.write_text(source.replace(old, new), encoding="utf-8")
         report = target / "results.xml"
         tests = [selected] if selected else [DEPLOYMENT, RESTORE, INDEX]
@@ -142,14 +152,8 @@ def main() -> int:
             )
             print(f"FAILED {name}: timed out; inspect {target / 'output.txt'}")
             return 1
-        (target / "output.txt").write_text(
-            result.stdout + result.stderr, encoding="utf-8"
-        )
-        suites = (
-            list(ET.parse(report).getroot().iter("testsuite"))
-            if report.exists()
-            else []
-        )
+        (target / "output.txt").write_text(result.stdout + result.stderr, encoding="utf-8")
+        suites = list(ET.parse(report).getroot().iter("testsuite")) if report.exists() else []
         failures = sum(int(s.get("failures", 0)) for s in suites)
         errors = sum(int(s.get("errors", 0)) for s in suites)
         skipped = sum(int(s.get("skipped", 0)) for s in suites)

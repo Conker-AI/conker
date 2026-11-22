@@ -32,9 +32,7 @@ def _emit(text):
 
 def operation(args, config, request):
     value = pi_call(request, config, "/inbox")
-    _emit(
-        json.dumps(value, indent=2, ensure_ascii=False) if args.json else render(value)
-    )
+    _emit(json.dumps(value, indent=2, ensure_ascii=False) if args.json else render(value))
     return 0
 
 
@@ -69,9 +67,7 @@ def render(value):
                 filed = (item.get("source") or {}).get("requestKind")
                 line = f"  {marker} {title} · {REQUEST_KINDS.get(filed, 'request')}"
             elif item["kind"] == "plan" and item.get("resetsAt"):
-                line = (
-                    f"  {marker} {title}, resets {_format_reset(item['resetsAt'], tz)}"
-                )
+                line = f"  {marker} {title}, resets {_format_reset(item['resetsAt'], tz)}"
             else:
                 line = f"  {marker} {title}"
 

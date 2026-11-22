@@ -64,12 +64,8 @@ def test_preparation_points_memorygate_at_the_new_services_with_one_shared_key()
         == prepared["qdrant_volume"]
         == "conker-workspace-qdrant-abc1234567"
     )
-    assert prepared["meaning_search"]["qdrant_image"].startswith(
-        "qdrant/qdrant@sha256:"
-    )
-    again, changed = search.prepare(
-        prepared, "other-key" * 6, "/elsewhere", "other-image"
-    )
+    assert prepared["meaning_search"]["qdrant_image"].startswith("qdrant/qdrant@sha256:")
+    again, changed = search.prepare(prepared, "other-key" * 6, "/elsewhere", "other-image")
     assert not changed and again == prepared
 
 
@@ -81,9 +77,7 @@ def test_the_qdrant_image_is_the_releases_pinned_digest():
 
 
 def test_a_running_memorygate_is_refused_before_any_download(monkeypatch):
-    monkeypatch.setattr(
-        search, "owned_process", lambda config, service: service == "memorygate"
-    )
+    monkeypatch.setattr(search, "owned_process", lambda config, service: service == "memorygate")
     monkeypatch.setattr(
         search, "prepare_source", lambda *a: pytest.fail("no source work while running")
     )
@@ -126,9 +120,7 @@ def test_meaning_search_starts_its_services_before_memorygate(monkeypatch, capsy
         lambda config, service: seen.append(service) or "stopped",
     )
     monkeypatch.setattr(sys, "argv", ["workspace.py", "status"])
-    monkeypatch.setattr(
-        "workspace_memory.status", lambda config: "not configured", raising=False
-    )
+    monkeypatch.setattr("workspace_memory.status", lambda config: "not configured", raising=False)
     workspace.main()
     assert seen == [
         "postgres",
@@ -139,9 +131,7 @@ def test_meaning_search_starts_its_services_before_memorygate(monkeypatch, capsy
         "pi",
         "gateway",
     ]
-    assert (
-        "meaning search: configured (qwen3-embedding:0.6b)" in capsys.readouterr().out
-    )
+    assert "meaning search: configured (qwen3-embedding:0.6b)" in capsys.readouterr().out
 
 
 def test_qdrant_runs_labelled_on_loopback_with_its_own_volume(monkeypatch):
@@ -200,9 +190,7 @@ def test_an_owned_qdrant_container_is_recognised_by_label_port_and_volume(monkey
         {
             "Config": {"Labels": {"conker.local-integration": "true"}},
             "HostConfig": {
-                "PortBindings": {
-                    "6333/tcp": [{"HostIp": "127.0.0.1", "HostPort": "16333"}]
-                }
+                "PortBindings": {"6333/tcp": [{"HostIp": "127.0.0.1", "HostPort": "16333"}]}
             },
             "Mounts": [{"Name": "q", "Destination": "/qdrant/storage"}],
             "State": {"Running": True, "Restarting": False},
@@ -224,9 +212,7 @@ def test_the_start_order_is_the_same_every_time(monkeypatch, capsys):
     configured = {**config(), "meaning_search": {"model": "qwen3-embedding:0.6b"}}
     monkeypatch.setattr(workspace, "read_config", lambda: configured)
     monkeypatch.setattr(sys, "argv", ["workspace.py", "status"])
-    monkeypatch.setattr(
-        "workspace_memory.status", lambda config: "not configured", raising=False
-    )
+    monkeypatch.setattr("workspace_memory.status", lambda config: "not configured", raising=False)
     runs = []
     for _ in range(2):
         seen = []
