@@ -65,7 +65,9 @@ def load_recovery(directory: Path, *, require_complete: bool = True) -> tuple[Pa
     if require_complete:
         expected = state.get("restore_fingerprint")
         if not isinstance(expected, str) or expected != recovery_fingerprint(state):
-            raise RecoveryError("Recovery hold facts are incomplete or changed; keep the hold and investigate.")
+            raise RecoveryError(
+                "Recovery hold facts are incomplete or changed; keep the hold and investigate."
+            )
     return state_path, state
 
 
@@ -116,9 +118,7 @@ def snapshot_profile(manifest: dict[str, Any]) -> LayoutProfile:
     return PROFILES[layout]
 
 
-def snapshot_database(
-    manifest: dict[str, Any], profile: LayoutProfile
-) -> dict[str, str]:
+def snapshot_database(manifest: dict[str, Any], profile: LayoutProfile) -> dict[str, str]:
     database = manifest.get("database")
     if database is None and "layout" not in manifest:
         return {
@@ -139,11 +139,7 @@ def snapshot_database(
 
 
 def required_snapshot_files(profile: LayoutProfile, stores: set[str]) -> set[str]:
-    config = (
-        REPOSITORY_CONFIG_REQUIRED
-        if profile.name == "repository"
-        else UBUNTU_CONFIG_REQUIRED
-    )
+    config = REPOSITORY_CONFIG_REQUIRED if profile.name == "repository" else UBUNTU_CONFIG_REQUIRED
     return COMMON_REQUIRED | config | {name + ".tar" for name in stores}
 
 
@@ -157,9 +153,7 @@ def valid_service_inventory(services: set[str], profile: LayoutProfile) -> bool:
 
 def verify_snapshot(directory: Path) -> dict:
     if directory.is_symlink():
-        raise RecoveryError(
-            "Snapshot directory must not be a symlink; use its original location."
-        )
+        raise RecoveryError("Snapshot directory must not be a symlink; use its original location.")
     manifest_path = directory / "manifest.json"
     if not manifest_path.is_file() or manifest_path.is_symlink():
         raise RecoveryError(
@@ -192,8 +186,7 @@ def verify_snapshot(directory: Path) -> dict:
         )
     images = manifest.get("images", {})
     if not valid_service_inventory(set(images), profile) or any(
-        not isinstance(image, dict)
-        or not re.fullmatch(r"sha256:[0-9a-f]{64}", image.get("id", ""))
+        not isinstance(image, dict) or not re.fullmatch(r"sha256:[0-9a-f]{64}", image.get("id", ""))
         for image in images.values()
     ):
         raise RecoveryError(
@@ -204,18 +197,19 @@ def verify_snapshot(directory: Path) -> dict:
     if profile.name == "repository":
         allowed_stores.update({"memorygate", "memorygate-backups"})
     captured_config = json.loads((directory / "config/compose.json").read_text(encoding="utf-8"))
-    if not isinstance(captured_config, dict) or not isinstance(captured_config.get("services"), dict):
+    if not isinstance(captured_config, dict) or not isinstance(
+        captured_config.get("services"), dict
+    ):
         raise RecoveryError("Captured compose configuration is invalid; obtain an intact snapshot.")
     if captured_config.get("services", {}).keys() != images.keys():
-        raise RecoveryError("Captured services and image inventory disagree; obtain an intact snapshot.")
+        raise RecoveryError(
+            "Captured services and image inventory disagree; obtain an intact snapshot."
+        )
     if not expected_stores <= stores.keys() or any(
-        name not in allowed_stores
-        and not re.fullmatch(r"extra-[a-z]+-[0-9]+", name)
+        name not in allowed_stores and not re.fullmatch(r"extra-[a-z]+-[0-9]+", name)
         for name in stores
     ):
-        raise RecoveryError(
-            "Invalid storage inventory; use an intact snapshot manifest."
-        )
+        raise RecoveryError("Invalid storage inventory; use an intact snapshot manifest.")
     expected_metadata = {
         name: {"service": name, "destination": destination}
         for name, destination in profile.stores.items()
@@ -232,9 +226,7 @@ def verify_snapshot(directory: Path) -> dict:
             "destination": "/data/backups",
         }
     if any(stores.get(name) != metadata for name, metadata in expected_metadata.items()):
-        raise RecoveryError(
-            "Storage service or destination disagrees with the snapshot layout."
-        )
+        raise RecoveryError("Storage service or destination disagrees with the snapshot layout.")
     for name, metadata in stores.items():
         if name in expected_metadata:
             continue
@@ -249,20 +241,18 @@ def verify_snapshot(directory: Path) -> dict:
             or not metadata["destination"].startswith("/")
         ):
             raise RecoveryError("Additional storage metadata is invalid.")
-    if {name + ".tar" for name in stores} != {
-        name for name in files if name.endswith(".tar")
-    }:
-        raise RecoveryError(
-            "Storage inventory and archives disagree; obtain an intact snapshot."
-        )
+    if {name + ".tar" for name in stores} != {name for name in files if name.endswith(".tar")}:
+        raise RecoveryError("Storage inventory and archives disagree; obtain an intact snapshot.")
     with (directory / "memorygate.dump").open("rb") as dump:
         if dump.read(5) != b"PGDMP":
-            raise RecoveryError(
-                "PostgreSQL dump is empty or invalid; create a new backup."
-            )
+            raise RecoveryError("PostgreSQL dump is empty or invalid; create a new backup.")
     for name in files:
         if name.endswith(".tar"):
-            required = {"pi.tar": "pi.db", "toolgate.tar": "toolgate.db", "gateway.tar": "auth.db"}.get(name)
+            required = {
+                "pi.tar": "pi.db",
+                "toolgate.tar": "toolgate.db",
+                "gateway.tar": "auth.db",
+            }.get(name)
             validate_archive(directory / name, required)
     return manifest
 

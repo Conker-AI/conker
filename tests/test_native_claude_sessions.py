@@ -155,18 +155,14 @@ def test_duplicate_native_identity_is_ambiguous_and_unavailable(registry):
         b"[NaN]",
     ],
 )
-def test_unsupported_or_malformed_discovery_never_becomes_empty(
-    registry, monkeypatch, raw
-):
+def test_unsupported_or_malformed_discovery_never_becomes_empty(registry, monkeypatch, raw):
     sessions, _state, _calls = registry
     monkeypatch.setattr(sessions, "_run", lambda *_: raw)
     with pytest.raises(native.SessionError, match="native_sessions_unavailable"):
         sessions.list()
 
 
-def test_identity_uses_exact_session_start_cwd_and_store_not_status_or_name(
-    registry, tmp_path
-):
+def test_identity_uses_exact_session_start_cwd_and_store_not_status_or_name(registry, tmp_path):
     sessions, state, _calls = registry
     original = sessions.status("abcd1234")["result"]["identity"]
     assert native.DIGEST.fullmatch(original)
@@ -179,9 +175,7 @@ def test_identity_uses_exact_session_start_cwd_and_store_not_status_or_name(
         {"sessionId": None},
     ):
         assert sessions._row(row(**changes))["identity"] != original
-    another = native.Sessions(
-        sessions.executable, tmp_path / "different-isolated-store"
-    )
+    another = native.Sessions(sessions.executable, tmp_path / "different-isolated-store")
     assert another._row(row())["identity"] != original
 
 
@@ -232,9 +226,7 @@ def test_invalid_stop_request_does_not_launch_native_command(registry, body):
 
 def test_log_output_is_utf8_bounded_inert_and_identity_bound(registry):
     sessions, state, calls = registry
-    state["logs"] = (
-        "\x1b[31m" + "🙂" * 20000 + "\x1b]52;c;secret\x07\x00\u202eEND\n"
-    ).encode()
+    state["logs"] = ("\x1b[31m" + "🙂" * 20000 + "\x1b]52;c;secret\x07\x00\u202eEND\n").encode()
     result = sessions.output("abcd1234")
     assert result["truncated"] and not result["outputPersisted"]
     assert len(result["text"].encode()) <= 65536
@@ -248,9 +240,7 @@ def test_log_output_is_utf8_bounded_inert_and_identity_bound(registry):
     ]
 
 
-def test_replacement_during_logs_cannot_leak_output_under_old_identity(
-    registry, monkeypatch
-):
+def test_replacement_during_logs_cannot_leak_output_under_old_identity(registry, monkeypatch):
     sessions, state, calls = registry
     previous = sessions._run
 
@@ -283,9 +273,7 @@ def test_unknown_stop_outcome_is_not_replayed(registry, monkeypatch):
     assert sum(call[0] == "stop" for call in calls) == 1
 
 
-def test_real_runner_uses_isolated_environment_and_bounded_nonblocking_pipes(
-    tmp_path, monkeypatch
-):
+def test_real_runner_uses_isolated_environment_and_bounded_nonblocking_pipes(tmp_path, monkeypatch):
     sessions = native.Sessions(sys._base_executable, tmp_path)
     monkeypatch.setenv("ANTHROPIC_API_KEY", "not-forwarded")
     monkeypatch.setenv("CLAUDE_CODE_OAUTH_TOKEN", "not-forwarded")
@@ -366,26 +354,18 @@ def test_host_routes_preserve_owner_key_boundary_exact_body_and_no_query(
         ):
             assert client.get(path, headers=infer).status_code == 401
             assert (
-                client.get(
-                    path, headers={**control, "Origin": "https://browser"}
-                ).status_code
+                client.get(path, headers={**control, "Origin": "https://browser"}).status_code
                 == 401
             )
             assert client.get(path + "?x=1", headers=control).status_code == 401
         assert calls == []
         result = client.get("/claude/sessions", headers=control)
-        assert (
-            result.status_code == 200
-            and result.json()["results"][0]["identity"] == digest
-        )
+        assert result.status_code == 200 and result.json()["results"][0]["identity"] == digest
         result = client.get("/claude/sessions/abcd1234/output", headers=control)
         assert result.json()["text"] == "recent output\n"
         path = "/claude/sessions/abcd1234/stop"
         assert (
-            client.post(
-                path, headers=infer, json={"expectedIdentity": digest}
-            ).status_code
-            == 401
+            client.post(path, headers=infer, json={"expectedIdentity": digest}).status_code == 401
         )
         assert (
             client.post(
@@ -402,17 +382,11 @@ def test_host_routes_preserve_owner_key_boundary_exact_body_and_no_query(
             == 422
         )
         result = client.post(path, headers=control, json={"expectedIdentity": "0" * 64})
-        assert result.status_code == 409 and result.json() == {
-            "error": "native_session_changed"
-        }
+        assert result.status_code == 409 and result.json() == {"error": "native_session_changed"}
         assert (
-            client.post(
-                path, headers=control, json={"expectedIdentity": digest}
-            ).json()["status"]
+            client.post(path, headers=control, json={"expectedIdentity": digest}).json()["status"]
             == "stop_requested"
         )
-        assert (
-            client.get("/claude/sessions/missing", headers=control).status_code == 404
-        )
+        assert client.get("/claude/sessions/missing", headers=control).status_code == 404
         assert client.get("/claude/sessions/--all", headers=control).status_code == 422
         assert sum(call[0] == "stop" for call in calls) == 1

@@ -26,8 +26,7 @@ def pi_inspections(source: Path) -> dict:
     module = ast.parse((source / "gateway" / "inspection.py").read_text(encoding="utf-8"))
     for node in module.body:
         if isinstance(node, ast.Assign) and any(
-            isinstance(target, ast.Name) and target.id == "INSPECTIONS"
-            for target in node.targets
+            isinstance(target, ast.Name) and target.id == "INSPECTIONS" for target in node.targets
         ):
             break
     else:
@@ -74,9 +73,7 @@ def test_inspection_doc_matches_pi(pi):
     missing = sorted(set(pi) - set(documented))
     extra = sorted(set(documented) - set(pi))
     differing = sorted(name for name in set(pi) & set(documented) if pi[name] != documented[name])
-    detail = "; ".join(
-        f"{name}: doc {documented[name]!r} != Pi {pi[name]!r}" for name in differing
-    )
+    detail = "; ".join(f"{name}: doc {documented[name]!r} != Pi {pi[name]!r}" for name in differing)
     assert not missing and not extra and not differing, (
         f"Resources missing from the doc: {missing}; "
         f"doc rows unknown to Pi: {extra}; "

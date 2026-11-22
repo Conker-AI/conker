@@ -47,9 +47,15 @@ def validate_workspaces(
     if resolved.is_relative_to(deployment) or deployment.is_relative_to(resolved):
         raise AgentWorkspacesError("the folder overlaps the deployment directory")
     if home.resolve(strict=False).is_relative_to(resolved):
-        raise AgentWorkspacesError("the home directory or one of its parents cannot hold agent workspaces")
+        raise AgentWorkspacesError(
+            "the home directory or one of its parents cannot hold agent workspaces"
+        )
     details = resolved.stat()
-    if (details.st_uid, details.st_gid, stat.S_IMODE(details.st_mode)) != (runner_uid, owner_gid, MODE):
+    if (details.st_uid, details.st_gid, stat.S_IMODE(details.st_mode)) != (
+        runner_uid,
+        owner_gid,
+        MODE,
+    ):
         raise AgentWorkspacesError(
             f"the folder must be owned by {runner_uid}:{owner_gid} with mode 2770; run "
             f"sudo chown {runner_uid}:{owner_gid} '{resolved}' && sudo chmod 2770 '{resolved}'"

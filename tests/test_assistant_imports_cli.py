@@ -61,9 +61,7 @@ class Pi:
 
 
 def args(path, *, yes=False, as_json=False, source="claude"):
-    return Namespace(
-        source=source, path=Path(path), yes=yes, preview=not yes, json=as_json
-    )
+    return Namespace(source=source, path=Path(path), yes=yes, preview=not yes, json=as_json)
 
 
 @pytest.fixture
@@ -135,9 +133,7 @@ def test_a_zip_without_one_export_is_refused(tmp_path, members, message):
         assistant_imports.read_export(archive)
 
 
-def test_oversized_and_missing_exports_are_refused_before_pi_is_called(
-    tmp_path, monkeypatch
-):
+def test_oversized_and_missing_exports_are_refused_before_pi_is_called(tmp_path, monkeypatch):
     monkeypatch.setattr(assistant_imports, "MAX_BYTES", 10)
     big = tmp_path / "conversations.json"
     big.write_bytes(b"[" + b" " * 20 + b"]")
@@ -162,6 +158,7 @@ def test_oversized_and_missing_exports_are_refused_before_pi_is_called(
 
 def test_the_parser_takes_preview_or_yes_but_not_both(capsys):
     from scripts import conker_parser
+
     parser = conker_parser.build_parser("conker")
     parsed = parser.parse_args(["import", "chatgpt", "export.zip"])
     assert (parsed.command, parsed.source, parsed.yes) == ("import", "chatgpt", False)
@@ -197,9 +194,7 @@ def test_development_cli_shows_pis_refusal(monkeypatch, capsys, export):
                 "message": "It looks like a Claude export.",
             }
         }
-        raise HTTPError(
-            "http://pi", 422, "refused", {}, io.BytesIO(json.dumps(detail).encode())
-        )
+        raise HTTPError("http://pi", 422, "refused", {}, io.BytesIO(json.dumps(detail).encode()))
 
     monkeypatch.setattr(cli, "read_config", dict)
     monkeypatch.setattr(cli, "request", refuse)
@@ -213,9 +208,7 @@ def test_installed_caller_sends_only_import_routes(monkeypatch):
 
     def run(command, **options):
         seen.append((command, options["input"]))
-        return subprocess.CompletedProcess(
-            command, 0, b"200\n" + json.dumps(RESULT).encode()
-        )
+        return subprocess.CompletedProcess(command, 0, b"200\n" + json.dumps(RESULT).encode())
 
     monkeypatch.setattr(import_cli.subprocess, "run", run)
     call = import_cli.caller(["docker", "compose"])
@@ -240,9 +233,7 @@ def test_installed_caller_reports_pis_refusal(monkeypatch):
         lambda command, **options: subprocess.CompletedProcess(command, 0, refusal),
     )
     with pytest.raises(import_cli.Refused, match="The file is not valid JSON"):
-        import_cli.caller(["docker", "compose"])(
-            "POST", "/imports/chatgpt/preview", b"x"
-        )
+        import_cli.caller(["docker", "compose"])("POST", "/imports/chatgpt/preview", b"x")
 
 
 FAKE_PI = """
@@ -258,9 +249,7 @@ sys.stdout.write("200\\n" + os.environ["FAKE_PI_ANSWER"])
 @pytest.mark.skipif(
     sys.platform == "win32", reason="Python starts the recording Docker, a POSIX script"
 )
-def test_installed_launcher_previews_through_the_pi_container(
-    ubuntu_cli, tmp_path, export
-):
+def test_installed_launcher_previews_through_the_pi_container(ubuntu_cli, tmp_path, export):
     scripts = ubuntu_cli.deployment / "sources/companion/scripts"
     for name in ("assistant_imports.py", "import_cli.py"):
         shutil.copy2(ROOT / "scripts" / name, scripts / name)

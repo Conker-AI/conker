@@ -125,9 +125,7 @@ def test_list_and_detail_are_bounded_saved_metadata_without_activity_claims(inve
 
 def test_display_is_plain_bounded_unicode_with_explicit_preview_omission(inventory):
     sessions, state, _calls = inventory
-    state["data"] = [
-        row(name="\u202e\x00" + "猫" * 350, preview="\x00\u202e" + "😀" * 501)
-    ]
+    state["data"] = [row(name="\u202e\x00" + "猫" * 350, preview="\x00\u202e" + "😀" * 501)]
     result = sessions.list()["results"][0]
     assert result["name"] == "猫" * 300
     assert result["preview"] == "😀" * 500 and result["previewTruncated"]
@@ -147,9 +145,7 @@ def test_display_is_plain_bounded_unicode_with_explicit_preview_omission(invento
         (None, "unknown"),
     ],
 )
-def test_sources_do_not_expose_unbounded_native_classifiers(
-    inventory, source, expected
-):
+def test_sources_do_not_expose_unbounded_native_classifiers(inventory, source, expected):
     sessions, state, _calls = inventory
     state["data"] = [row(source=source)]
     assert sessions.list()["results"][0]["source"] == expected
@@ -295,9 +291,7 @@ def test_noncanonical_malformed_cursor_fails_before_start(inventory):
 
 
 @pytest.mark.parametrize("nested", [None, [], "", "x" * 4097, "\ud800"])
-def test_bound_malformed_nested_cursor_is_invalid_request_not_unavailable(
-    inventory, nested
-):
+def test_bound_malformed_nested_cursor_is_invalid_request_not_unavailable(inventory, nested):
     sessions, _state, calls = inventory
     value = {
         "v": 1,
@@ -309,10 +303,7 @@ def test_bound_malformed_nested_cursor_is_invalid_request_not_unavailable(
     cursor = base64.urlsafe_b64encode(json.dumps(value).encode()).decode().rstrip("=")
     with pytest.raises(native.SessionError) as caught:
         sessions.list({"cursor": cursor})
-    assert (
-        caught.value.status == 422
-        and str(caught.value) == "invalid_native_session_request"
-    )
+    assert caught.value.status == 422 and str(caught.value) == "invalid_native_session_request"
     assert calls == []
 
 
@@ -338,43 +329,27 @@ def test_host_routes_preserve_control_credential_exact_queries_and_lifespan(
         for path in ("/codex/sessions?limit=1", f"/codex/sessions/{ID}"):
             assert client.get(path, headers=inference).status_code == 401
             assert (
-                client.get(
-                    path, headers={**control, "Origin": "https://browser"}
-                ).status_code
+                client.get(path, headers={**control, "Origin": "https://browser"}).status_code
                 == 401
             )
         assert calls == []
-        assert client.get(
-            "/codex/sessions?limit=1&archived=true", headers=control
-        ).json()["archived"]
-        assert (
-            client.get(f"/codex/sessions/{ID}", headers=control).json()["session"]["id"]
-            == ID
-        )
+        assert client.get("/codex/sessions?limit=1&archived=true", headers=control).json()[
+            "archived"
+        ]
+        assert client.get(f"/codex/sessions/{ID}", headers=control).json()["session"]["id"] == ID
         before = len(calls)
         for query in ("limit=1&limit=2", "extra=1", "cursor=", "archived=1"):
             response = client.get("/codex/sessions?" + query, headers=control)
             assert response.status_code == 422 and response.json() == {
                 "error": "invalid_native_session_request"
             }
-        assert (
-            client.get(f"/codex/sessions/{ID}?limit=1", headers=control).status_code
-            == 401
-        )
-        assert (
-            client.get("/claude/sessions?limit=1", headers=control).status_code == 401
-        )
+        assert client.get(f"/codex/sessions/{ID}?limit=1", headers=control).status_code == 401
+        assert client.get("/claude/sessions?limit=1", headers=control).status_code == 401
         assert client.get("/chatgpt?limit=1", headers=control).status_code == 401
         assert client.get("/codex/sessions/--last", headers=control).status_code == 422
         assert (
-            client.post(
-                f"/codex/sessions/{ID}/stop", headers=control, json={}
-            ).status_code
-            == 404
+            client.post(f"/codex/sessions/{ID}/stop", headers=control, json={}).status_code == 404
         )
-        assert (
-            client.get(f"/codex/sessions/{ID}/output", headers=control).status_code
-            == 404
-        )
+        assert client.get(f"/codex/sessions/{ID}/output", headers=control).status_code == 404
         assert len(calls) == before
     assert sessions.closed.is_set()

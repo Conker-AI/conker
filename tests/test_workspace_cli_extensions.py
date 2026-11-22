@@ -38,9 +38,7 @@ def discovery(tmp_path, **overrides):
         "required": ["query"],
     }
     digest = hashlib.sha256(
-        json.dumps(
-            schema, sort_keys=True, separators=(",", ":"), ensure_ascii=False
-        ).encode()
+        json.dumps(schema, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()
     ).hexdigest()
     value = {
         "server": {"url": "https://mcp.example.test/mcp"},
@@ -182,9 +180,7 @@ def test_skill_import_preserves_exact_source_and_replacement_identity(invoke, tm
     assert len(calls) == count
 
 
-@pytest.mark.parametrize(
-    "content", ["x" * 32001, "🦔" * 32001], ids=["ascii", "unicode"]
-)
+@pytest.mark.parametrize("content", ["x" * 32001, "🦔" * 32001], ids=["ascii", "unicode"])
 def test_skill_size_is_counted_in_characters_before_request(invoke, tmp_path, content):
     run, calls = invoke
     path = tmp_path / "SKILL.md"
@@ -254,9 +250,7 @@ def test_unicode_skill_and_chat_flags_are_preserved(invoke, tmp_path):
         ["mcp", "access", "mcp.echo", "--enabled", "true"],
     ],
 )
-def test_invalid_identifiers_and_flags_fail_without_traceback(
-    invoke, capsys, arguments
-):
+def test_invalid_identifiers_and_flags_fail_without_traceback(invoke, capsys, arguments):
     run, calls = invoke
     assert run(*arguments) == 1
     assert calls == []
@@ -312,9 +306,7 @@ def test_mcp_discover_and_import_never_autogrant(invoke, tmp_path):
         {"tools": [{"name": "search"}, {"name": "search"}], "server": {}},
     ],
 )
-def test_malformed_discovery_files_fail_without_traceback(
-    invoke, tmp_path, capsys, value
-):
+def test_malformed_discovery_files_fail_without_traceback(invoke, tmp_path, capsys, value):
     run, calls = invoke
     path = tmp_path / "bad.json"
     path.write_text(json.dumps(value))
@@ -386,10 +378,7 @@ def test_owner_access_transport_uses_both_scoped_keys_and_no_proxy(monkeypatch):
     assert headers["x-toolgate-owner-key"] == "owner-key"
     assert headers["x-toolgate-execution-key"] == "execution-key"
     assert "x-toolgate-key" not in headers
-    assert (
-        captured[0].full_url
-        == "http://127.0.0.1:18510/v2/owner/mcp/tools/mcp.echo/access"
-    )
+    assert captured[0].full_url == "http://127.0.0.1:18510/v2/owner/mcp/tools/mcp.echo/access"
 
 
 def test_missing_and_non_utf8_files_fail_without_traceback(invoke, tmp_path, capsys):

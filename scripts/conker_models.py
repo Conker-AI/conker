@@ -19,7 +19,7 @@ def set_role(request, config, role: str, model: str | None, backups: list[str] =
     if role not in roles:
         raise ValueError(f"No model role called {role}. Roles: {', '.join(sorted(roles))}.")
     catalogue = {item["id"] for item in configuration["models"]}
-    for name in ([] if model is None else [model, *backups]):
+    for name in [] if model is None else [model, *backups]:
         if name not in catalogue:
             raise ValueError(f"No model called {name} in the catalogue; conker models lists them.")
     current = roles[role]

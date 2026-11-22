@@ -59,9 +59,7 @@ def family(monkeypatch):
 
     def wait(processes, timeout):
         waits.append((processes, timeout))
-        return [p for p in processes if p.signals], [
-            p for p in processes if not p.signals
-        ]
+        return [p for p in processes if p.signals], [p for p in processes if not p.signals]
 
     monkeypatch.setattr(psutil, "wait_procs", wait)
     monkeypatch.setattr(provider_lifecycle, "graceful_stop", lambda *_: False)
@@ -73,14 +71,10 @@ def test_fallback_selects_only_exact_service_processes_including_venv_launcher(f
     provider_lifecycle.stop(root, {}, 18570, LAUNCHER)
     assert root.signals == worker.signals == ["terminate"]
     assert supervisor.signals == agent.signals == []
-    assert all(
-        supervisor not in processes and agent not in processes for processes, _ in waits
-    )
+    assert all(supervisor not in processes and agent not in processes for processes, _ in waits)
 
 
-def test_graceful_shutdown_does_not_signal_native_jobs_or_exited_service(
-    family, monkeypatch
-):
+def test_graceful_shutdown_does_not_signal_native_jobs_or_exited_service(family, monkeypatch):
     root, worker, supervisor, agent, waits = family
     monkeypatch.setattr(provider_lifecycle, "graceful_stop", lambda *_: True)
 
@@ -141,15 +135,11 @@ def test_private_shutdown_request_is_scoped_bounded_and_not_redirected(monkeypat
             return io.BytesIO(b'{"status":"stopping"}')
 
     def opener(*handlers):
-        assert handlers[0].proxies == {} and isinstance(
-            handlers[1], provider_lifecycle.NoRedirect
-        )
+        assert handlers[0].proxies == {} and isinstance(handlers[1], provider_lifecycle.NoRedirect)
         return Opener()
 
     monkeypatch.setattr(provider_lifecycle, "build_opener", opener)
-    assert provider_lifecycle.graceful_stop(
-        {"native_providers": {"control_key": "c" * 32}}, 18570
-    )
+    assert provider_lifecycle.graceful_stop({"native_providers": {"control_key": "c" * 32}}, 18570)
     request, timeout = requests[0]
     assert request.full_url == "http://127.0.0.1:18570/lifecycle/stop"
     assert request.data == b"{}" and timeout == 3
@@ -188,15 +178,10 @@ def test_shutdown_route_is_owner_only_exact_and_only_requests_server_exit(tmp_pa
             ).status_code
             == 401
         )
-        assert (
-            client.post("/lifecycle/stop?x=1", headers=owner, json={}).status_code
-            == 401
-        )
+        assert client.post("/lifecycle/stop?x=1", headers=owner, json={}).status_code == 401
         for value in ([], None, {"stopNativeSessions": True}):
             assert (
-                client.post(
-                    "/lifecycle/stop", headers=owner, content=json.dumps(value)
-                ).status_code
+                client.post("/lifecycle/stop", headers=owner, content=json.dumps(value)).status_code
                 == 422
             )
         assert called == []

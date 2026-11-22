@@ -130,9 +130,7 @@ def _apply(receipts: dict[str, dict], record: object) -> bool:
             or not OPERATION.fullmatch(record["operation"])
             or not isinstance(arguments, dict)
             or any(
-                not isinstance(key, str)
-                or not isinstance(value, str)
-                or not VALUE.fullmatch(value)
+                not isinstance(key, str) or not isinstance(value, str) or not VALUE.fullmatch(value)
                 for key, value in arguments.items()
             )
             or not isinstance(record["argumentsDigest"], str)

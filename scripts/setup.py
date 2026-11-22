@@ -61,9 +61,7 @@ def _receipt(
         "subject": subject,
         "evidenceDigest": digest,
         "completedAt": completed.isoformat().replace("+00:00", "Z"),
-        "expiresAt": (completed + timedelta(days=days))
-        .isoformat()
-        .replace("+00:00", "Z"),
+        "expiresAt": (completed + timedelta(days=days)).isoformat().replace("+00:00", "Z"),
     }
 
 
@@ -129,9 +127,7 @@ def _protection_subject(policy: dict[str, object]) -> str:
 
 def require_off_machine_destination(root: Path, destination: Path) -> None:
     if not destination.is_dir():
-        raise SetupError(
-            "backup destination must already be a mounted off-machine directory"
-        )
+        raise SetupError("backup destination must already be a mounted off-machine directory")
     if os.stat(root.resolve()).st_dev == os.stat(destination.resolve()).st_dev:
         raise SetupError(
             "backup destination is on the installation device; mount separate storage first"
@@ -194,9 +190,7 @@ def prepare_protection(
     completed = _datetime(manifest.get("created_at"), "snapshot created_at")
     observed = (now or datetime.now(UTC)).astimezone(UTC)
     if completed > observed or completed + timedelta(days=90) <= observed:
-        raise SetupError(
-            "verified snapshot completion time is invalid or already stale"
-        )
+        raise SetupError("verified snapshot completion time is invalid or already stale")
     (prune or enforce_retention)(
         destination, snapshot, int(cast(int, policy["retentionCopies"])), verify
     )
@@ -235,9 +229,7 @@ def main() -> int:
     args = parser.parse_args()
     os.umask(0o077)
     try:
-        receipt, snapshot = prepare_protection(
-            args.root, load_protection_policy(args.policy)
-        )
+        receipt, snapshot = prepare_protection(args.root, load_protection_policy(args.policy))
         write_receipt(args.output, receipt)
         print(f"Verified coordinated backup: {snapshot}", file=sys.stderr)
         return 0

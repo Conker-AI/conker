@@ -33,20 +33,14 @@ def compose_config(tmp_path):
         for line in (ROOT / "versions.env").read_text().splitlines()
         if line and not line.startswith("#")
     )
-    values = {
-        name: name.lower() + "-fixture-" + "x" * 32 for name in names - versions.keys()
-    }
+    values = {name: name.lower() + "-fixture-" + "x" * 32 for name in names - versions.keys()}
     values.update(
         CONKER_PORT="8050",
         CONKER_BACKUP_DIR=tmp_path.as_posix(),
         GATEWAY_ORIGIN="https://localhost:8050",
         CONKER_EMBEDDING_DIMENSION="1024",
-        PI_GATEWAY_KEY_SHA256=hashlib.sha256(
-            values["PI_GATEWAY_KEY"].encode()
-        ).hexdigest(),
-        PI_OWNER_KEY_SHA256=hashlib.sha256(
-            values["GATEWAY_PI_OWNER_KEY"].encode()
-        ).hexdigest(),
+        PI_GATEWAY_KEY_SHA256=hashlib.sha256(values["PI_GATEWAY_KEY"].encode()).hexdigest(),
+        PI_OWNER_KEY_SHA256=hashlib.sha256(values["GATEWAY_PI_OWNER_KEY"].encode()).hexdigest(),
         TOOLGATE_OWNER_KEY_SHA256=hashlib.sha256(
             values["GATEWAY_TOOLGATE_OWNER_KEY"].encode()
         ).hexdigest(),
@@ -78,12 +72,16 @@ def compose_config(tmp_path):
         # test here skips, and one that fails instead reports an environment
         # problem as a security regression - which is the most expensive kind of
         # false alarm, because the property it guards is the one worth trusting.
-        unavailable = ("docker" in result.stderr.lower()
-                       or "docker" in result.stdout.lower()
-                       or not shutil.which("docker"))
+        unavailable = (
+            "docker" in result.stderr.lower()
+            or "docker" in result.stdout.lower()
+            or not shutil.which("docker")
+        )
         if unavailable:
-            pytest.skip(f"needs a running Docker to resolve the compose file: "
-                        f"{(result.stderr or result.stdout).strip().splitlines()[-1][:120]}")
+            pytest.skip(
+                f"needs a running Docker to resolve the compose file: "
+                f"{(result.stderr or result.stdout).strip().splitlines()[-1][:120]}"
+            )
         raise AssertionError(result.stderr)
     return json.loads(result.stdout)
 
@@ -118,12 +116,8 @@ def test_compose_cannot_give_worker_owner_credentials_or_auth_storage(tmp_path):
     assert "owner_control" not in pi["networks"]
     assert "owner_control" in gateway["networks"]
     assert config["networks"]["owner_control"]["internal"] is True
-    assert (
-        gateway["environment"]["GATEWAY_TOOLGATE_URL"] == "http://toolgate-owner:8010"
-    )
-    assert (
-        "toolgate-owner" in services["toolgate"]["networks"]["owner_control"]["aliases"]
-    )
+    assert gateway["environment"]["GATEWAY_TOOLGATE_URL"] == "http://toolgate-owner:8010"
+    assert "toolgate-owner" in services["toolgate"]["networks"]["owner_control"]["aliases"]
     assert (
         gateway["environment"]["GATEWAY_TOOLGATE_EXECUTION_KEY"]
         == pi["environment"]["PI_TOOLGATE_KEY"]
@@ -133,8 +127,9 @@ def test_compose_cannot_give_worker_owner_credentials_or_auth_storage(tmp_path):
         == hashlib.sha256(owner_key.encode()).hexdigest()
     )
     assert gateway["environment"]["GATEWAY_DASHBOARD_DIR"] == "/dashboard"
-    assert any(mount["target"] == "/dashboard" and mount["read_only"]
-               for mount in gateway["volumes"])
+    assert any(
+        mount["target"] == "/dashboard" and mount["read_only"] for mount in gateway["volumes"]
+    )
     assert (
         pi["environment"]["PI_MEMORYGATE_INGEST_KEY"]
         == services["memorygate"]["environment"]["MEMORYGATE_CONVERSATION_KEY"]
@@ -165,9 +160,7 @@ def test_manifest_cannot_hide_gateway_by_removing_image_and_archive(installed):
         recovery_snapshot.verify_snapshot(snapshot)
 
 
-def test_pre_gateway_snapshot_still_restores_under_hold(
-    installed, tmp_path, monkeypatch
-):
+def test_pre_gateway_snapshot_still_restores_under_hold(installed, tmp_path, monkeypatch):
     root, engine = installed
     original_json = engine.json
 
@@ -197,7 +190,9 @@ def test_qdrant_network_is_shared_only_with_memorygate(tmp_path):
     services = config["services"]
     assert set(services["qdrant"]["networks"]) == {"memory_index"}
     assert not services["qdrant"].get("ports")
-    peers = {name for name, service in services.items() if "memory_index" in service.get("networks", {})}
+    peers = {
+        name for name, service in services.items() if "memory_index" in service.get("networks", {})
+    }
     assert peers == {"memorygate", "qdrant"}
     assert config["networks"]["memory_index"]["internal"] is True
     assert services["memorygate"]["environment"]["QDRANT_URL"] == "http://qdrant:6333"

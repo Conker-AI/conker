@@ -12,9 +12,7 @@ pytest.importorskip("pi.schedule.jobs", reason="Add the Pi checkout to PYTHONPAT
 import httpx
 from fastapi.testclient import TestClient
 
-pytest.importorskip(
-    "toolgate.api.server", reason="Add the ToolGate checkout to PYTHONPATH"
-)
+pytest.importorskip("toolgate.api.server", reason="Add the ToolGate checkout to PYTHONPATH")
 from pi.actions.toolgate import ToolGateClient
 from pi.conversation.store import Store
 from pi.schedule import jobs
@@ -92,9 +90,7 @@ def test_paid_schedule_reserves_once_and_reconciles_without_replay(
         if lose_receipt and request.method == "POST":
             assert response.status_code == 200, response.text
             raise httpx.ReadTimeout("synthetic acknowledgement loss")
-        return httpx.Response(
-            response.status_code, stream=httpx.ByteStream(response.content)
-        )
+        return httpx.Response(response.status_code, stream=httpx.ByteStream(response.content))
 
     adapter = PublishedJobs(
         {"companion": ToolGateClient("http://gate", key)},
@@ -133,9 +129,7 @@ def test_paid_schedule_reserves_once_and_reconciles_without_replay(
                 adapter,
             )
         budget = spending.create_job(agent["id"], run["id"], 10_000_000)
-        jobs.bind_budget(
-            store, run["id"], jobs.BudgetBinding(budget_id=budget["job_id"]), adapter
-        )
+        jobs.bind_budget(store, run["id"], jobs.BudgetBinding(budget_id=budget["job_id"]), adapter)
         worker.tick(now=3601)
         state = jobs.runs(store, job["id"])[0]["status"]
         assert state == ("outcome_unknown" if lose_receipt else "completed")

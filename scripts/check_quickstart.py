@@ -119,15 +119,19 @@ def check() -> list[str]:
 def answers(url: str) -> bool:
     try:
         with urllib.request.urlopen(url, timeout=5) as response:
-            return response.status == 200 and 'id="root"' in response.read().decode("utf-8", "replace")
+            return response.status == 200 and 'id="root"' in response.read().decode(
+                "utf-8", "replace"
+            )
     except (urllib.error.URLError, OSError):
         return False
 
 
 def run() -> int:
     if sys.platform == "win32":
-        print("--run needs Linux or macOS (it starts the server in its own process group).",
-              file=sys.stderr)
+        print(
+            "--run needs Linux or macOS (it starts the server in its own process group).",
+            file=sys.stderr,
+        )
         return 2
     text = quickstart((ROOT / "README.md").read_text(encoding="utf-8"))
     lines = commands(BLOCK.findall(text)[0])
@@ -144,20 +148,27 @@ def run() -> int:
             if line.startswith("cd "):
                 cwd = cwd / line[3:].strip()
                 continue
-            subprocess.run(line, shell=True, cwd=cwd, check=True, timeout=deadline - time.monotonic())
+            subprocess.run(
+                line, shell=True, cwd=cwd, check=True, timeout=deadline - time.monotonic()
+            )
         print(f"$ {lines[-1]}", flush=True)
         server = subprocess.Popen(lines[-1], shell=True, cwd=cwd, start_new_session=True)
         try:
             while time.monotonic() < deadline and server.poll() is None:
                 if answers(opened.group(1)):
-                    print(f"The preview answered at {opened.group(1)} after "
-                          f"{time.monotonic() - started:.0f} s.")
+                    print(
+                        f"The preview answered at {opened.group(1)} after "
+                        f"{time.monotonic() - started:.0f} s."
+                    )
                     return 0
                 time.sleep(1)
         finally:
             os.killpg(server.pid, signal.SIGTERM)
             server.wait(timeout=30)
-    print(f"The preview did not answer at {opened.group(1)} within {LIMIT_SECONDS} s.", file=sys.stderr)
+    print(
+        f"The preview did not answer at {opened.group(1)} within {LIMIT_SECONDS} s.",
+        file=sys.stderr,
+    )
     return 1
 
 

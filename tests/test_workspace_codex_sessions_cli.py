@@ -79,12 +79,8 @@ def test_codex_default_archive_and_next_page_are_owner_gets(invoke):
         "cursor": ["opaque_next-123"],
     }
     assert not urlsplit(calls[2].full_url).query
-    assert all(
-        request.get_method() == "GET" and request.data is None for request in calls
-    )
-    assert all(
-        request.get_header("Authorization") == "Bearer owner-only" for request in calls
-    )
+    assert all(request.get_method() == "GET" and request.data is None for request in calls)
+    assert all(request.get_header("Authorization") == "Bearer owner-only" for request in calls)
 
 
 @pytest.mark.parametrize(
@@ -106,9 +102,7 @@ def test_codex_default_archive_and_next_page_are_owner_gets(invoke):
         ("claude", "list", "--archived"),
     ],
 )
-def test_invalid_or_unsupported_requests_fail_before_configuration(
-    invoke, capsys, arguments
-):
+def test_invalid_or_unsupported_requests_fail_before_configuration(invoke, capsys, arguments):
     run, calls, config_reads = invoke
     assert run(*arguments) == 1
     assert not calls and not config_reads

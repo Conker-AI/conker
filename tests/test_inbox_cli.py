@@ -303,9 +303,7 @@ def test_inbox_suggestion_gets_question_mark(invoke, capsys):
                 "timeZone": "Asia/Jerusalem",
                 "startsAt": 1792188000.0,
             },
-            "needsYou": [
-                {"kind": "suggestion", "id": "sug_1", "title": "Consider this option"}
-            ],
+            "needsYou": [{"kind": "suggestion", "id": "sug_1", "title": "Consider this option"}],
             "handled": [],
             "upcoming": [],
             "impact": {
@@ -378,13 +376,9 @@ def test_inbox_time_on_another_day_shows_weekday():
 def test_inbox_pi_refusal_exits(invoke, capsys):
     run, _calls, _, state, _ = invoke
     body = b'{"detail": {"code": "forbidden", "message": "Owner access required."}}'
-    state["responses"] = [
-        HTTPError("http://private", 403, "Forbidden", {}, io.BytesIO(body))
-    ]
+    state["responses"] = [HTTPError("http://private", 403, "Forbidden", {}, io.BytesIO(body))]
     assert run("inbox") == 1
-    assert (
-        "Pi refused this (forbidden): Owner access required." in capsys.readouterr().err
-    )
+    assert "Pi refused this (forbidden): Owner access required." in capsys.readouterr().err
 
 
 def test_inbox_time_with_an_unknown_zone_is_a_dash():
@@ -439,8 +433,15 @@ def test_conkers_agent_and_team_requests_show_what_they_would_make():
 
     def request(kind, title):
         return {
-            "kind": "change-request", "id": "creq_" + "a" * 32, "title": title, "since": 1792240000.0,
-            "source": {"kind": "change-request", "requestId": "creq_" + "a" * 32, "requestKind": kind},
+            "kind": "change-request",
+            "id": "creq_" + "a" * 32,
+            "title": title,
+            "since": 1792240000.0,
+            "source": {
+                "kind": "change-request",
+                "requestId": "creq_" + "a" * 32,
+                "requestKind": kind,
+            },
         }
 
     value = {
@@ -451,7 +452,8 @@ def test_conkers_agent_and_team_requests_show_what_they_would_make():
             request("team", "Create the team “Essay”: A → B"),
             request("grant_access", "Something newer"),
         ],
-        "handled": [], "upcoming": [],
+        "handled": [],
+        "upcoming": [],
         "impact": {"today": zero, "week": zero},
         "counts": {"needsYou": 3, "handled": 0, "upcoming": 0},
     }

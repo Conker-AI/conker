@@ -54,9 +54,7 @@ def test_conker_ops_lists_receipts_newest_first(tmp_path, capsys):
     assert cli(tmp_path, "show", "op-missing-0000000") == 1
 
 
-def test_conker_ops_run_uses_the_same_table_lock_and_journal(
-    tmp_path, capsys, monkeypatch
-):
+def test_conker_ops_run_uses_the_same_table_lock_and_journal(tmp_path, capsys, monkeypatch):
     runner = Runner()
     monkeypatch.setattr(
         host_ops_cli,
@@ -96,9 +94,7 @@ def test_routes_answer_fixed_codes_and_plain_words(tmp_path):
     status, value = route(ops, "POST", "/host/ops", {"operation": "shell"})
     assert status == 422 and value["error"] == "invalid_host_operation"
     assert "shell" not in value["message"]
-    status, value = route(
-        ops, "POST", "/host/ops", action("services.restart", {"service": "pi"})
-    )
+    status, value = route(ops, "POST", "/host/ops", action("services.restart", {"service": "pi"}))
     assert status == 200 and value["id"] == "op-1234567890abcdef"
     assert route(ops, "GET", "/host/ops/op-1234567890abcdef", None)[0] == 200
 
@@ -133,9 +129,7 @@ def test_helper_socket_handler_serves_host_routes_beside_providers(tmp_path):
         )
         assert status == 200 and value["result"]["services"]
         assert request("POST", "/host/ops", {"operation": "shell"})[0] == 422
-        assert (
-            request("POST", "/host/ops", action("backup.run"), "text/plain")[0] == 422
-        )
+        assert request("POST", "/host/ops", action("backup.run"), "text/plain")[0] == 422
         assert request("POST", "/host/exec", {"operation": "shell"})[0] == 404
     finally:
         server.shutdown()
@@ -182,14 +176,10 @@ def test_only_the_gateway_mounts_the_helper_socket_and_nothing_mounts_the_journa
         "docker-compose.terminal.yml",
         "docker-compose.sandbox.yml",
     ):
-        for service, value in yaml.safe_load((ROOT / name).read_text())[
-            "services"
-        ].items():
+        for service, value in yaml.safe_load((ROOT / name).read_text())["services"].items():
             compose.setdefault(service, []).extend(mounts(value))
     prepare(tmp_path)
-    ubuntu = json.loads((tmp_path / "compose.json").read_text(encoding="utf-8"))[
-        "services"
-    ]
+    ubuntu = json.loads((tmp_path / "compose.json").read_text(encoding="utf-8"))["services"]
     for layout in (compose, {name: mounts(value) for name, value in ubuntu.items()}):
         reaching = {
             service
@@ -197,9 +187,7 @@ def test_only_the_gateway_mounts_the_helper_socket_and_nothing_mounts_the_journa
             if any("provider-control" in volume for volume in volumes)
         }
         assert reaching == {"gateway"}
-        assert not any(
-            "host-ops" in volume for volumes in layout.values() for volume in volumes
-        )
+        assert not any("host-ops" in volume for volumes in layout.values() for volume in volumes)
 
 
 # The installed launcher
@@ -237,9 +225,7 @@ def test_conker_restart_takes_one_named_service(launcher):
     ):
         result = launcher(*bad)
         assert result.returncode == 2
-    assert len(launcher.docker_log.read_text(encoding="utf-8").splitlines()) == len(
-        calls
-    )
+    assert len(launcher.docker_log.read_text(encoding="utf-8").splitlines()) == len(calls)
 
 
 def restarts(launcher) -> list[str]:
@@ -304,8 +290,7 @@ def test_conker_ops_run_restarts_through_the_launcher_with_a_receipt(launcher):
     assert receipt["outcome"] == "done" and receipt["source"] == "cli"
     calls = launcher.docker_log.read_text(encoding="utf-8").splitlines()
     assert any(
-        "compose --project-directory" in call and call.endswith("restart pi")
-        for call in calls
+        "compose --project-directory" in call and call.endswith("restart pi") for call in calls
     )
     listing = launcher("ops")
     assert "done     services.restart service=pi  (cli, cli-" in listing.stdout

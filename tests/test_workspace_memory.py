@@ -37,9 +37,7 @@ def config():
                 "MEMORYGATE_BOOTSTRAP_READ_KEY": "private-read-key-retained-123456",
             },
             "toolgate": {"TOOLGATE_BOOTSTRAP_SCOPES": "existing-owner-selected-scope"},
-            "gateway": {
-                "GATEWAY_TOOLGATE_OWNER_KEY": "private-owner-key-retained-123456"
-            },
+            "gateway": {"GATEWAY_TOOLGATE_OWNER_KEY": "private-owner-key-retained-123456"},
         },
     }
 
@@ -56,9 +54,7 @@ def test_preparation_adds_only_five_fields_and_distinct_scoped_secret():
     original = config()
     before = copy.deepcopy(original)
     prepared, changed = memory.prepare(original)
-    assert (
-        changed and original == before and remove_correction_fields(prepared) == before
-    )
+    assert changed and original == before and remove_correction_fields(prepared) == before
     pi, gate = prepared["environments"]["pi"], prepared["environments"]["memorygate"]
     assert pi["PI_MEMORY_CORRECTION_KEY"] == gate["MEMORYGATE_CORRECTION_KEY"]
     assert len(pi["PI_MEMORY_CORRECTION_KEY"]) >= 32
@@ -99,9 +95,7 @@ def test_partial_configuration_is_not_guessed_or_overwritten(service, field, val
     before = copy.deepcopy(original)
     with pytest.raises(ValueError, match="Partial"):
         memory.prepare(original)
-    assert (
-        original == before and memory.status(original) == "configuration needs review"
-    )
+    assert original == before and memory.status(original) == "configuration needs review"
 
 
 @pytest.mark.parametrize(
@@ -122,9 +116,7 @@ def test_mismatched_existing_configuration_is_preserved_and_readiness_is_not_rea
     before = copy.deepcopy(original)
     with pytest.raises(ValueError):
         memory.prepare(original)
-    assert (
-        original == before and memory.status(original) == "configuration needs review"
-    )
+    assert original == before and memory.status(original) == "configuration needs review"
 
 
 @pytest.mark.parametrize(
@@ -139,9 +131,7 @@ def test_mismatched_existing_configuration_is_preserved_and_readiness_is_not_rea
         "http://127.0.0.1:18520#fragment",
     ],
 )
-def test_no_credential_is_minted_for_foreign_or_ambiguous_memory_target(
-    value, monkeypatch
-):
+def test_no_credential_is_minted_for_foreign_or_ambiguous_memory_target(value, monkeypatch):
     original = config()
     original["environments"]["pi"]["PI_MEMORYGATE_URL"] = value
     monkeypatch.setattr(
@@ -155,9 +145,7 @@ def test_no_credential_is_minted_for_foreign_or_ambiguous_memory_target(
 
 def test_namespace_mismatch_is_rejected_without_widening_scope():
     original = config()
-    original["environments"]["memorygate"]["MEMORYGATE_CONVERSATION_AGENT_ID"] = (
-        "other_namespace"
-    )
+    original["environments"]["memorygate"]["MEMORYGATE_CONVERSATION_AGENT_ID"] = "other_namespace"
     with pytest.raises(ValueError, match="namespaces"):
         memory.prepare(original)
     assert original["environments"]["pi"]["PI_MEMORYGATE_AGENT_ID"] == "local_companion"
@@ -204,12 +192,8 @@ def test_targeted_command_updates_only_stopped_config_atomically_and_never_print
     path.write_text(json.dumps(value), encoding="utf-8")
     monkeypatch.setattr(setup, "CONFIG", path)
     checked = []
-    monkeypatch.setattr(
-        setup, "owned_process", lambda _config, name: checked.append(name) or False
-    )
-    monkeypatch.setattr(
-        setup, "run", lambda *a, **k: pytest.fail("No installation or model calls")
-    )
+    monkeypatch.setattr(setup, "owned_process", lambda _config, name: checked.append(name) or False)
+    monkeypatch.setattr(setup, "run", lambda *a, **k: pytest.fail("No installation or model calls"))
     setup.configure_memory_corrections(value)
     prepared = json.loads(path.read_text(encoding="utf-8"))
     assert checked == ["pi", "memorygate"]
@@ -223,9 +207,7 @@ def test_targeted_command_updates_only_stopped_config_atomically_and_never_print
 
 
 @pytest.mark.parametrize("running", ["pi", "memorygate"])
-def test_targeted_command_refuses_running_services_before_writes(
-    tmp_path, monkeypatch, running
-):
+def test_targeted_command_refuses_running_services_before_writes(tmp_path, monkeypatch, running):
     path = tmp_path / "configuration.json"
     path.write_text("unchanged", encoding="utf-8")
     monkeypatch.setattr(setup, "CONFIG", path)
@@ -235,9 +217,7 @@ def test_targeted_command_refuses_running_services_before_writes(
     assert path.read_text() == "unchanged"
 
 
-def test_stale_or_incomplete_setup_never_overwrites_current_config(
-    tmp_path, monkeypatch
-):
+def test_stale_or_incomplete_setup_never_overwrites_current_config(tmp_path, monkeypatch):
     value = sources(tmp_path, config())
     path = tmp_path / "configuration.json"
     path.write_text(json.dumps({**value, "changed": True}), encoding="utf-8")
@@ -271,9 +251,7 @@ def test_workspace_command_dispatches_narrow_repair_without_other_work(monkeypat
     value = config()
     calls = []
     monkeypatch.setattr(workspace, "read_config", lambda: value)
-    monkeypatch.setattr(
-        setup, "configure_memory_corrections", lambda config: calls.append(config)
-    )
+    monkeypatch.setattr(setup, "configure_memory_corrections", lambda config: calls.append(config))
     monkeypatch.setattr(sys, "argv", ["workspace.py", "memory-corrections"])
     workspace.main()
     assert calls == [value]
@@ -297,9 +275,7 @@ def test_failed_atomic_replace_keeps_original_config_and_removes_temporary_file(
     assert not list(tmp_path.glob("*.tmp.*"))
 
 
-def test_missing_correction_sources_does_not_mint_or_write_credentials(
-    tmp_path, monkeypatch
-):
+def test_missing_correction_sources_does_not_mint_or_write_credentials(tmp_path, monkeypatch):
     value = config()
     value["repositories"] = {"pi": str(tmp_path), "memorygate": str(tmp_path)}
     path = tmp_path / "configuration.json"
@@ -321,9 +297,7 @@ def test_enhancement_validates_existing_partial_link_before_any_source_or_depend
     monkeypatch,
 ):
     value = config()
-    value["environments"]["pi"]["PI_MEMORY_CORRECTION_KEY"] = (
-        "saved-existing-private-key-123456789"
-    )
+    value["environments"]["pi"]["PI_MEMORY_CORRECTION_KEY"] = "saved-existing-private-key-123456789"
     before = copy.deepcopy(value)
     monkeypatch.setattr(setup, "owned_process", lambda *args: False)
     monkeypatch.setattr(
@@ -338,9 +312,7 @@ def test_enhancement_validates_existing_partial_link_before_any_source_or_depend
 
 def test_status_does_not_claim_live_readiness_or_generate_credentials(monkeypatch):
     value = config()
-    monkeypatch.setattr(
-        memory.secrets, "token_urlsafe", lambda *a: pytest.fail("Read-only status")
-    )
+    monkeypatch.setattr(memory.secrets, "token_urlsafe", lambda *a: pytest.fail("Read-only status"))
     assert memory.status(value) == "not configured"
     monkeypatch.setattr(workspace, "read_config", lambda: value)
     monkeypatch.setattr(workspace, "service_state", lambda *args: "stopped")
@@ -349,9 +321,7 @@ def test_status_does_not_claim_live_readiness_or_generate_credentials(monkeypatc
 
 
 @pytest.mark.parametrize("service", ["pi", "memorygate"])
-def test_custom_service_ports_are_refused_before_minting_or_writing(
-    tmp_path, monkeypatch, service
-):
+def test_custom_service_ports_are_refused_before_minting_or_writing(tmp_path, monkeypatch, service):
     value = config()
     value["ports"][service] += 1
     if service == "memorygate":
@@ -382,7 +352,4 @@ def test_collision_with_any_existing_credential_is_retried_without_reusing_it(
     tokens = iter([collision, "d" * 48])
     monkeypatch.setattr(memory.secrets, "token_urlsafe", lambda *args: next(tokens))
     prepared, _ = memory.prepare(value)
-    assert (
-        prepared["environments"]["pi"]["PI_MEMORY_CORRECTION_KEY"]
-        == "mg_correction_" + "d" * 48
-    )
+    assert prepared["environments"]["pi"]["PI_MEMORY_CORRECTION_KEY"] == "mg_correction_" + "d" * 48

@@ -143,13 +143,9 @@ def test_draft_files_a_tool_request_and_waits_for_it():
 
 def test_from_chat_files_the_owners_own_message():
     pi, services = Pi(), Services()
-    args = Namespace(
-        operation="from-chat", session="ses_1", message="msg_owner", **waiting()
-    )
+    args = Namespace(operation="from-chat", session="ses_1", message="msg_owner", **waiting())
     assert workflows.tool_request(args, {}, services, pi, emit=lambda _text: None) == 0
-    assert (
-        pi.calls[0][2]["description"] == "Every morning tell me the weather in Tel Aviv"
-    )
+    assert pi.calls[0][2]["description"] == "Every morning tell me the weather in Tel Aviv"
     assert services.to("/sessions/ses_1")
 
 
@@ -164,9 +160,7 @@ def test_from_chat_files_the_owners_own_message():
 )
 def test_only_the_owners_own_messages_become_requests(message, error):
     pi = Pi()
-    args = Namespace(
-        operation="from-chat", session="ses_1", message=message, **waiting()
-    )
+    args = Namespace(operation="from-chat", session="ses_1", message=message, **waiting())
     with pytest.raises(ValueError, match=error):
         workflows.tool_request(args, {}, Services(), pi)
     assert pi.calls == []
@@ -193,9 +187,7 @@ def test_the_development_cli_drafts_through_the_tool_request(monkeypatch, capsys
         monkeypatch.setattr(sys, "argv", ["conker.py", "workflow", "draft", "x", *old])
         with pytest.raises(SystemExit):
             cli.main()
-    monkeypatch.setattr(
-        sys, "argv", ["conker.py", "workflow", "accept", "wfo_" + "2" * 32]
-    )
+    monkeypatch.setattr(sys, "argv", ["conker.py", "workflow", "accept", "wfo_" + "2" * 32])
     with pytest.raises(SystemExit):
         cli.main()
 
@@ -209,9 +201,7 @@ def test_dismiss_declines_a_tool_request():
     assert services.to(f"/change-requests/{REQUEST}/decline")[0][2] == {}
     for old in ("wfp_" + "1" * 32, "wfo_" + "2" * 32, "creq_x"):
         with pytest.raises(ValueError, match="creq_"):
-            workflows.workflow_operation(
-                Namespace(operation="dismiss", request=old), {}, services
-            )
+            workflows.workflow_operation(Namespace(operation="dismiss", request=old), {}, services)
 
 
 def publish(services, **values):
@@ -294,9 +284,7 @@ def test_the_capability_query_sends_only_known_options(monkeypatch):
             return io.BytesIO(b'{"items": []}')
 
     monkeypatch.setattr(cli, "build_opener", lambda *handlers: Opener())
-    config = {
-        "environments": {"gateway": {"GATEWAY_TOOLGATE_OWNER_KEY": "fixture-owner-key"}}
-    }
+    config = {"environments": {"gateway": {"GATEWAY_TOOLGATE_OWNER_KEY": "fixture-owner-key"}}}
     cli.request(
         config,
         "toolgate-owner",
@@ -308,34 +296,31 @@ def test_the_capability_query_sends_only_known_options(monkeypatch):
 
 
 def test_validation_issues_name_their_step():
-    assert workflows.problem(
-        {"message": "Use a valid reference.", "node_id": "fetch"}
-    ) == ("Step fetch: Use a valid reference.")
-    assert workflows.problem(
-        {"message": "Use exactly one Input node.", "node_id": None}
-    ) == ("Use exactly one Input node.")
+    assert workflows.problem({"message": "Use a valid reference.", "node_id": "fetch"}) == (
+        "Step fetch: Use a valid reference."
+    )
+    assert workflows.problem({"message": "Use exactly one Input node.", "node_id": None}) == (
+        "Use exactly one Input node."
+    )
 
 
 def test_refusals_show_the_services_message():
     def refuse(config, service, path, body=None, **options):
         detail = {"detail": {"code": "decided", "message": "Already decided."}}
-        raise HTTPError(
-            "http://pi", 409, "x", {}, io.BytesIO(json.dumps(detail).encode())
-        )
+        raise HTTPError("http://pi", 409, "x", {}, io.BytesIO(json.dumps(detail).encode()))
 
-    with pytest.raises(
-        ValueError, match=r"Pi refused this \(decided\): Already decided."
-    ):
-        workflows.workflow_operation(
-            Namespace(operation="dismiss", request=REQUEST), {}, refuse
-        )
+    with pytest.raises(ValueError, match=r"Pi refused this \(decided\): Already decided."):
+        workflows.workflow_operation(Namespace(operation="dismiss", request=REQUEST), {}, refuse)
 
 
 def test_a_large_tool_catalogue_does_not_hide_the_workflows():
     def editor(config, service, path, body=None, **options):
         query = options["query"]
         if query["kind"] == "workflow":
-            return {"items": [{"id": "flow", "authorization": "owner_confirmation"}], "next_after": None}
+            return {
+                "items": [{"id": "flow", "authorization": "owner_confirmation"}],
+                "next_after": None,
+            }
         start = int(query.get("after") or 0)
         items = [{"id": f"tool-{n}"} for n in range(start, start + 100)]
         return {"items": items, "next_after": str(start + 100) if start < 400 else None}

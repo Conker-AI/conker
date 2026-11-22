@@ -1,4 +1,5 @@
 """The agent sandbox overlay stays deferred until its isolated services are accepted."""
+
 from __future__ import annotations
 
 import sys
@@ -15,6 +16,7 @@ def load_compose(path):
 
 
 # --- sandbox-runner hardening ---
+
 
 def test_sandbox_runner_is_networkless_read_only_and_hardened():
     overlay = load_compose(ROOT / "docker-compose.sandbox.yml")
@@ -67,6 +69,7 @@ def test_sandbox_runner_environment_keys_and_no_secret_references():
 
 # --- package-proxy hardening ---
 
+
 def test_package_proxy_is_on_sandbox_egress_only_and_hardened():
     overlay = load_compose(ROOT / "docker-compose.sandbox.yml")
     pp = overlay["services"]["package-proxy"]
@@ -91,6 +94,7 @@ def test_package_proxy_environment_is_only_client_uids():
 
 
 # --- cross-compose isolation ---
+
 
 def test_only_sandbox_runner_mounts_docker_socket():
     base = load_compose(ROOT / "docker-compose.yml")
@@ -157,9 +161,7 @@ def test_no_service_except_package_proxy_is_on_sandbox_egress():
         nets = svc.get("networks", [])
         if isinstance(nets, dict):
             nets = list(nets.keys())
-        assert "sandbox_egress" not in nets, (
-            f"{name} in docker-compose.yml is on sandbox_egress"
-        )
+        assert "sandbox_egress" not in nets, f"{name} in docker-compose.yml is on sandbox_egress"
 
     for name, svc in overlay["services"].items():
         if name == "package-proxy":
@@ -167,9 +169,7 @@ def test_no_service_except_package_proxy_is_on_sandbox_egress():
         nets = svc.get("networks", [])
         if isinstance(nets, dict):
             nets = list(nets.keys())
-        assert "sandbox_egress" not in nets, (
-            f"{name} in sandbox overlay is on sandbox_egress"
-        )
+        assert "sandbox_egress" not in nets, f"{name} in sandbox overlay is on sandbox_egress"
 
 
 def test_sandbox_services_are_on_neither_conker_net_nor_owner_control():
@@ -186,6 +186,7 @@ def test_sandbox_services_are_on_neither_conker_net_nor_owner_control():
 
 # --- hardening in docker-compose.yml ---
 
+
 def test_toolgate_has_cap_drop_all_read_only_tmpfs_and_no_cap_add():
     base = load_compose(ROOT / "docker-compose.yml")
     tg = base["services"]["toolgate"]
@@ -193,9 +194,7 @@ def test_toolgate_has_cap_drop_all_read_only_tmpfs_and_no_cap_add():
     assert tg["cap_drop"] == ["ALL"]
     assert tg["read_only"] is True
     assert tg.get("cap_add") is None
-    assert any("/tmp" in str(t) for t in tg.get("tmpfs", [])), (
-        "toolgate has no /tmp tmpfs"
-    )
+    assert any("/tmp" in str(t) for t in tg.get("tmpfs", [])), "toolgate has no /tmp tmpfs"
 
 
 def test_memorygate_has_cap_drop_all_dac_override_read_only_and_tmpfs():
@@ -205,12 +204,11 @@ def test_memorygate_has_cap_drop_all_dac_override_read_only_and_tmpfs():
     assert mg["cap_drop"] == ["ALL"]
     assert mg["cap_add"] == ["DAC_OVERRIDE"]
     assert mg["read_only"] is True
-    assert any("/tmp" in str(t) for t in mg.get("tmpfs", [])), (
-        "memorygate has no /tmp tmpfs"
-    )
+    assert any("/tmp" in str(t) for t in mg.get("tmpfs", [])), "memorygate has no /tmp tmpfs"
 
 
 # --- launcher and installer source checks ---
+
 
 def test_launcher_and_installer_select_overlay_only_for_active_sandbox():
     installer = (ROOT / "install.sh").read_text(encoding="utf-8")

@@ -74,15 +74,11 @@ def test_human_status_tracks_matrix_counts_and_deferred_families():
             "deferred but claims",
         ),
         (
-            lambda data: row(data, "setup-status")["evidence"][0].update(
-                contains="invented route"
-            ),
+            lambda data: row(data, "setup-status")["evidence"][0].update(contains="invented route"),
             "evidence is stale",
         ),
         (
-            lambda data: row(data, "verified-backup")["evidence"][0].update(
-                path="../outside"
-            ),
+            lambda data: row(data, "verified-backup")["evidence"][0].update(path="../outside"),
             "escapes the repository",
         ),
     ],

@@ -92,9 +92,7 @@ def provider_state_for_backup(root: Path, profile: LayoutProfile) -> dict[str, A
     return value
 
 
-def capture_configuration(
-    root: Path, staging: Path, profile: LayoutProfile
-) -> None:
+def capture_configuration(root: Path, staging: Path, profile: LayoutProfile) -> None:
     target = staging / "config"
     if profile.name == "repository":
         for source, name in (
@@ -109,17 +107,11 @@ def capture_configuration(
         target / "versions.env",
     )
     copy_bounded_regular(root / "compose.json", target / "source-compose.json")
-    copy_bounded_regular(
-        root / "state" / "credentials.json", target / "credentials.json"
-    )
+    copy_bounded_regular(root / "state" / "credentials.json", target / "credentials.json")
     environment_files = {
-        path.name
-        for path in (root / "state").glob("*.env")
-        if path.is_file() or path.is_symlink()
+        path.name for path in (root / "state").glob("*.env") if path.is_file() or path.is_symlink()
     }
-    if not UBUNTU_ENV_FILES <= environment_files <= (
-        UBUNTU_ENV_FILES | UBUNTU_OPTIONAL_ENV_FILES
-    ):
+    if not UBUNTU_ENV_FILES <= environment_files <= (UBUNTU_ENV_FILES | UBUNTU_OPTIONAL_ENV_FILES):
         raise RecoveryError(
             "Ubuntu environment inventory differs from the release contract; "
             "review it before backup."
@@ -150,11 +142,7 @@ def _backup(root: Path, destination: Path | None, docker: Docker) -> Path:
         )
     containers, runtime, mounts, images = {}, {}, {}, {}
     for service in sorted(config["services"]):
-        ids = (
-            docker.run(*compose, "ps", "--all", "--quiet", service)
-            .stdout.decode()
-            .split()
-        )
+        ids = docker.run(*compose, "ps", "--all", "--quiet", service).stdout.decode().split()
         if len(ids) != 1:
             raise RecoveryError(
                 f"Expected one {service} container; restore the installation layout before backup."
@@ -162,9 +150,7 @@ def _backup(root: Path, destination: Path | None, docker: Docker) -> Path:
         container = docker.json("inspect", ids[0])[0]
         containers[service] = container
         runtime[service] = dict(
-            value.split("=", 1)
-            for value in container["Config"].get("Env", [])
-            if "=" in value
+            value.split("=", 1) for value in container["Config"].get("Env", []) if "=" in value
         )
         image = docker.json("image", "inspect", container["Image"])[0]
         images[service] = {
@@ -226,12 +212,9 @@ def _backup(root: Path, destination: Path | None, docker: Docker) -> Path:
             raise RecoveryError(
                 "MemoryGate uses an unmapped database endpoint; map that authoritative store before backup."
             )
-    store_paths = {
-        name: path for name, path in profile.stores.items() if name in containers
-    }
+    store_paths = {name: path for name, path in profile.stores.items() if name in containers}
     if profile.name == "repository" and any(
-        mount["Destination"] == "/data"
-        for mount in containers["memorygate"]["Mounts"]
+        mount["Destination"] == "/data" for mount in containers["memorygate"]["Mounts"]
     ):
         # Current installs persist MemoryGate's runtime key and local state in
         # /data. Legacy installs had only the nested backup bind and remain
@@ -243,13 +226,9 @@ def _backup(root: Path, destination: Path | None, docker: Docker) -> Path:
     mounts["toolgate"]["database"] = "toolgate.db"
     if "gateway" in mounts:
         mounts["gateway"]["database"] = "auth.db"
-    stores = {
-        name: {"service": name, "destination": path} for name, path in store_paths.items()
-    }
+    stores = {name: {"service": name, "destination": path} for name, path in store_paths.items()}
     if profile.name == "repository":
-        mounts["memorygate-backups"] = mount_at(
-            containers["memorygate"], "/data/backups"
-        )
+        mounts["memorygate-backups"] = mount_at(containers["memorygate"], "/data/backups")
         stores["memorygate-backups"] = {
             "service": "memorygate",
             "destination": "/data/backups",
@@ -257,11 +236,7 @@ def _backup(root: Path, destination: Path | None, docker: Docker) -> Path:
     # Images can declare anonymous volumes absent from Compose (for example
     # search-engine configuration). Inventory them rather than silently omit them.
     for service, container in containers.items():
-        known = {
-            item["destination"]
-            for item in stores.values()
-            if item["service"] == service
-        }
+        known = {item["destination"] for item in stores.values() if item["service"] == service}
         for index, mount in enumerate(container["Mounts"]):
             path = mount["Destination"]
             if path in known | profile.excluded_mounts.get(service, frozenset()):
@@ -286,9 +261,7 @@ def _backup(root: Path, destination: Path | None, docker: Docker) -> Path:
         destination = Path(source["source"]).parent
     destination = destination.resolve()
     for mount in mounts.values():
-        if mount["type"] == "bind" and destination.is_relative_to(
-            Path(mount["source"]).resolve()
-        ):
+        if mount["type"] == "bind" and destination.is_relative_to(Path(mount["source"]).resolve()):
             raise RecoveryError(
                 "Backup destination is inside a source store; choose a separate directory."
             )
@@ -297,11 +270,7 @@ def _backup(root: Path, destination: Path | None, docker: Docker) -> Path:
             "PostgreSQL is stopped; start it before creating a coordinated logical backup."
         )
     destination.mkdir(parents=True, exist_ok=True)
-    name = (
-        "snapshot-"
-        + datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ-")
-        + uuid.uuid4().hex[:8]
-    )
+    name = "snapshot-" + datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ-") + uuid.uuid4().hex[:8]
     staging = destination / ("." + name + ".partial")
     staging.mkdir(mode=0o700)
     for folder in ("config", "memorygate"):
@@ -426,9 +395,7 @@ def _backup(root: Path, destination: Path | None, docker: Docker) -> Path:
         for store, mount in mounts.items():
             print(f"Capturing {store}...", file=sys.stderr)
             with (staging / (store + ".tar")).open("wb") as output:
-                helper(
-                    docker, images["pi"]["id"], "snapshot-tree", mount, output=output
-                )
+                helper(docker, images["pi"]["id"], "snapshot-tree", mount, output=output)
         helper(
             docker,
             images["toolgate"]["id"],
@@ -450,9 +417,7 @@ def _backup(root: Path, destination: Path | None, docker: Docker) -> Path:
             path.chmod(0o600)
             with path.open("r+b") as stream:
                 os.fsync(stream.fileno())
-    for path in sorted(
-        (path for path in staging.rglob("*") if path.is_dir()), reverse=True
-    ):
+    for path in sorted((path for path in staging.rglob("*") if path.is_dir()), reverse=True):
         sync_directory(path)
     write_json(
         staging / "manifest.json",
@@ -472,9 +437,7 @@ def _backup(root: Path, destination: Path | None, docker: Docker) -> Path:
             "deletion_ledger": "unavailable",
             "execution_journal": "not_reconciled",
             "recovery_program_sha256": sha256(Path(__file__)),
-            "recovery_data_sha256": sha256(
-                Path(__file__).with_name("recovery_data.py")
-            ),
+            "recovery_data_sha256": sha256(Path(__file__).with_name("recovery_data.py")),
         },
     )
     verify_snapshot(staging)

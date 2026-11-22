@@ -118,7 +118,11 @@ def test_a_failed_check_backs_off_for_fifteen_minutes(tmp_path):
     queue.pop()()
     clock.now += host_ops_check.SUCCESS_GAP + 1
     failed = result(ops)
-    assert (failed["state"], failed["ok"], failed["reason"]) == ("fresh", False, "github_unreachable")
+    assert (failed["state"], failed["ok"], failed["reason"]) == (
+        "fresh",
+        False,
+        "github_unreachable",
+    )
     clock.now += host_ops_check.FAILURE_GAP
     assert result(ops)["state"] == "started"
     queue.pop()()

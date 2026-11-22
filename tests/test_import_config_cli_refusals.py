@@ -45,9 +45,7 @@ def answering(monkeypatch, module, stdout=b"", code=0, stderr=b"", error=None):
 
 
 def never_sent(monkeypatch, module):
-    monkeypatch.setattr(
-        module.subprocess, "run", lambda *a, **k: pytest.fail("a call was sent")
-    )
+    monkeypatch.setattr(module.subprocess, "run", lambda *a, **k: pytest.fail("a call was sent"))
 
 
 # --- config_cli.reason ------------------------------------------------------
@@ -193,16 +191,12 @@ def test_config_main_refuses_bad_arguments_with_usage(monkeypatch, capsys, argv)
     assert "usage:" in capsys.readouterr().err
 
 
-def test_config_main_refuses_when_the_registry_is_missing(
-    monkeypatch, capsys, tmp_path
-):
+def test_config_main_refuses_when_the_registry_is_missing(monkeypatch, capsys, tmp_path):
     never_sent(monkeypatch, config_cli)
     monkeypatch.setattr(config_cli, "REGISTRY", tmp_path)
     (tmp_path / "README.md").write_text("no topics here", encoding="utf-8")
     assert config_cli.main(["--root", "/srv", "--layout", "ubuntu", "list"]) == 1
-    assert capsys.readouterr().err.strip() == (
-        f"The settings registry is missing: {tmp_path}"
-    )
+    assert capsys.readouterr().err.strip() == (f"The settings registry is missing: {tmp_path}")
 
 
 def test_config_main_refuses_an_unknown_setting_with_exit_2(monkeypatch, capsys):
@@ -239,12 +233,8 @@ def test_config_main_reports_pis_refusal_with_exit_1(monkeypatch, capsys, tmp_pa
 def test_config_main_reports_a_conflict_on_save_with_exit_1(monkeypatch, capsys):
     setting = a_pi_toggle()
     answers = [
-        SimpleNamespace(
-            returncode=0, stdout=b'200\n{"revision": 4, "values": {}}', stderr=b""
-        ),
-        SimpleNamespace(
-            returncode=0, stdout=b'409\n{"detail": {"code": "conflict"}}', stderr=b""
-        ),
+        SimpleNamespace(returncode=0, stdout=b'200\n{"revision": 4, "values": {}}', stderr=b""),
+        SimpleNamespace(returncode=0, stdout=b'409\n{"detail": {"code": "conflict"}}', stderr=b""),
     ]
     sent = []
 
@@ -255,17 +245,13 @@ def test_config_main_reports_a_conflict_on_save_with_exit_1(monkeypatch, capsys)
     monkeypatch.setattr(config_cli.subprocess, "run", run)
     argv = ["--root", "/srv", "--layout", "ubuntu", "set", setting["id"], "on"]
     assert config_cli.main(argv) == 1
-    assert "changed while the command ran, so nothing was saved" in (
-        capsys.readouterr().err
-    )
+    assert "changed while the command ran, so nothing was saved" in (capsys.readouterr().err)
     (read, _), (write, body) = sent
     assert read == ["GET", "/owner/settings"] and write == ["POST", "/owner/settings"]
     assert json.loads(body)["expected_revision"] == 4 and not answers
 
 
-def test_config_cli_run_as_a_script_refuses_without_its_host_arguments(
-    monkeypatch, capsys
-):
+def test_config_cli_run_as_a_script_refuses_without_its_host_arguments(monkeypatch, capsys):
     monkeypatch.setattr(sys, "argv", ["config_cli.py", "list"])
     with pytest.raises(SystemExit) as stopped:
         runpy.run_path(str(ROOT / "scripts" / "config_cli.py"), run_name="__main__")
@@ -296,9 +282,7 @@ def test_caller_refuses_a_route_before_sending(monkeypatch):
 
 
 def test_caller_says_a_slow_import_can_be_repeated(monkeypatch):
-    calls = answering(
-        monkeypatch, import_cli, error=subprocess.TimeoutExpired(["docker"], 660)
-    )
+    calls = answering(monkeypatch, import_cli, error=subprocess.TimeoutExpired(["docker"], 660))
     with pytest.raises(OSError) as failed:
         a_call()("POST", "/imports/chatgpt/preview", EXPORT)
     assert str(failed.value) == (
@@ -355,9 +339,7 @@ def import_argv(root, *rest, layout="ubuntu"):
         ["chatgpt", "export.zip", "--yes", "--preview"],
     ],
 )
-def test_import_main_refuses_bad_arguments_with_usage(
-    monkeypatch, capsys, tmp_path, rest
-):
+def test_import_main_refuses_bad_arguments_with_usage(monkeypatch, capsys, tmp_path, rest):
     never_sent(monkeypatch, import_cli)
     with pytest.raises(SystemExit) as stopped:
         import_cli.main(import_argv(tmp_path, *rest))
@@ -373,18 +355,14 @@ def test_import_main_refuses_a_bad_layout(monkeypatch, capsys, tmp_path):
     assert "invalid choice" in capsys.readouterr().err
 
 
-def test_import_main_refuses_a_missing_export_with_exit_2(
-    monkeypatch, capsys, tmp_path
-):
+def test_import_main_refuses_a_missing_export_with_exit_2(monkeypatch, capsys, tmp_path):
     never_sent(monkeypatch, import_cli)
     missing = tmp_path / "nothing.zip"
     assert import_cli.main(import_argv(tmp_path, "claude", str(missing))) == 2
     assert capsys.readouterr().err.strip() == f"There is no file at {missing}."
 
 
-def test_import_main_refuses_a_folder_without_the_export(
-    monkeypatch, capsys, tmp_path
-):
+def test_import_main_refuses_a_folder_without_the_export(monkeypatch, capsys, tmp_path):
     never_sent(monkeypatch, import_cli)
     assert import_cli.main(import_argv(tmp_path, "chatgpt", str(tmp_path))) == 2
     assert "There is no conversations.json in that folder." in capsys.readouterr().err
@@ -430,9 +408,7 @@ def test_import_main_prints_pis_answer_as_json_on_the_repository_layout(
     assert command[-2:] == ["POST", "/imports/claude/preview"]
 
 
-def test_import_cli_run_as_a_script_refuses_without_its_host_arguments(
-    monkeypatch, capsys
-):
+def test_import_cli_run_as_a_script_refuses_without_its_host_arguments(monkeypatch, capsys):
     monkeypatch.setattr(sys, "argv", ["import_cli.py", "chatgpt", "x"])
     with pytest.raises(SystemExit) as stopped:
         runpy.run_path(str(ROOT / "scripts" / "import_cli.py"), run_name="__main__")

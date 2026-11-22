@@ -55,12 +55,8 @@ def test_list_status_and_output_are_only_owner_reads(invoke, capsys):
         "http://127.0.0.1:18570/claude/sessions/abcd1234",
         "http://127.0.0.1:18570/claude/sessions/abcd1234/output",
     ]
-    assert all(
-        request.get_method() == "GET" and request.data is None for request in calls
-    )
-    assert all(
-        request.get_header("Authorization") == "Bearer owner-only" for request in calls
-    )
+    assert all(request.get_method() == "GET" and request.data is None for request in calls)
+    assert all(request.get_header("Authorization") == "Bearer owner-only" for request in calls)
     assert "not-for-control" not in capsys.readouterr().out
 
 
@@ -82,12 +78,8 @@ def test_stop_uses_explicit_observed_identity_in_one_post(invoke):
     assert json.loads(calls[0].data) == {"expectedIdentity": "a" * 64}
 
 
-@pytest.mark.parametrize(
-    "identity", ["../other", "name with spaces", "a?query", "x" * 101, "тест"]
-)
-def test_invalid_native_ids_fail_without_requests_or_tracebacks(
-    invoke, identity, capsys
-):
+@pytest.mark.parametrize("identity", ["../other", "name with spaces", "a?query", "x" * 101, "тест"])
+def test_invalid_native_ids_fail_without_requests_or_tracebacks(invoke, identity, capsys):
     run, calls = invoke
     assert run("native-sessions", "claude", "status", identity) == 1
     assert calls == [] and "Traceback" not in capsys.readouterr().err

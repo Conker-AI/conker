@@ -46,15 +46,10 @@ def run(monkeypatch, capsys, *arguments, answers=None):
 def test_the_meter_reads_pi(monkeypatch, capsys):
     code, sent, out = run(monkeypatch, capsys)
     assert code == 0 and json.loads(out.out) == METER
-    assert (
-        sent[0].full_url.endswith("/inference/spending")
-        and sent[0].get_method() == "GET"
-    )
+    assert sent[0].full_url.endswith("/inference/spending") and sent[0].get_method() == "GET"
 
 
-def test_changing_the_cap_keeps_every_other_preference_and_sends_the_revision(
-    monkeypatch, capsys
-):
+def test_changing_the_cap_keeps_every_other_preference_and_sends_the_revision(monkeypatch, capsys):
     saved = {"revision": 5, "preferences": {**PREFERENCES["preferences"]}}
     saved["preferences"]["spendingCap"] = {
         "enabled": False,
@@ -74,10 +69,7 @@ def test_changing_the_cap_keeps_every_other_preference_and_sends_the_revision(
     )
     assert code == 0
     body = json.loads(sent[1].data)
-    assert (
-        sent[1].full_url.endswith("/owner/preferences")
-        and sent[1].get_method() == "POST"
-    )
+    assert sent[1].full_url.endswith("/owner/preferences") and sent[1].get_method() == "POST"
     assert body == {
         "expected_revision": 4,
         "preferences": {

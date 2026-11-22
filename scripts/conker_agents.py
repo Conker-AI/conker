@@ -133,9 +133,7 @@ def _search(args, config, request):
     query = _text(args.query, "the search words", 200)
     if not 1 <= args.limit <= 50:
         raise ValueError("--limit must be from 1 to 50.")
-    return pi_call(
-        request, config, "/memory/objects", query={"search": query, "limit": args.limit}
-    )
+    return pi_call(request, config, "/memory/objects", query={"search": query, "limit": args.limit})
 
 
 def belief_query(args):
@@ -202,16 +200,11 @@ def _find(agents, reference):
     """The agent a role names, by id or exact name (case does not matter)."""
     wanted = reference.strip()
     for agent in agents:
-        if (
-            agent["id"] == wanted
-            or agent["configuration"]["name"].casefold() == wanted.casefold()
-        ):
+        if agent["id"] == wanted or agent["configuration"]["name"].casefold() == wanted.casefold():
             if agent.get("archived_at") is not None:
                 raise ValueError(f"The agent “{wanted}” is archived; restore it first.")
             return agent
-    raise ValueError(
-        f"There is no agent “{wanted}”. Run `conker definitions --kind agent`."
-    )
+    raise ValueError(f"There is no agent “{wanted}”. Run `conker definitions --kind agent`.")
 
 
 def team_definition(args, agents):
@@ -219,9 +212,7 @@ def team_definition(args, agents):
     if not 1 <= len(args.role) <= MAX_ROLES:
         raise ValueError(f"A team has 1 to {MAX_ROLES} roles.")
     if args.role_tokens < 1 or args.role_cents < 0:
-        raise ValueError(
-            "--role-tokens must be at least 1 and --role-cents at least 0."
-        )
+        raise ValueError("--role-tokens must be at least 1 and --role-cents at least 0.")
     budget = {
         "maxTurns": 1,
         "maxTokens": args.role_tokens,
@@ -381,6 +372,4 @@ def operation(args, config, request):
     if args.operation != "create":
         return conker_team_run.operation(args, config, request)
     agents = pi_call(request, config, "/agents")["results"]
-    return pi_call(
-        request, config, "/collaboration/teams", team_definition(args, agents)
-    )
+    return pi_call(request, config, "/collaboration/teams", team_definition(args, agents))

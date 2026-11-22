@@ -14,7 +14,9 @@ def manifest(directory):
     for path in directory.rglob("*"):
         if path.is_file():
             with path.open("rb") as stream:
-                result[str(path.relative_to(directory))] = hashlib.file_digest(stream, "sha256").hexdigest()
+                result[str(path.relative_to(directory))] = hashlib.file_digest(
+                    stream, "sha256"
+                ).hexdigest()
     return result
 
 
@@ -33,7 +35,9 @@ def publish(root, stage, destination, checkpoint, *, before_swap=None):
     # complete tree before touching dist; an interrupted copy cannot be served.
     shutil.copytree(stage, ready)
     if manifest(ready) != expected:
-        raise RuntimeError("Prepared assets differ from the verified build; previous assets retained.")
+        raise RuntimeError(
+            "Prepared assets differ from the verified build; previous assets retained."
+        )
     if before_swap is not None:
         before_swap()
     had_previous = destination.exists()
@@ -63,8 +67,17 @@ def build_dashboard(root: Path, state: Path, run, require_stopped):
     stage = checkpoint / "staged"
     run(npm, "run", "design:check", cwd=dashboard)
     run(node, dashboard / "node_modules/typescript/bin/tsc", "-b", cwd=dashboard)
-    run(node, dashboard / "node_modules/vite/bin/vite.js", "build", "--configLoader", "runner",
-        "--outDir", stage, "--emptyOutDir", cwd=dashboard)
+    run(
+        node,
+        dashboard / "node_modules/vite/bin/vite.js",
+        "build",
+        "--configLoader",
+        "runner",
+        "--outDir",
+        stage,
+        "--emptyOutDir",
+        cwd=dashboard,
+    )
     run(node, dashboard / "scripts/check-production-bundle.cjs", stage / "assets", cwd=dashboard)
     # Another owner command may have started Gateway while compilation ran.
     previous = publish(root, stage, dashboard / "dist", checkpoint, before_swap=require_stopped)

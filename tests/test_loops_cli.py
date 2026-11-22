@@ -98,7 +98,9 @@ def test_list_prints_one_line_per_loop(monkeypatch, capsys):
 
 def test_add_posts_the_promise(monkeypatch, capsys):
     arguments = ["add", "chat_1", "  Send the essay ", "--by", "conker", "--due", "2026-11-20"]
-    code, sent, out = calls(monkeypatch, capsys, [*arguments, "--message", "msg_1"], [{"loop": LOOP}])
+    code, sent, out = calls(
+        monkeypatch, capsys, [*arguments, "--message", "msg_1"], [{"loop": LOOP}]
+    )
     assert code == 0 and json.loads(out.out) == {"loop": LOOP}
     assert urlsplit(sent[0].full_url).path == "/open-loops" and sent[0].get_method() == "POST"
     assert json.loads(sent[0].data) == {

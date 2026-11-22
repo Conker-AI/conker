@@ -7,7 +7,9 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-SPEC = importlib.util.spec_from_file_location("check_quickstart", ROOT / "scripts" / "check_quickstart.py")
+SPEC = importlib.util.spec_from_file_location(
+    "check_quickstart", ROOT / "scripts" / "check_quickstart.py"
+)
 assert SPEC and SPEC.loader
 quickstart = importlib.util.module_from_spec(SPEC)
 sys.modules["check_quickstart"] = quickstart
@@ -15,7 +17,9 @@ SPEC.loader.exec_module(quickstart)
 
 URL = "https://github.com/Conker-AI/conker.git"
 INSTALLER = f'readonly REPO_URL="{URL}"\n'
-LAUNCHER = "case \"$command\" in\n    status)    cmd_status ;;\n    backup|restore) cmd_backup ;;\nesac\n"
+LAUNCHER = (
+    'case "$command" in\n    status)    cmd_status ;;\n    backup|restore) cmd_backup ;;\nesac\n'
+)
 SCRIPTS = {"dev": "vite"}
 
 

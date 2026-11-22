@@ -15,7 +15,9 @@ def _require_memory_ports(config):
         type(configured.get(service)) is not int or configured[service] != PORTS[service]
         for service in ("pi", "memorygate")
     ):
-        raise SystemExit("Pi and MemoryGate ports must match this workspace's ownership checks; configuration unchanged.")
+        raise SystemExit(
+            "Pi and MemoryGate ports must match this workspace's ownership checks; configuration unchanged."
+        )
 
 
 def enhance(config, pi_source, toolgate_source=None, memorygate_source=None):
@@ -35,6 +37,7 @@ def enhance(config, pi_source, toolgate_source=None, memorygate_source=None):
         )
     _require_memory_ports(config)
     from scripts.workspace_memory import prepare, require_sources
+
     try:
         config, _ = prepare(config)
     except (ValueError, TypeError) as exc:
@@ -54,13 +57,9 @@ def enhance(config, pi_source, toolgate_source=None, memorygate_source=None):
     toolgate = (toolgate_source or Path(config["repositories"]["toolgate"])).resolve()
     if not (toolgate / "toolgate/executors/mcp_http.py").is_file():
         raise SystemExit("Select the ToolGate MCP checkout with --toolgate-source.")
-    memorygate = (
-        memorygate_source or Path(config["repositories"]["memorygate"])
-    ).resolve()
+    memorygate = (memorygate_source or Path(config["repositories"]["memorygate"])).resolve()
     if not (memorygate / "services/api/app/services/lexical_retrieval.py").is_file():
-        raise SystemExit(
-            "Select the MemoryGate recall checkout with --memorygate-source."
-        )
+        raise SystemExit("Select the MemoryGate recall checkout with --memorygate-source.")
     try:
         require_sources({"repositories": {"pi": str(source), "memorygate": str(memorygate)}})
     except (ValueError, TypeError) as exc:
@@ -100,7 +99,9 @@ def enhance(config, pi_source, toolgate_source=None, memorygate_source=None):
     if not binaries:
         npm = shutil.which("npm.cmd" if os.name == "nt" else "npm")
         if not npm:
-            raise SystemExit("npm could not be found; install Node.js to set up the pinned Codex runtime.")
+            raise SystemExit(
+                "npm could not be found; install Node.js to set up the pinned Codex runtime."
+            )
         run(
             npm,
             "install",
@@ -146,9 +147,7 @@ def enhance(config, pi_source, toolgate_source=None, memorygate_source=None):
         "control_key": secrets.token_urlsafe(36),
         "inference_key": secrets.token_urlsafe(36),
     }
-    private.update(
-        state=str(STATE / "providers"), codex=str(binaries[0]), claude=str(claude)
-    )
+    private.update(state=str(STATE / "providers"), codex=str(binaries[0]), claude=str(claude))
     for name in ("providers", "decisions"):
         (STATE / name).mkdir(exist_ok=True)
     decision_key = config["environments"].get("decisions", {}).get(
@@ -205,11 +204,15 @@ def configure_memory_corrections(config):
     try:
         original = CONFIG.read_bytes()
         if json.loads(original) != config:
-            raise ValueError("Workspace configuration changed; reload before preparing memory corrections.")
+            raise ValueError(
+                "Workspace configuration changed; reload before preparing memory corrections."
+            )
         require_sources(config)
         prepared, changed = prepare(config)
         if changed:
             write_config(CONFIG, prepared, original)
     except (ValueError, TypeError, OSError) as exc:
         raise SystemExit(str(exc)) from None
-    print("Dedicated memory corrections configured; credentials retained privately. Start Pi and MemoryGate, then verify the owner capability. Running readiness is not implied.")
+    print(
+        "Dedicated memory corrections configured; credentials retained privately. Start Pi and MemoryGate, then verify the owner capability. Running readiness is not implied."
+    )

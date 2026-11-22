@@ -40,26 +40,18 @@ PI_QUERY_KEYS = {
 
 def register(commands):
     """Register the context parser and its subcommands."""
-    context = commands.add_parser(
-        "context", help="Read and change one chat's context settings"
-    )
+    context = commands.add_parser("context", help="Read and change one chat's context settings")
     subparsers = context.add_subparsers(dest="operation", required=True)
 
-    show = subparsers.add_parser(
-        "show", help="Show current context settings and summary"
-    )
+    show = subparsers.add_parser("show", help="Show current context settings and summary")
     show.add_argument("session")
 
     rule = subparsers.add_parser("rule", help="Set or clear a message's context rule")
     rule.add_argument("session")
     rule.add_argument("message")
-    rule.add_argument(
-        "rule", choices=["pin", "exclude", "retrieve", "summarize", "clear"]
-    )
+    rule.add_argument("rule", choices=["pin", "exclude", "retrieve", "summarize", "clear"])
 
-    instructions = subparsers.add_parser(
-        "instructions", help="Set session instructions"
-    )
+    instructions = subparsers.add_parser("instructions", help="Set session instructions")
     instructions.add_argument("session")
     instructions.add_argument("file", nargs="?", type=Path)
     instructions.add_argument("--clear", action="store_true")
@@ -90,29 +82,21 @@ def register(commands):
     decide = subparsers.add_parser("decide", help="Add a decision to the chat context")
     decide.add_argument("session")
     decide.add_argument("text")
-    decide.add_argument(
-        "--cite", action="append", default=[], help="Message identity (repeatable)"
-    )
+    decide.add_argument("--cite", action="append", default=[], help="Message identity (repeatable)")
     decide.add_argument("--replaces", help="Decision item to replace")
 
     thread = subparsers.add_parser("thread", help="Add a thread to the chat context")
     thread.add_argument("session")
     thread.add_argument("text")
-    thread.add_argument(
-        "--cite", action="append", default=[], help="Message identity (repeatable)"
-    )
+    thread.add_argument("--cite", action="append", default=[], help="Message identity (repeatable)")
 
     items = subparsers.add_parser("items", help="List context items for a chat")
     items.add_argument("session")
 
-    item_state = subparsers.add_parser(
-        "item-state", help="Change a context item's state"
-    )
+    item_state = subparsers.add_parser("item-state", help="Change a context item's state")
     item_state.add_argument("session")
     item_state.add_argument("item")
-    item_state.add_argument(
-        "state", choices=["active", "open", "resolved", "withdrawn"]
-    )
+    item_state.add_argument("state", choices=["active", "open", "resolved", "withdrawn"])
 
     compact = subparsers.add_parser(
         "compact", help="Fold reviewed messages into a reviewed summary"
@@ -168,15 +152,8 @@ def pi_call(request, config, path, body=None, *, query=None, **kwargs):
                 if isinstance(detail, dict):
                     code = detail.get("code")
                     message = detail.get("message")
-                    if (
-                        isinstance(code, str)
-                        and isinstance(message, str)
-                        and code
-                        and message
-                    ):
-                        raise ValueError(
-                            f"Pi refused this ({code}): {message}"
-                        ) from None
+                    if isinstance(code, str) and isinstance(message, str) and code and message:
+                        raise ValueError(f"Pi refused this ({code}): {message}") from None
                 elif isinstance(detail, str) and detail and len(detail) <= 300:
                     raise ValueError(f"Pi refused this: {detail}") from None
 
@@ -282,9 +259,7 @@ def operation(args, config, request):
         return pi_call(request, config, f"/context/{args.session}", body)
 
     elif args.operation == "summary-edit":
-        text = _file_text(
-            args.file, "Summary file", "Summaries are limited to 16000 characters."
-        )
+        text = _file_text(args.file, "Summary file", "Summaries are limited to 16000 characters.")
 
         summary_response = pi_call(request, config, f"/context/{args.session}/summary")
         body = {"expected_revision": summary_response["revision"], "summary": text}
@@ -304,14 +279,10 @@ def operation(args, config, request):
             "expected_revision": summary_response["revision"],
             "revision": args.revision,
         }
-        return pi_call(
-            request, config, f"/context/{args.session}/summary/restore", body
-        )
+        return pi_call(request, config, f"/context/{args.session}/summary/restore", body)
 
     elif args.operation == "fork":
-        text = _file_text(
-            args.file, "Summary file", "Summaries are limited to 16000 characters."
-        )
+        text = _file_text(args.file, "Summary file", "Summaries are limited to 16000 characters.")
 
         request_id = args.request_id
         if request_id:
@@ -360,9 +331,7 @@ def operation(args, config, request):
             and args.replaces
             and not re.fullmatch(r"^dec_[0-9a-f]{16}$", args.replaces)
         ):
-            raise ValueError(
-                "Use a decision item identity (dec_ followed by 16 hex digits)."
-            )
+            raise ValueError("Use a decision item identity (dec_ followed by 16 hex digits).")
         kind = "decision" if args.operation == "decide" else "thread"
         items_response = pi_call(request, config, f"/context/{args.session}/items")
         body = {
@@ -382,17 +351,13 @@ def operation(args, config, request):
     elif args.operation == "item-state":
         item = args.item
         if not re.fullmatch(r"^(dec|thr)_[0-9a-f]{16}$", item):
-            raise ValueError(
-                "Use an item identity (dec_ or thr_ followed by 16 hex digits)."
-            )
+            raise ValueError("Use an item identity (dec_ or thr_ followed by 16 hex digits).")
         items_response = pi_call(request, config, f"/context/{args.session}/items")
         body = {
             "expected_revision": items_response["revision"],
             "state": args.state,
         }
-        return pi_call(
-            request, config, f"/context/{args.session}/items/{item}/state", body
-        )
+        return pi_call(request, config, f"/context/{args.session}/items/{item}/state", body)
 
     elif args.operation == "compact":
         summary_text = _file_text(
@@ -423,8 +388,7 @@ def operation(args, config, request):
         policy_response = pi_call(request, config, f"/context/{args.session}")
         if policy_response.get("policy") is None:
             raise ValueError(
-                "Set context settings before compacting: "
-                + START.format(session=args.session)
+                "Set context settings before compacting: " + START.format(session=args.session)
             )
 
         summary_response = pi_call(request, config, f"/context/{args.session}/summary")

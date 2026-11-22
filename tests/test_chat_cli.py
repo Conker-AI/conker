@@ -246,9 +246,7 @@ def test_summary_draft_posts_focus_and_returns_draft(invoke):
             "configurationRevision": 2,
         }
     ]
-    assert (
-        run("context", "summary-draft", "ses_a", "--focus", "Focus on key points") == 0
-    )
+    assert run("context", "summary-draft", "ses_a", "--focus", "Focus on key points") == 0
     assert len(calls) == 1
     check_headers(0)
     assert calls[0][0].full_url == "http://127.0.0.1:18551/context/ses_a/summary/draft"

@@ -29,7 +29,9 @@ from recovery_docker import Docker  # noqa: E402
 MANIFEST = ROOT / "versions.env"
 OVERLAY = ROOT / "docker-compose.subscriptions.yml"
 PINNED = "ghcr.io/conker-ai/subscriptions@sha256:" + "a" * 64
-TRIVY = "aquasec/trivy:0.75.0@sha256:af6acf9a6b85dfe389a1941505c0ce9efef52a4719635e1a962f022a3d855daa"
+TRIVY = (
+    "aquasec/trivy:0.75.0@sha256:af6acf9a6b85dfe389a1941505c0ce9efef52a4719635e1a962f022a3d855daa"
+)
 
 
 def files(command: list[str]) -> list[str]:
@@ -141,12 +143,8 @@ def test_the_runtime_is_boxed_in_and_pi_gets_only_the_inference_key():
 
 def test_the_overlay_hardening_matches_the_ubuntu_build(tmp_path):
     prepare(tmp_path)
-    ubuntu = json.loads((tmp_path / "compose.json").read_text())["services"][
-        "subscriptions"
-    ]
-    runtime = yaml.safe_load(OVERLAY.read_text(encoding="utf-8"))["services"][
-        "subscriptions"
-    ]
+    ubuntu = json.loads((tmp_path / "compose.json").read_text())["services"]["subscriptions"]
+    runtime = yaml.safe_load(OVERLAY.read_text(encoding="utf-8"))["services"]["subscriptions"]
     for setting in (
         "network_mode",
         "read_only",
@@ -197,9 +195,7 @@ def test_update_runs_the_candidate_releases_overlays_with_the_owners_choice(tmp_
     ]
     # The candidate release has the runtime; this installation's .env chose it.
     override = tmp_path / "resolved-images.json"
-    assert files(
-        transport._compose_command("up", root=candidate, override=override)
-    ) == [
+    assert files(transport._compose_command("up", root=candidate, override=override)) == [
         str(candidate / "docker-compose.yml"),
         str(candidate / "docker-compose.sandbox.yml"),
         str(candidate / "docker-compose.subscriptions.yml"),
@@ -225,9 +221,7 @@ def test_the_spending_switch_recreates_pi_with_the_runtimes_address(tmp_path):
 
     PaidPolicy(root, "repository", runner=runner)._compose("config", "--services")
 
-    assert files(seen[0])[-1] == str(
-        root.resolve() / "docker-compose.subscriptions.yml"
-    )
+    assert files(seen[0])[-1] == str(root.resolve() / "docker-compose.subscriptions.yml")
 
 
 # --- backups ------------------------------------------------------------------------------------
@@ -237,25 +231,21 @@ def test_the_runtime_is_an_optional_writer_whose_mounts_are_never_archived():
     profile = recovery_layout.REPOSITORY_PROFILE
     assert "subscriptions" in profile.optional_services
     assert profile.writers.index("pi") < profile.writers.index("subscriptions")
-    assert profile.excluded_mounts["subscriptions"] == frozenset(
-        {"/state", "/run/conker-chatgpt"}
-    )
-    overlay = yaml.safe_load(OVERLAY.read_text(encoding="utf-8"))["services"][
-        "subscriptions"
-    ]
+    assert profile.excluded_mounts["subscriptions"] == frozenset({"/state", "/run/conker-chatgpt"})
+    overlay = yaml.safe_load(OVERLAY.read_text(encoding="utf-8"))["services"]["subscriptions"]
     assert mounts(overlay) == profile.excluded_mounts["subscriptions"]
 
 
 def test_backup_inventories_the_overlay_only_when_it_runs(tmp_path):
     root = release(tmp_path / "install", "active", "on")
     profile = recovery_layout.REPOSITORY_PROFILE
-    assert str(
-        root / "docker-compose.subscriptions.yml"
-    ) in recovery_layout.compose_command(root, profile)
+    assert str(root / "docker-compose.subscriptions.yml") in recovery_layout.compose_command(
+        root, profile
+    )
     (root / ".env").write_text("CONKER_CLAUDE_PLAN=off\n", encoding="utf-8")
-    assert str(
-        root / "docker-compose.subscriptions.yml"
-    ) not in recovery_layout.compose_command(root, profile)
+    assert str(root / "docker-compose.subscriptions.yml") not in recovery_layout.compose_command(
+        root, profile
+    )
 
 
 def test_backup_stops_the_runtime_and_leaves_its_sign_in_out(tmp_path):
@@ -289,26 +279,18 @@ def test_backup_stops_the_runtime_and_leaves_its_sign_in_out(tmp_path):
 
     assert "subscriptions" in manifest["images"]
     assert "subscriptions" not in manifest["stores"]
-    archived = b"".join(
-        path.read_bytes() for path in snapshot.rglob("*") if path.is_file()
-    )
+    archived = b"".join(path.read_bytes() for path in snapshot.rglob("*") if path.is_file())
     assert b"synthetic-sign-in" not in archived
-    assert any(
-        call[0] == "stop" and "source-subscriptions" in call for call in engine.calls
-    )
+    assert any(call[0] == "stop" and "source-subscriptions" in call for call in engine.calls)
 
 
 # --- the publish workflow -----------------------------------------------------------------------
 
 
 def test_the_image_is_published_only_for_its_own_tags_after_its_checks():
-    workflow = (ROOT / ".github/workflows/publish-subscriptions.yml").read_text(
-        encoding="utf-8"
-    )
+    workflow = (ROOT / ".github/workflows/publish-subscriptions.yml").read_text(encoding="utf-8")
     parsed = yaml.safe_load(workflow)
-    triggers = (
-        parsed[True] if True in parsed else parsed["on"]
-    )  # YAML reads `on` as true
+    triggers = parsed[True] if True in parsed else parsed["on"]  # YAML reads `on` as true
 
     assert triggers["push"] == {"tags": ["subscriptions-v*.*.*"]}
     assert parsed["permissions"] == {"contents": "read"}
@@ -349,13 +331,9 @@ def test_the_image_is_published_only_for_its_own_tags_after_its_checks():
 
 def test_ci_and_the_weekly_check_scan_the_image_like_the_others():
     ci = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
-    runtime_job = ci.split("  subscription-runtime:", 1)[1].split("\n  cross-gate:", 1)[
-        0
-    ]
+    runtime_job = ci.split("  subscription-runtime:", 1)[1].split("\n  cross-gate:", 1)[0]
     assert TRIVY in runtime_job and "conker-subscriptions:ci" in runtime_job
     weekly = (ROOT / ".github/workflows/security.yml").read_text(encoding="utf-8")
     assert "pin SUBSCRIPTIONS_IMAGE" in weekly
-    dockerfile = (ROOT / "services/subscriptions/Dockerfile").read_text(
-        encoding="utf-8"
-    )
+    dockerfile = (ROOT / "services/subscriptions/Dockerfile").read_text(encoding="utf-8")
     assert "fetch_claude.py" in dockerfile

@@ -56,9 +56,7 @@ def accepts(setting, value):
             return False
         return True
     model, document = HOMES[setting["home"]["path"]]
-    changed = config.with_value(
-        copy.deepcopy(document), setting["home"]["field"], value
-    )
+    changed = config.with_value(copy.deepcopy(document), setting["home"]["field"], value)
     if (
         setting["home"]["path"] == "/owner/preferences"
         and setting["home"]["field"] == "quietHours.start"
@@ -73,11 +71,7 @@ def accepts(setting, value):
 
 @pytest.mark.parametrize(
     "setting",
-    [
-        item
-        for item in config.load_registry()
-        if item.get("home", {}).get("service") == "pi"
-    ],
+    [item for item in config.load_registry() if item.get("home", {}).get("service") == "pi"],
     ids=lambda setting: setting["id"],
 )
 def test_registry_matches_pi(setting):
@@ -87,11 +81,9 @@ def test_registry_matches_pi(setting):
     else:
         assert setting["home"]["path"] in HOMES, "Add the home's Pi model to this test."
         _, document = HOMES[setting["home"]["path"]]
-        assert config.value_at(
-            document, setting["home"]["field"]
-        ) is not None or setting["default"] in (None, ""), (
-            "field missing from the home document"
-        )
+        assert config.value_at(document, setting["home"]["field"]) is not None or setting[
+            "default"
+        ] in (None, ""), "field missing from the home document"
     if setting["default"] is not None:
         assert accepts(setting, setting["default"])
     if setting["type"] == "select":
@@ -112,11 +104,7 @@ def test_registry_matches_pi(setting):
 
 @pytest.mark.parametrize(
     "setting",
-    [
-        item
-        for item in config.load_registry()
-        if item.get("home", {}).get("service") == "toolgate"
-    ],
+    [item for item in config.load_registry() if item.get("home", {}).get("service") == "toolgate"],
     ids=lambda setting: setting["id"],
 )
 def test_registry_matches_toolgate(setting):

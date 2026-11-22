@@ -61,7 +61,9 @@ def _safe_value(name: str, value: str, *, limit: int) -> str:
     if not value or value != value.strip() or len(value) > limit:
         raise SpeechConfigError(f"{name} is missing or invalid.")
     if "$" in value or "#" in value or any(ord(char) < 32 or ord(char) == 127 for char in value):
-        raise SpeechConfigError(f"{name} contains characters that are unsafe in the host environment file.")
+        raise SpeechConfigError(
+            f"{name} contains characters that are unsafe in the host environment file."
+        )
     try:
         value.encode("utf-8")
     except UnicodeError as exc:
@@ -85,7 +87,9 @@ def _url(value: str) -> str:
     except ValueError:
         valid = False
     if not valid:
-        raise SpeechConfigError("Speech URL must be an explicit HTTP(S) API base without credentials, query or fragment.")
+        raise SpeechConfigError(
+            "Speech URL must be an explicit HTTP(S) API base without credentials, query or fragment."
+        )
     return value.rstrip("/")
 
 
@@ -101,7 +105,9 @@ def _secret(path: Path) -> bytes:
     if len(value) > MAX_SECRET_BYTES:
         raise SpeechConfigError("Speech credential exceeds 4096 bytes.")
     if value and any(byte < 33 or byte > 126 for byte in value):
-        raise SpeechConfigError("Speech credential must be one printable ASCII token without spaces.")
+        raise SpeechConfigError(
+            "Speech credential must be one printable ASCII token without spaces."
+        )
     return value
 
 
@@ -141,7 +147,9 @@ def status(env_file: Path, key_file: Path) -> dict:
         "schemaVersion": 1,
         "configured": bool(url and stt),
         "speechInput": "configured" if url and stt else "unconfigured",
-        "speechOutput": "configured" if url and tts and (voice or character != "unsupported") else "unconfigured",
+        "speechOutput": "configured"
+        if url and tts and (voice or character != "unsupported")
+        else "unconfigured",
         "credentialConfigured": bool(key),
         "urlConfigured": bool(url),
         "sttModelConfigured": bool(stt),
@@ -160,7 +168,9 @@ def configure(args: argparse.Namespace) -> dict:
     if voice and not tts:
         raise SpeechConfigError("A TTS voice requires a TTS model.")
     if tts and not voice and args.character_voice == "unsupported":
-        raise SpeechConfigError("A TTS model requires a default voice or an explicit character voice adapter.")
+        raise SpeechConfigError(
+            "A TTS model requires a default voice or an explicit character voice adapter."
+        )
     try:
         timeout = float(args.timeout)
     except ValueError as exc:
@@ -176,9 +186,15 @@ def configure(args: argparse.Namespace) -> dict:
         if current_key.endswith(b"\r"):
             current_key = current_key[:-1]
         if not current_key:
-            raise SpeechConfigError("Speech credential input is empty; omit --key-stdin for an unauthenticated server.")
-        if len(current_key) > MAX_SECRET_BYTES or any(byte < 33 or byte > 126 for byte in current_key):
-            raise SpeechConfigError("Speech credential must be one printable ASCII token of at most 4096 bytes.")
+            raise SpeechConfigError(
+                "Speech credential input is empty; omit --key-stdin for an unauthenticated server."
+            )
+        if len(current_key) > MAX_SECRET_BYTES or any(
+            byte < 33 or byte > 126 for byte in current_key
+        ):
+            raise SpeechConfigError(
+                "Speech credential must be one printable ASCII token of at most 4096 bytes."
+            )
     elif args.clear_key:
         current_key = b""
     updates = {
@@ -187,7 +203,9 @@ def configure(args: argparse.Namespace) -> dict:
         "PI_TTS_MODEL": tts,
         "PI_TTS_VOICE": voice,
         "PI_SPEECH_CHARACTER_VOICE": args.character_voice,
-        "PI_SPEECH_TIMEOUT_S": str(timeout).rstrip("0").rstrip(".") if "." in str(timeout) else str(timeout),
+        "PI_SPEECH_TIMEOUT_S": str(timeout).rstrip("0").rstrip(".")
+        if "." in str(timeout)
+        else str(timeout),
     }
     _write_env(Path(args.env_file), updates)
     _atomic(key_file, current_key)
@@ -196,10 +214,17 @@ def configure(args: argparse.Namespace) -> dict:
 
 def disable(env_file: Path, key_file: Path) -> dict:
     _secret(key_file)
-    _write_env(env_file, {
-        "PI_SPEECH_URL": "", "PI_STT_MODEL": "", "PI_TTS_MODEL": "", "PI_TTS_VOICE": "",
-        "PI_SPEECH_CHARACTER_VOICE": "unsupported", "PI_SPEECH_TIMEOUT_S": "30",
-    })
+    _write_env(
+        env_file,
+        {
+            "PI_SPEECH_URL": "",
+            "PI_STT_MODEL": "",
+            "PI_TTS_MODEL": "",
+            "PI_TTS_VOICE": "",
+            "PI_SPEECH_CHARACTER_VOICE": "unsupported",
+            "PI_SPEECH_TIMEOUT_S": "30",
+        },
+    )
     _atomic(key_file, b"")
     return status(env_file, key_file)
 
@@ -215,7 +240,11 @@ def parser() -> argparse.ArgumentParser:
     setup.add_argument("--stt-model", required=True)
     setup.add_argument("--tts-model", default="")
     setup.add_argument("--voice", default="")
-    setup.add_argument("--character-voice", choices=("unsupported", "qwen3-design", "qwen3-base"), default="unsupported")
+    setup.add_argument(
+        "--character-voice",
+        choices=("unsupported", "qwen3-design", "qwen3-base"),
+        default="unsupported",
+    )
     setup.add_argument("--timeout", default="30")
     key = setup.add_mutually_exclusive_group()
     key.add_argument("--key-stdin", action="store_true")

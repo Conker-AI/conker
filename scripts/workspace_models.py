@@ -29,9 +29,7 @@ def installed_models(url):
         or parsed.fragment
         or parsed.path not in {"", "/"}
     ):
-        raise ValueError(
-            "Model initialization requires the configured loopback Ollama URL."
-        )
+        raise ValueError("Model initialization requires the configured loopback Ollama URL.")
     opener = build_opener(ProxyHandler({}), NoRedirect())
     with opener.open(url.rstrip("/") + "/api/tags", timeout=5) as response:
         raw = response.read(2_000_001)
@@ -55,9 +53,7 @@ def configuration_for(model, installed, roles):
         raise ValueError("The installation needs a valid local model route.")
 
     def present(route):
-        return route in installed or (
-            ":" not in route and route + ":latest" in installed
-        )
+        return route in installed or (":" not in route and route + ":latest" in installed)
 
     primary_available = present(model)
     models = [
@@ -113,9 +109,7 @@ def configuration_for(model, installed, roles):
             )
         thinker = "local-thinking" if "local-thinking" in answer_ids else "local-answer"
         # The assignment enables explicit Think requests, not automatic inference.
-        assignments["thinking"].update(
-            enabled=True, eligibleModelIds=[thinker], modelId=thinker
-        )
+        assignments["thinking"].update(enabled=True, eligibleModelIds=[thinker], modelId=thinker)
         assignments["routing"].update(
             enabled=True,
             eligibleModelIds=["laya-router"],
@@ -151,9 +145,7 @@ def initialize():
     try:
         saved = model_roles.load(store)
         if saved["configuration"]:
-            print(
-                "Existing model choices retained. Review Talking and Thinking in Settings."
-            )
+            print("Existing model choices retained. Review Talking and Thinking in Settings.")
             return
         environment = settings["environments"]["pi"]
         try:
@@ -166,9 +158,7 @@ def initialize():
         value = configuration_for(environment["PI_MODEL"], installed, model_roles.ROLES)
         model_roles.save(
             store,
-            model_roles.Update(
-                expected_revision=saved["revision"], configuration=value
-            ),
+            model_roles.Update(expected_revision=saved["revision"], configuration=value),
         )
         if value["defaultModelId"]:
             print(

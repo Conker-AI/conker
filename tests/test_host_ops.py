@@ -7,6 +7,7 @@ import json
 import subprocess
 import sys
 import threading
+import time
 from pathlib import Path
 
 import pytest
@@ -85,9 +86,7 @@ def stored(ops: HostOps, identity: str) -> dict:
 def host(tmp_path, **kwargs) -> HostOps:
     backups = tmp_path / "backups"
     kwargs.setdefault("reader", docker())
-    kwargs.setdefault(
-        "policy", lambda: {"destination": str(backups), "retentionCopies": 7}
-    )
+    kwargs.setdefault("policy", lambda: {"destination": str(backups), "retentionCopies": 7})
     kwargs.setdefault("runner", no_command)
     return HostOps(tmp_path / "deploy", tmp_path / "source", "ubuntu", **kwargs)
 
@@ -181,9 +180,9 @@ def test_backup_list_names_verified_snapshots_newest_first(tmp_path):
 
 
 def test_backup_list_says_plainly_when_no_folder_is_saved_or_mounted(tmp_path):
-    empty = host(tmp_path, policy=lambda: None).read(
-        {"operation": "backup.list", "arguments": {}}
-    )["result"]
+    empty = host(tmp_path, policy=lambda: None).read({"operation": "backup.list", "arguments": {}})[
+        "result"
+    ]
     assert empty["destination"] is None and empty["ready"] is False
     assert empty["snapshots"] == []
     missing = host(tmp_path).read({"operation": "backup.list", "arguments": {}})
@@ -253,9 +252,7 @@ def test_saved_policy_is_read_like_conker_setup_protection(tmp_path):
         {"id": "op-1234567890abcdef", "operation": ["backup.run"], "arguments": {}},
     ],
 )
-def test_actions_outside_the_allowlist_are_refused_before_anything_runs(
-    tmp_path, value
-):
+def test_actions_outside_the_allowlist_are_refused_before_anything_runs(tmp_path, value):
     ops = host(tmp_path, reader=lambda *_a, **_k: pytest.fail("no host read"))
     error = refusal(lambda: ops.start(value))
     assert (error.status, error.code) == (422, "invalid_host_operation")
@@ -280,9 +277,7 @@ def test_reads_outside_the_allowlist_are_refused(tmp_path, value):
 def test_restart_runs_only_the_fixed_cli_argv_and_keeps_no_output(tmp_path):
     runner = Runner()
     ops = host(tmp_path, runner=runner)
-    receipt = ops.start(
-        action("services.restart", {"service": "memorygate"}), wait=True
-    )
+    receipt = ops.start(action("services.restart", {"service": "memorygate"}), wait=True)
 
     argv, kwargs = runner.calls[0]
     assert argv == ["bash", str(ops.source / "conker"), "restart", "memorygate"]
@@ -363,9 +358,7 @@ def test_same_id_returns_the_same_action_and_never_a_second_run(tmp_path):
     again = ops.start(action("services.restart", {"service": "pi"}), wait=True)
 
     assert again == first and len(runner.calls) == 1
-    error = refusal(
-        lambda: ops.start(action("services.restart", {"service": "gateway"}))
-    )
+    error = refusal(lambda: ops.start(action("services.restart", {"service": "gateway"})))
     assert (error.status, error.code) == (409, "operation_id_conflict")
 
 
@@ -378,18 +371,14 @@ def test_one_action_at_a_time(tmp_path):
         return 0
 
     ops = host(tmp_path, runner=runner)
-    first = ops.start(
-        action("services.restart", {"service": "pi"}, "op-first-000000001")
-    )
+    first = ops.start(action("services.restart", {"service": "pi"}, "op-first-000000001"))
     assert running.wait(10)
     assert first["outcome"] == "working"
 
     error = refusal(lambda: ops.start(action("backup.run", None, "op-second-00000001")))
     assert (error.status, error.code) == (409, "host_busy")
     # A retry of the running action is answered with its receipt, not refused.
-    retry = ops.start(
-        action("services.restart", {"service": "pi"}, "op-first-000000001")
-    )
+    retry = ops.start(action("services.restart", {"service": "pi"}, "op-first-000000001"))
     assert retry["outcome"] == "working"
     assert ops.settle() == 0, "a live action is never marked unknown"
 
@@ -409,9 +398,7 @@ def test_one_action_at_a_time(tmp_path):
         (".conker-recovery.json", "recovery is held"),
     ],
 )
-def test_the_clis_backup_lock_and_recovery_hold_refuse_every_action(
-    tmp_path, name, message
-):
+def test_the_clis_backup_lock_and_recovery_hold_refuse_every_action(tmp_path, name, message):
     ops = host(tmp_path)
     (ops.root / name).touch()
     error = refusal(lambda: ops.start(action("services.restart", {"service": "pi"})))
@@ -447,26 +434,29 @@ def test_the_lock_spans_processes_and_the_kernel_drops_it_when_its_holder_dies(
     try:
         assert holder.stdout is not None
         assert holder.stdout.readline().strip() == "held"
-        error = refusal(
-            lambda: ops.start(action("services.restart", {"service": "pi"}))
-        )
+        error = refusal(lambda: ops.start(action("services.restart", {"service": "pi"})))
         assert error.code == "host_busy"
     finally:
         holder.kill()
-        holder.wait(10)
-    assert (
-        ops.start(action("services.restart", {"service": "pi"}), wait=True)["outcome"]
-        == "done"
-    )
+        holder.wait(30)
+    # The kernel releases a dead process's lock, but on Windows that can lag a moment.
+    deadline = time.monotonic() + 30
+    while True:
+        try:
+            result = ops.start(action("services.restart", {"service": "pi"}), wait=True)
+            break
+        except Exception:
+            if time.monotonic() > deadline:
+                raise
+            time.sleep(0.05)
+    assert result["outcome"] == "done"
 
 
 # Receipts across restarts, and the unknown outcome
 
 
 def test_receipts_survive_a_helper_restart(tmp_path):
-    host(tmp_path, runner=Runner()).start(
-        action("services.restart", {"service": "pi"}), wait=True
-    )
+    host(tmp_path, runner=Runner()).start(action("services.restart", {"service": "pi"}), wait=True)
     later = host(tmp_path)
     value = later.receipts()
     assert [row["outcome"] for row in value["operations"]] == ["done"]
@@ -515,9 +505,7 @@ def test_an_action_cut_off_by_a_restart_becomes_unknown_and_is_never_rerun(
     receipt = stored(restarted, identity)
     assert receipt["outcome"] == "unknown" and receipt["reason"] == CUT_OFF
     assert receipt["check"] == {"operation": check[0], "arguments": check[1]}
-    retry = restarted.start(
-        {"id": identity, "operation": operation, "arguments": arguments}
-    )
+    retry = restarted.start({"id": identity, "operation": operation, "arguments": arguments})
     assert retry == receipt
 
 
@@ -526,9 +514,7 @@ def test_an_interrupted_cli_run_records_unknown(tmp_path):
     with pytest.raises(KeyboardInterrupt):
         ops.start(action("services.restart", {"service": "pi"}), wait=True)
     receipt = stored(ops, "op-1234567890abcdef")
-    assert receipt["outcome"] == "unknown" and receipt["check"]["operation"] == (
-        "services.status"
-    )
+    assert receipt["outcome"] == "unknown" and receipt["check"]["operation"] == ("services.status")
     assert OperationLock(ops.lock_path).acquire(), "the lock was released"
 
 
@@ -579,9 +565,7 @@ def test_journal_folds_records_only_in_order():
     assert _apply(receipts, finished("op-1234567890abcdef", "done", None, "t"))
     assert not _apply(receipts, finished("op-1234567890abcdef", "failed", None, "t"))
     assert receipts["op-1234567890abcdef"]["outcome"] == "done"
-    assert not _apply(
-        {}, started("op-1234567890abcdef", "backup.run", {}, "a" * 64, "agent", "t")
-    )
+    assert not _apply({}, started("op-1234567890abcdef", "backup.run", {}, "a" * 64, "agent", "t"))
 
 
 def test_journal_lives_outside_the_gateway_mount(tmp_path):

@@ -37,7 +37,20 @@ def transport(tmp_path: Path, answers=None) -> tuple[HostTransport, list[list[st
 
 
 @pytest.mark.parametrize(
-    "ref", ["-upload-pack=x", "main..evil", "main@{1}", "a\\b", "a:b", "a~1", "a^", "a?", "a*", "a[", "a b"]
+    "ref",
+    [
+        "-upload-pack=x",
+        "main..evil",
+        "main@{1}",
+        "a\\b",
+        "a:b",
+        "a~1",
+        "a^",
+        "a?",
+        "a*",
+        "a[",
+        "a b",
+    ],
 )
 def test_an_unsafe_update_ref_is_refused_before_git_runs(tmp_path, monkeypatch, ref):
     monkeypatch.setenv("CONKER_UPDATE_REF", ref)
@@ -111,14 +124,21 @@ def test_code_is_not_applied_over_a_change_made_after_preflight(tmp_path):
 
 @pytest.mark.parametrize(
     ("body", "status"),
-    [('{"status": "ok"}', "ok"), ('{"status": "degraded"}', "degraded"), ("not json", None), ("[]", None)],
+    [
+        ('{"status": "ok"}', "ok"),
+        ('{"status": "degraded"}', "degraded"),
+        ("not json", None),
+        ("[]", None),
+    ],
 )
 def test_a_health_answer_is_read_or_counted_as_no_answer(body, status):
     assert HostTransport._health_status(body) == status
 
 
 def git(root: Path, *arguments: str) -> str:
-    result = subprocess.run(["git", *arguments], cwd=root, capture_output=True, text=True, check=True)
+    result = subprocess.run(
+        ["git", *arguments], cwd=root, capture_output=True, text=True, check=True
+    )
     return result.stdout.strip()
 
 

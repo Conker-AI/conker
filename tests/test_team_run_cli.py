@@ -113,7 +113,12 @@ def test_a_refusal_from_pi_is_shown_and_nothing_else_is_sent(monkeypatch, capsys
                 Message(),
                 io.BytesIO(
                     json.dumps(
-                        {"detail": {"code": "spending_cap_off", "message": "The daily spending cap is off."}}
+                        {
+                            "detail": {
+                                "code": "spending_cap_off",
+                                "message": "The daily spending cap is off.",
+                            }
+                        }
                     ).encode()
                 ),
             )
@@ -122,7 +127,9 @@ def test_a_refusal_from_pi_is_shown_and_nothing_else_is_sent(monkeypatch, capsys
         cli, "read_config", lambda: {"environments": {"pi": {"PI_ADMIN_KEY": "fixture-key"}}}
     )
     monkeypatch.setattr(cli, "build_opener", lambda *handlers: Refusing())
-    monkeypatch.setattr(sys, "argv", ["conker.py", "team", "run", TEAM, "--chat", CHAT, "--task", "x"])
+    monkeypatch.setattr(
+        sys, "argv", ["conker.py", "team", "run", TEAM, "--chat", CHAT, "--task", "x"]
+    )
     assert cli.cli() == 1
     assert "daily spending cap is off" in capsys.readouterr().err
 
@@ -132,7 +139,10 @@ def test_next_runs_the_role_over_the_declared_handoff_as_reviewed(monkeypatch, c
         monkeypatch,
         capsys,
         ["team", "next", RUN, "--reviewed"],
-        answers=[run_view(steps=["role1"], revision=2), run_view(steps=["role1", "role2"], revision=3)],
+        answers=[
+            run_view(steps=["role1"], revision=2),
+            run_view(steps=["role1", "role2"], revision=3),
+        ],
     )
     assert code == 0
     assert paths(sent) == [("GET", f"/team-runs/{RUN}"), ("POST", f"/team-runs/{RUN}/steps")]
@@ -192,7 +202,9 @@ def test_the_installed_launcher_relays_exactly_the_team_run_routes(monkeypatch):
 
     sent = []
     monkeypatch.setattr(
-        config_cli, "request", lambda command, service, path, body, query=None, timeout=30: sent.append(path)
+        config_cli,
+        "request",
+        lambda command, service, path, body, query=None, timeout=30: sent.append(path),
     )
     call = owner_cli.caller(["team", "run"])
     for path, body in (

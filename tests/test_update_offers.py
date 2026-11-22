@@ -59,7 +59,9 @@ VERSIONS_ENV = "".join(
 def github(versions_env=VERSIONS_ENV, module=OTHER):
     answers = {
         API + "conker/commits/v0.2.0": SHA.encode(),
-        API + f"conker/contents/versions.env?ref={SHA}": ("CONKER_VERSION=0.2.0\n" + versions_env).encode(),
+        API + f"conker/contents/versions.env?ref={SHA}": (
+            "CONKER_VERSION=0.2.0\n" + versions_env
+        ).encode(),
     }
     for repository, version in PINS.values():
         answers[API + f"{repository}/commits/v{version}"] = (module + "\n").encode()
@@ -195,7 +197,9 @@ def _module(**changes):
         json.dumps({"offers": {"0.2.0": _module(commit="main")}}),
         json.dumps({"offers": {"0.2.0": _module(version="0.24")}}),
         json.dumps({"offers": {"0.2.0": _module(tag="v0.24.0")}}),
-        json.dumps({"offers": {"0.2.0": {"commit": SHA, "modules": {**pinned()["modules"], "x": {}}}}}),
+        json.dumps(
+            {"offers": {"0.2.0": {"commit": SHA, "modules": {**pinned()["modules"], "x": {}}}}}
+        ),
     ],
 )
 def test_an_offer_file_that_is_not_one_offers_nothing(tmp_path, text):

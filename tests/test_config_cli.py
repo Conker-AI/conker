@@ -79,9 +79,7 @@ def test_an_installed_stack_is_reached_inside_the_pi_container(monkeypatch):
         with pytest.raises(ValueError, match="not a settings home"):
             config_cli.request(command, "pi", path)
     answer(b'404\n{"detail": "Conversation unavailable."}')
-    with pytest.raises(
-        config_cli.NotConfirmed, match=r"\): Conversation unavailable\.$"
-    ):
+    with pytest.raises(config_cli.NotConfirmed, match=r"\): Conversation unavailable\.$"):
         config_cli.request(command, "pi", "/sessions/ses_gone/output")
 
 
@@ -111,9 +109,7 @@ def test_the_relay_calls_pi_with_its_own_key_and_reports_the_status():
 
     server = HTTPServer(("127.0.0.1", 0), Pi)
     Thread(target=server.serve_forever, daemon=True).start()
-    relay = config_cli.RELAY.replace(
-        "127.0.0.1:8050", f"127.0.0.1:{server.server_port}"
-    )
+    relay = config_cli.RELAY.replace("127.0.0.1:8050", f"127.0.0.1:{server.server_port}")
     environment = {**os.environ, "PI_ADMIN_KEY": "recovery-key"}
     try:
         got, posted = (
@@ -147,14 +143,10 @@ def test_toolgate_settings_are_reached_inside_the_gateway_container(monkeypatch)
 
     monkeypatch.setattr(config_cli.subprocess, "run", run)
     answers.append(
-        SimpleNamespace(
-            returncode=0, stdout=b'200\n{"revision": 2, "settings": {}}', stderr=b""
-        )
+        SimpleNamespace(returncode=0, stdout=b'200\n{"revision": 2, "settings": {}}', stderr=b"")
     )
     body = {"expected_revision": 1, "settings": {"tool_seconds": 60}}
-    config_cli.request(
-        command, "toolgate-owner", "/v2/owner/settings", body, method="PUT"
-    )
+    config_cli.request(command, "toolgate-owner", "/v2/owner/settings", body, method="PUT")
     sent, payload = calls[-1]
     assert sent[len(command) :] == [
         "exec",

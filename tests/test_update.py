@@ -1,4 +1,5 @@
 """Transaction tests for the fail-closed repository updater."""
+
 from __future__ import annotations
 
 import json
@@ -15,9 +16,7 @@ REV_B = "b" * 40
 
 
 class FakeTransport:
-    def __init__(
-        self, *, candidate_revision: str = REV_B, fail: str | set[str] | None = None
-    ):
+    def __init__(self, *, candidate_revision: str = REV_B, fail: str | set[str] | None = None):
         self.candidate_revision = candidate_revision
         self.fail = fail
         self.calls: list[str] = []
@@ -25,9 +24,7 @@ class FakeTransport:
             "revision": REV_A,
             "branch": "main",
             "manifest": {"manifest_version": 1},
-            "services": {
-                "gateway": {"exists": True, "running": True, "image_id": "sha256:old"}
-            },
+            "services": {"gateway": {"exists": True, "running": True, "image_id": "sha256:old"}},
         }
 
     def _call(self, name: str) -> None:
@@ -109,7 +106,9 @@ def test_preflight_failure_never_applies_and_keeps_a_receipt(tmp_path):
     transport = FakeTransport(fail="preflight")
     updater = UpdateCoordinator(transport, store(tmp_path))
 
-    with pytest.raises(UpdateError, match=r"^Update stopped before apply: RuntimeError\. Receipt: "):
+    with pytest.raises(
+        UpdateError, match=r"^Update stopped before apply: RuntimeError\. Receipt: "
+    ):
         updater.run()
 
     assert transport.calls == ["preflight"]
@@ -128,7 +127,10 @@ def test_a_preflight_refusal_says_why(tmp_path):
     transport.preflight = refuse
     updater = UpdateCoordinator(transport, store(tmp_path))
 
-    with pytest.raises(UpdateError, match=r"before apply: refusing update because the repository is dirty\. Receipt"):
+    with pytest.raises(
+        UpdateError,
+        match=r"before apply: refusing update because the repository is dirty\. Receipt",
+    ):
         updater.run()
     assert transport.calls == ["preflight"]
 
@@ -287,6 +289,10 @@ def test_services_start_only_after_every_provider_key_file_exists(tmp_path):
     transport.apply_services({"resolved_images": {}})
 
     initialize, up = commands
-    assert initialize[-3:] == ["--directory", str(tmp_path / ".conker" / "provider-secrets"), "initialize"]
+    assert initialize[-3:] == [
+        "--directory",
+        str(tmp_path / ".conker" / "provider-secrets"),
+        "initialize",
+    ]
     assert initialize[1] == str(tmp_path / "scripts/provider_secrets.py")
     assert up[:3] == ["docker", "compose", "up"]

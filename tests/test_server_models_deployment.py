@@ -150,9 +150,7 @@ def test_the_claude_plan_runtime_is_its_own_isolated_service(tmp_path):
     # Pi can ask for answers but never control the sign-in, and holds no ChatGPT socket of its own.
     assert control not in (tmp_path / "state/pi.env").read_text()
     assert "PI_CHATGPT_SOCKET" not in env["pi"]
-    assert not any(
-        "chatgpt" in volume for volume in manifest["services"]["pi"]["volumes"]
-    )
+    assert not any("chatgpt" in volume for volume in manifest["services"]["pi"]["volumes"])
     assert not any(
         "subscriptions" in volume
         for name, service in manifest["services"].items()
@@ -165,15 +163,9 @@ def test_the_claude_plan_runtime_is_its_own_isolated_service(tmp_path):
 def test_recovery_leaves_the_sign_in_out_of_snapshots(tmp_path):
     manifest, _ = generated(tmp_path)
     profile = recovery_layout.UBUNTU_PROFILE
-    mounts = {
-        volume.split(":")[1]
-        for volume in manifest["services"]["subscriptions"]["volumes"]
-    }
+    mounts = {volume.split(":")[1] for volume in manifest["services"]["subscriptions"]["volumes"]}
     assert mounts == profile.excluded_mounts["subscriptions"]
-    assert (
-        "subscriptions" in profile.optional_services
-        and "subscriptions" in profile.writers
-    )
+    assert "subscriptions" in profile.optional_services and "subscriptions" in profile.writers
     assert "subscriptions" not in profile.stores
 
 
@@ -193,10 +185,7 @@ def test_ollama_keeps_a_model_loaded_a_day_unless_the_owner_says_otherwise(tmp_p
     ollama = compose["services"]["ollama"]["environment"]
     assert ollama["OLLAMA_KEEP_ALIVE"] == "${CONKER_OLLAMA_KEEP_ALIVE:-24h}"
     installer = (ROOT / "install.sh").read_text(encoding="utf-8")
-    assert (
-        "CONKER_OLLAMA_KEEP_ALIVE=$(keep_optional CONKER_OLLAMA_KEEP_ALIVE)"
-        in installer
-    )
+    assert "CONKER_OLLAMA_KEEP_ALIVE=$(keep_optional CONKER_OLLAMA_KEEP_ALIVE)" in installer
     assert "\nCONKER_OLLAMA_KEEP_ALIVE=$CONKER_OLLAMA_KEEP_ALIVE\n" in installer
 
 
@@ -204,13 +193,9 @@ def test_pi_knows_the_context_length_ollama_was_given(tmp_path):
     # Pi caps the owner's models.local.context to it (pi/models/local_settings.py).
     _, env = generated(tmp_path)
     assert env["pi"]["PI_OLLAMA_CONTEXT_LENGTH"] == "8192"
-    assert (
-        env["pi"]["PI_OLLAMA_CONTEXT_LENGTH"] == env["ollama"]["OLLAMA_CONTEXT_LENGTH"]
-    )
+    assert env["pi"]["PI_OLLAMA_CONTEXT_LENGTH"] == env["ollama"]["OLLAMA_CONTEXT_LENGTH"]
 
-    services = yaml.safe_load(
-        (ROOT / "docker-compose.yml").read_text(encoding="utf-8")
-    )["services"]
+    services = yaml.safe_load((ROOT / "docker-compose.yml").read_text(encoding="utf-8"))["services"]
     assert services["pi"]["environment"]["PI_OLLAMA_CONTEXT_LENGTH"] == (
         "${CONKER_MODEL_CONTEXT:-8192}"
     )
@@ -221,22 +206,15 @@ def test_pi_knows_the_context_length_ollama_was_given(tmp_path):
 
 
 def test_the_repository_compose_wires_the_service_keys_to_pi(tmp_path):
-    services = yaml.safe_load(
-        (ROOT / "docker-compose.yml").read_text(encoding="utf-8")
-    )["services"]
+    services = yaml.safe_load((ROOT / "docker-compose.yml").read_text(encoding="utf-8"))["services"]
     assert services["pi"]["environment"]["PI_SERVICE_KEYS_SHA256"] == (
         "${PI_SERVICE_KEYS_SHA256:-}"
     )
     for service, prefix in (("memorygate", "MEMORYGATE"), ("toolgate", "TOOLGATE")):
         environment = services[service]["environment"]
         # Pi's compose service name and port; both stay empty until install.sh writes the key.
-        assert (
-            environment[f"{prefix}_PI_URL"]
-            == f"${{{prefix}_PI_SERVICE_KEY:+http://pi:8050}}"
-        )
-        assert (
-            environment[f"{prefix}_PI_SERVICE_KEY"] == f"${{{prefix}_PI_SERVICE_KEY:-}}"
-        )
+        assert environment[f"{prefix}_PI_URL"] == f"${{{prefix}_PI_SERVICE_KEY:+http://pi:8050}}"
+        assert environment[f"{prefix}_PI_SERVICE_KEY"] == f"${{{prefix}_PI_SERVICE_KEY:-}}"
         assert f"{prefix}_PI_SERVICE_KEY" not in json.dumps(services["pi"])
     assert services["gateway"]["environment"]["GATEWAY_PI_URL"] == "http://pi:8050"
     installer = (ROOT / "install.sh").read_text(encoding="utf-8")

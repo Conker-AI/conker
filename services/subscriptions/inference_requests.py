@@ -87,9 +87,7 @@ class Requests:
             self._purge()
             if key in self.entries:
                 raise AdmissionError("request_already_used", 409)
-            if len(self.entries) >= self.maximum or not self.slots.acquire(
-                blocking=False
-            ):
+            if len(self.entries) >= self.maximum or not self.slots.acquire(blocking=False):
                 raise AdmissionError("busy", 503)
             control = RequestControl()
             self.entries[key] = (control, None)
@@ -125,8 +123,6 @@ class Requests:
 
     def close(self):
         with self.lock:
-            active = [
-                control for control, ended in self.entries.values() if ended is None
-            ]
+            active = [control for control, ended in self.entries.values() if ended is None]
         for control in active:
             control.cancel()

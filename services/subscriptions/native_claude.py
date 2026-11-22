@@ -20,6 +20,7 @@ SYSTEM_PROMPT = (
     "use only the format it gives."
 )
 
+
 def environment(home):
     keep = (
         "SYSTEMROOT",
@@ -48,10 +49,7 @@ def stop_inference_process(process):
         if os.name == "nt":
             # Never accept a PID from a request. The live Popen handle supplies
             # this worker-owned root; taskkill /T includes native CLI children.
-            taskkill = (
-                Path(os.environ.get("SYSTEMROOT", "C:/Windows"))
-                / "System32/taskkill.exe"
-            )
+            taskkill = Path(os.environ.get("SYSTEMROOT", "C:/Windows")) / "System32/taskkill.exe"
             subprocess.run(
                 [str(taskkill), "/PID", str(process.pid), "/T", "/F"],
                 stdout=subprocess.DEVNULL,
@@ -148,9 +146,7 @@ class Claude:
                 )
                 self.login_state, self.started = "pending", time.monotonic()
                 self.login_id = "login_" + uuid.uuid4().hex
-                threading.Thread(
-                    target=self._read_login, args=(self.process,), daemon=True
-                ).start()
+                threading.Thread(target=self._read_login, args=(self.process,), daemon=True).start()
             elif (
                 operation == "cancel"
                 and set(value) == {"operation", "loginId"}
@@ -182,9 +178,7 @@ class Claude:
             total += len(line)
             if not line or total > 262144:
                 return
-            for candidate in re.findall(
-                r"https://[^\s\x1b]+", line.decode(errors="replace")
-            ):
+            for candidate in re.findall(r"https://[^\s\x1b]+", line.decode(errors="replace")):
                 url = urlsplit(candidate)
                 if (
                     url.hostname
@@ -278,9 +272,7 @@ class Claude:
             ):
                 if cancellation:
                     cancellation.check()
-                stdout, _stderr = process.communicate(
-                    input=prompt.encode(), timeout=timeout
-                )
+                stdout, _stderr = process.communicate(input=prompt.encode(), timeout=timeout)
                 if cancellation:
                     cancellation.check()
         finally:

@@ -116,18 +116,36 @@ def test_memory_search_reads_the_memory_screen_route(monkeypatch, capsys):
 
 
 def test_memory_search_refuses_bad_input_before_calling_pi(monkeypatch, capsys):
-    for arguments in (["memory", "search", "   "], ["memory", "search", "x" * 201],
-                      ["memory", "search", "exam", "--limit", "51"]):
+    for arguments in (
+        ["memory", "search", "   "],
+        ["memory", "search", "x" * 201],
+        ["memory", "search", "exam", "--limit", "51"],
+    ):
         code, sent, out = calls(monkeypatch, capsys, arguments)
         assert code == 1 and sent == [] and out.err
 
 
 def test_agent_create_posts_one_owner_agent(monkeypatch, capsys):
-    code, sent, _ = calls(monkeypatch, capsys, [
-        "agent", "create", "--name", " Exam coach ", "--role", "Quizzes me",
-        "--instructions", "Ask one question at a time.", "--tool", "research.search",
-        "--tool", "research.search", "--tool", "calendar.read",
-    ])
+    code, sent, _ = calls(
+        monkeypatch,
+        capsys,
+        [
+            "agent",
+            "create",
+            "--name",
+            " Exam coach ",
+            "--role",
+            "Quizzes me",
+            "--instructions",
+            "Ask one question at a time.",
+            "--tool",
+            "research.search",
+            "--tool",
+            "research.search",
+            "--tool",
+            "calendar.read",
+        ],
+    )
     assert code == 0 and len(sent) == 1
     assert urlsplit(sent[0].full_url).path == "/agents" and sent[0].get_method() == "POST"
     assert body(sent[0]) == {
@@ -142,48 +160,115 @@ def test_agent_create_posts_one_owner_agent(monkeypatch, capsys):
 
 
 def test_agent_create_takes_model_and_memory_and_refuses_blank_names(monkeypatch, capsys):
-    code, sent, _ = calls(monkeypatch, capsys, [
-        "agent", "create", "--name", "Coach", "--role", "r", "--instructions", "i",
-        "--model", "openrouter/x", "--memory", "none",
-    ])
+    code, sent, _ = calls(
+        monkeypatch,
+        capsys,
+        [
+            "agent",
+            "create",
+            "--name",
+            "Coach",
+            "--role",
+            "r",
+            "--instructions",
+            "i",
+            "--model",
+            "openrouter/x",
+            "--memory",
+            "none",
+        ],
+    )
     assert code == 0
     assert body(sent[0])["modelId"] == "openrouter/x"
     assert body(sent[0])["memory"] == {"scope": "none", "memoryIds": []}
-    code, sent, out = calls(monkeypatch, capsys, [
-        "agent", "create", "--name", "  ", "--role", "r", "--instructions", "i",
-    ])
+    code, sent, out = calls(
+        monkeypatch,
+        capsys,
+        [
+            "agent",
+            "create",
+            "--name",
+            "  ",
+            "--role",
+            "r",
+            "--instructions",
+            "i",
+        ],
+    )
     assert code == 1 and sent == [] and "--name" in out.err
 
 
 def test_team_create_builds_a_linear_team_from_existing_agents(monkeypatch, capsys):
-    code, sent, _ = calls(monkeypatch, capsys, [
-        "team", "create", "--name", "Essay review", "--objective", "Check then edit.",
-        "--role", "Fact checker", "research partner", "Check every date.",
-        "--role", "Editor", "companion", "Tighten the writing.",
-    ], answers=[{"schemaVersion": 1, "results": [COMPANION, RESEARCH, OLD]}])
+    code, sent, _ = calls(
+        monkeypatch,
+        capsys,
+        [
+            "team",
+            "create",
+            "--name",
+            "Essay review",
+            "--objective",
+            "Check then edit.",
+            "--role",
+            "Fact checker",
+            "research partner",
+            "Check every date.",
+            "--role",
+            "Editor",
+            "companion",
+            "Tighten the writing.",
+        ],
+        answers=[{"schemaVersion": 1, "results": [COMPANION, RESEARCH, OLD]}],
+    )
     assert code == 0 and [urlsplit(r.full_url).path for r in sent] == [
-        "/agents", "/collaboration/teams"
+        "/agents",
+        "/collaboration/teams",
     ]
     team = body(sent[1])
-    assert [(role["id"], role["name"], role["agentId"], role["toolIds"]) for role in team["roles"]] == [
+    assert [
+        (role["id"], role["name"], role["agentId"], role["toolIds"]) for role in team["roles"]
+    ] == [
         ("role1", "Fact checker", RESEARCH["id"], ["research.search"]),
         ("role2", "Editor", "companion", ["calendar.read", "research.fetch"]),
     ]
     assert all(role["memory"] == {"scope": "none", "memoryIds": []} for role in team["roles"])
-    assert team["handoffs"] == [{
-        "id": "handoff1", "fromRoleId": "role1", "toRoleId": "role2",
-        "condition": "The owner reviewed the result of Fact checker.",
-        "payload": "result_only", "maxTransfers": 1,
-    }]
-    assert team["budget"] == {"maxTurns": 4, "maxTokens": 100000, "maxCostCents": 50, "maxHandoffs": 1}
+    assert team["handoffs"] == [
+        {
+            "id": "handoff1",
+            "fromRoleId": "role1",
+            "toRoleId": "role2",
+            "condition": "The owner reviewed the result of Fact checker.",
+            "payload": "result_only",
+            "maxTransfers": 1,
+        }
+    ]
+    assert team["budget"] == {
+        "maxTurns": 4,
+        "maxTokens": 100000,
+        "maxCostCents": 50,
+        "maxHandoffs": 1,
+    }
 
 
 def test_team_create_refuses_unknown_and_archived_agents(monkeypatch, capsys):
     for agent, words in (("Nobody", "no agent"), ("Old helper", "archived")):
-        code, sent, out = calls(monkeypatch, capsys, [
-            "team", "create", "--name", "T", "--objective", "O",
-            "--role", "One", agent, "Do it.",
-        ], answers=[{"schemaVersion": 1, "results": [RESEARCH, OLD]}])
+        code, sent, out = calls(
+            monkeypatch,
+            capsys,
+            [
+                "team",
+                "create",
+                "--name",
+                "T",
+                "--objective",
+                "O",
+                "--role",
+                "One",
+                agent,
+                "Do it.",
+            ],
+            answers=[{"schemaVersion": 1, "results": [RESEARCH, OLD]}],
+        )
         assert code == 1 and len(sent) == 1 and words in out.err
 
 
@@ -217,8 +302,19 @@ def test_memory_beliefs_flags_map_to_the_query(monkeypatch, capsys):
     code, sent, out = calls(
         monkeypatch,
         capsys,
-        ["memory", "beliefs", "--concluded", "--review", "--type", "fact", "--limit", "7",
-         "--after", "eyJ4IjogMX0", "--json"],
+        [
+            "memory",
+            "beliefs",
+            "--concluded",
+            "--review",
+            "--type",
+            "fact",
+            "--limit",
+            "7",
+            "--after",
+            "eyJ4IjogMX0",
+            "--json",
+        ],
         [BELIEFS],
     )
     assert code == 0 and json.loads(out.out) == BELIEFS
@@ -346,9 +442,7 @@ UPKEEP = {
         {"ids": ["m3", "m4"], "reason": "say different things", "conflictId": "c1"}
     ),
     "expired": _group(),
-    "notRecalled": _group(
-        {"ids": ["m5"], "reason": "never recalled", "conflictId": None}, total=4
-    ),
+    "notRecalled": _group({"ids": ["m5"], "reason": "never recalled", "conflictId": None}, total=4),
     "memories": {
         "m1": {"text": "Tea at\nfour", "revision": 1},
         "m2": {"text": "Tea at four", "revision": 3},

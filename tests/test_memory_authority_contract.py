@@ -9,9 +9,7 @@ import httpx
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-pytest.importorskip(
-    "app.routes.runtime", reason="Add MemoryGate services/api to PYTHONPATH"
-)
+pytest.importorskip("app.routes.runtime", reason="Add MemoryGate services/api to PYTHONPATH")
 from app.core import auth
 from app.core.db import Base
 from app.models.agent_access_key import AgentAccessKey
@@ -96,9 +94,7 @@ def test_namespace_and_revocation_rechecked_on_every_pi_read(tmp_path, monkeypat
                 assert result["briefing"] == {} and not result["evidence"]
                 client.read_headers["X-Agent-Id"] = "companion"
                 with pytest.raises(httpx.HTTPStatusError) as denied:
-                    client.retrieve(
-                        "question", scope="selected", memory_ids=["foreign"]
-                    )
+                    client.retrieve("question", scope="selected", memory_ids=["foreign"])
                 assert denied.value.response.status_code == 401
                 client.read_headers["X-Agent-Id"] = "specialist"
                 with sessions() as db:
@@ -110,16 +106,12 @@ def test_namespace_and_revocation_rechecked_on_every_pi_read(tmp_path, monkeypat
                     client.retrieve("question", scope="selected", memory_ids=["own"])
                 assert revoked.value.response.status_code == 401
                 with sessions() as db:
-                    assert keys.ensure_bootstrap_agent_access_key(
-                        db, raw, "specialist"
-                    ).revoked
+                    assert keys.ensure_bootstrap_agent_access_key(db, raw, "specialist").revoked
                 with pytest.raises(httpx.HTTPStatusError) as restarted:
                     client.retrieve("question", scope="selected", memory_ids=["own"])
                 assert restarted.value.response.status_code == 401
         assert len(seen) == 4
         assert all(request.headers["X-MemoryGate-Key"] == raw for request in seen)
-        assert all(
-            "X-MemoryGate-Conversation-Key" not in request.headers for request in seen
-        )
+        assert all("X-MemoryGate-Conversation-Key" not in request.headers for request in seen)
     finally:
         engine.dispose()

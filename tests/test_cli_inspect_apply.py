@@ -47,10 +47,7 @@ def test_inspect_submission_passes_one_validated_compound_resource(ubuntu_cli):
     assert result.returncode == 0, result.stderr
     assert json.loads(result.stdout)["status"] == "running"
     call = ubuntu_cli.docker_log.read_text(encoding="utf-8")
-    assert (
-        "gateway python -m gateway inspect submission:request_1234567890abcdef"
-        in call
-    )
+    assert "gateway python -m gateway inspect submission:request_1234567890abcdef" in call
 
 
 @pytest.mark.parametrize(
@@ -60,9 +57,7 @@ def test_inspect_submission_passes_one_validated_compound_resource(ubuntu_cli):
         ("inventory", "inventory_1234567890abcdef"),
     ],
 )
-def test_inspect_system_observation_passes_validated_compound_resource(
-    ubuntu_cli, kind, identity
-):
+def test_inspect_system_observation_passes_validated_compound_resource(ubuntu_cli, kind, identity):
     result = ubuntu_cli("inspect", kind, identity)
 
     assert result.returncode == 0, result.stderr
@@ -92,7 +87,9 @@ def test_inspect_tool_draft_passes_validated_compound_resource(ubuntu_cli):
 
     assert result.returncode == 0, result.stderr
     assert json.loads(result.stdout)["id"] == "example"
-    assert "gateway python -m gateway inspect tool-draft:example" in ubuntu_cli.docker_log.read_text()
+    assert (
+        "gateway python -m gateway inspect tool-draft:example" in ubuntu_cli.docker_log.read_text()
+    )
 
 
 def test_inspect_tool_access_binds_exact_publication_target(ubuntu_cli):
@@ -127,7 +124,11 @@ def test_apply_rejects_unknown_resource_or_missing_file_before_compose(ubuntu_cl
     unknown = ubuntu_cli("apply", "payments", str(tmp_path / "missing.json"))
     missing = ubuntu_cli("apply", "models", str(tmp_path / "missing.json"))
 
-    assert unknown.returncode == 2 and "supports: agents, approvals, artifacts, asks, calls, character, files, inventory, jobs, memory, models, projects, proposals, requests, sessions, tasks, teams, tools, turns" in unknown.stderr
+    assert (
+        unknown.returncode == 2
+        and "supports: agents, approvals, artifacts, asks, calls, character, files, inventory, jobs, memory, models, projects, proposals, requests, sessions, tasks, teams, tools, turns"
+        in unknown.stderr
+    )
     assert missing.returncode == 2 and "file not found" in missing.stderr.lower()
     assert not ubuntu_cli.docker_log.exists()
 
@@ -238,9 +239,7 @@ def test_apply_memory_uses_the_same_bounded_gateway_entrypoint(ubuntu_cli, tmp_p
 def test_apply_proposals_uses_the_same_bounded_gateway_entrypoint(ubuntu_cli, tmp_path):
     document = tmp_path / "proposal.json"
     document.write_text(
-        json.dumps(
-            {"operation": "decide", "id": "proposal_123", "decision": "decline"}
-        ),
+        json.dumps({"operation": "decide", "id": "proposal_123", "decision": "decline"}),
         encoding="utf-8",
     )
 
@@ -343,9 +342,7 @@ def test_apply_approvals_uses_the_same_bounded_gateway_entrypoint(ubuntu_cli, tm
 
 def test_apply_turns_uses_the_same_bounded_gateway_entrypoint(ubuntu_cli, tmp_path):
     document = tmp_path / "turn.json"
-    document.write_text(
-        json.dumps({"operation": "resume", "id": "turn_123"}), encoding="utf-8"
-    )
+    document.write_text(json.dumps({"operation": "resume", "id": "turn_123"}), encoding="utf-8")
 
     result = ubuntu_cli("apply", "turns", str(document))
 
@@ -390,14 +387,10 @@ def test_apply_system_observation_uses_bounded_gateway_entrypoint(
     assert f"gateway python -m gateway apply {resource}" in ubuntu_cli.docker_log.read_text()
 
 
-def test_apply_character_streams_package_to_isolated_gateway_operation(
-    ubuntu_cli, tmp_path
-):
+def test_apply_character_streams_package_to_isolated_gateway_operation(ubuntu_cli, tmp_path):
     document = tmp_path / "character.json"
     document.write_text(
-        json.dumps(
-            {"operation": "restore", "expected_revision": 1, "revision": 1}
-        ),
+        json.dumps({"operation": "restore", "expected_revision": 1, "revision": 1}),
         encoding="utf-8",
     )
 

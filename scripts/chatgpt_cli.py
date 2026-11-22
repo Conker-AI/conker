@@ -22,18 +22,14 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, required=True)
     parser.add_argument("--layout", choices=("ubuntu", "repository"), required=True)
-    parser.add_argument(
-        "operation", choices=("status", "login", "models", "cancel", "logout")
-    )
+    parser.add_argument("operation", choices=("status", "login", "models", "cancel", "logout"))
     parser.add_argument("identity", nargs="?")
     args = parser.parse_args()
     value = {"operation": args.operation}
     if args.operation in {"cancel", "logout"}:
         if not args.identity:
             parser.error("Supply the exact loginId or connectionId from status.")
-        value["loginId" if args.operation == "cancel" else "connectionId"] = (
-            args.identity
-        )
+        value["loginId" if args.operation == "cancel" else "connectionId"] = args.identity
     elif args.identity:
         parser.error("This operation does not accept an identity.")
     path = (
