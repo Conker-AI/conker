@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import type { GatewayAuthClient } from './auth'
+import { createPiClient, piData } from './pi-client'
 import { GatewayError } from './transport'
 
 const requestId = z.string().regex(/^[A-Za-z0-9_-]{16,100}$/)
@@ -69,6 +70,7 @@ export function createHostInventoryRequestId() {
 }
 
 export function createGatewayHostInventoryClient(auth: Pick<GatewayAuthClient, 'request'>) {
+  const pi = createPiClient(auth)
   const base = '/api/control/pi/system/inventory'
   return {
     async request(id: string, limit = 100, signal?: AbortSignal): Promise<GatewayHostInventory> {
@@ -90,7 +92,7 @@ export function createGatewayHostInventoryClient(auth: Pick<GatewayAuthClient, '
       return value
     },
     async configured(kind: 'services' | 'containers', signal?: AbortSignal): Promise<GatewayConfiguredTargets> {
-      const value = parse(configuredTargets, await auth.request(`${base}/configured/${kind}`, { signal }))
+      const value = await piData(kind === 'services' ? pi.GET('/system/inventory/configured/services', { signal }) : pi.GET('/system/inventory/configured/containers', { signal }), configuredTargets)
       if (value.kind !== kind) throw new GatewayError('invalid-response')
       return value
     },

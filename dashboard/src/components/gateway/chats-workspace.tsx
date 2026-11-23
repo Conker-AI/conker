@@ -22,6 +22,7 @@ import type { GatewayAuthStore } from '@/lib/gateway/auth-store'
 import type { GatewayRuntimeWorkspaceState } from './runtime-state'
 import type { GatewaySourcePrivacyState } from './source-privacy'
 import { useChatDirectory } from './use-chat-directory'
+import { formatDateTime } from '@/lib/date-format'
 
 const sorts = [
   { value: 'newest', label: 'Newest' },
@@ -34,7 +35,7 @@ const shows = [
   { value: 'include', label: 'All' },
   { value: 'trash', label: 'Trash' },
 ] as const satisfies readonly { value: HistoryArchived; label: string }[]
-const when = (value: string) => new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(new Date(value))
+const when = (value: string) => formatDateTime(value, { month: 'short', day: 'numeric' })
 
 export function GatewayChatsWorkspace({
   runtime,

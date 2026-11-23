@@ -182,13 +182,17 @@
         {
           "id": "you.time_format",
           "title": "Time format",
-          "description": "How times are written.",
+          "description": "How times are written on Conker's screens.",
           "type": "select",
-          "default": "24h",
+          "default": "device",
           "tier": "basic",
           "scope": "global",
-          "effect": "stored",
+          "effect": "live",
           "options": [
+            {
+              "value": "device",
+              "label": "Follow this device"
+            },
             {
               "value": "24h",
               "label": "24-hour"
@@ -202,13 +206,17 @@
         {
           "id": "you.date_format",
           "title": "Date format",
-          "description": "How dates are written.",
+          "description": "How dates are written on Conker's screens.",
           "type": "select",
-          "default": "dmy",
+          "default": "device",
           "tier": "basic",
           "scope": "global",
-          "effect": "stored",
+          "effect": "live",
           "options": [
+            {
+              "value": "device",
+              "label": "Follow this device"
+            },
             {
               "value": "dmy",
               "label": "28 Oct 2026"

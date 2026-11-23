@@ -31,8 +31,8 @@ Who you are, where you are and how your days run.
 | **Follow this device's time zone**<br>`you.time_zone_auto` | Updates your time zone when you travel. (saved, not used yet) | on | owner settings |
 | **App language**<br>`you.app_language` | The language of Conker's screens. Choices: English, Hebrew, Russian. (saved, not used yet) | English | owner settings |
 | **Answer language**<br>`you.answer_language` | The language Conker answers in. Choices: Same as your message, English, Hebrew, Russian. (applies from the next message) | Same as your message | owner settings |
-| **Time format**<br>`you.time_format` | How times are written. Choices: 24-hour, 12-hour. (saved, not used yet) | 24-hour | owner settings |
-| **Date format**<br>`you.date_format` | How dates are written. Choices: 28 Oct 2026, Oct 28, 2026, 2026-10-28. (saved, not used yet) | 28 Oct 2026 | owner settings |
+| **Time format**<br>`you.time_format` | How times are written on Conker's screens. Choices: Follow this device, 24-hour, 12-hour. (applies right away) | Follow this device | owner settings |
+| **Date format**<br>`you.date_format` | How dates are written on Conker's screens. Choices: Follow this device, 28 Oct 2026, Oct 28, 2026, 2026-10-28. (applies right away) | Follow this device | owner settings |
 | **First day of the week**<br>`you.week_start` | Where weeks start in calendars and weekly plans. Choices: Sunday, Monday. (saved, not used yet) | Sunday | owner settings |
 | **Units**<br>`you.units` | Units for distance, weight and temperature. Choices: Not set, Metric, Imperial. (applies from the next message) | Not set | owner settings |
 

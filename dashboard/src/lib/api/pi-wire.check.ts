@@ -4,15 +4,8 @@
 import type { paths } from './generated/pi'
 import type { Same } from '../gateway/pi-client'
 import type { GatewayHostInventory } from '../gateway/host-inventory'
-import type { GatewayJob } from '../gateway/jobs'
-import type { GatewayTeam } from '../gateway/teams'
 import type { GatewayDirectory } from '../gateway/filesystem'
-import type { GatewayCall, GatewayCallAudioTurn, GatewayCallAvailability } from '../gateway/calls'
-import type { AgentProfile, SetupChoice, SetupModelOptions, SetupProtectionPolicy, SetupReceipt, SetupRehearsal, SetupStatus } from '../gateway/control'
-import type { GatewayConfiguredTargets } from '../gateway/host-inventory'
-import type { GatewayAgentNote } from '../gateway/jobs'
-import type { ChatOutput } from '../gateway/chat-names'
-import type { OpenLoopPage } from '../gateway/open-loops'
+import type { GatewayCall, GatewayCallAudioTurn } from '../gateway/calls'
 import type { EnhancedPrompt } from '../gateway/prompt-enhance'
 import type { TemplateDeleted, TemplateReceipt } from '../gateway/prompt-templates'
 import type { TeamRunFinishBody, TeamRunStepBody } from '../gateway/team-runs'
@@ -29,25 +22,11 @@ export const piWire = {
   // Pi's team-run replies are `unknown` in its OpenAPI, so only what the browser sends is bound here.
   teamRunStep: true satisfies Same<TeamRunStepBody, PiRequest<'/team-runs/{identity}/steps', 'post'>>,
   teamRunFinish: true satisfies Same<TeamRunFinishBody, PiRequest<'/team-runs/{identity}/finish', 'post'>>,
-  openLoops: true satisfies Same<OpenLoopPage, PiResponse<'/open-loops', 'get'>>,
-  chatOutput: true satisfies Same<ChatOutput, PiResponse<'/sessions/{session_id}/output', 'get'>>,
   promptEnhance: true satisfies Same<EnhancedPrompt, PiResponse<'/prompts/enhance', 'post'>>,
   promptTemplateSaved: true satisfies Same<TemplateReceipt, PiResponse<'/prompts/templates/{template_id}', 'post'>>,
   promptTemplateDeleted: true satisfies Same<TemplateDeleted, PiResponse<'/prompts/templates/{template_id}/delete', 'post'>>,
-  team: true satisfies Same<GatewayTeam, PiResponse<'/collaboration/teams/{identity}', 'get'>>,
-  job: true satisfies Same<GatewayJob, PiResponse<'/jobs/{identity}', 'get'>>,
   inv: true satisfies Same<GatewayHostInventory, PiResponse<'/system/inventory', 'post'>>,
   listing: true satisfies Same<GatewayDirectory, PiResponse<'/system/files/listings', 'post'>>,
   call: true satisfies Same<GatewayCall, PiResponse<'/calls/browser', 'post'>>,
   callAudio: true satisfies Same<GatewayCallAudioTurn, PiResponse<'/calls/browser/{identity}/audio', 'post'>>,
-  callAvailable: true satisfies Same<GatewayCallAvailability, PiResponse<'/calls/browser/capabilities', 'get'>>,
-  setup: true satisfies Same<SetupStatus, PiResponse<'/setup/status', 'get'>>,
-  setupReceipt: true satisfies Same<SetupReceipt, PiResponse<'/setup/receipts/{step}', 'get'>>,
-  setupChoice: true satisfies Same<SetupChoice, PiResponse<'/setup/choices/{step}', 'get'>>,
-  setupProtection: true satisfies Same<SetupProtectionPolicy, PiResponse<'/setup/protection', 'get'>>,
-  setupModels: true satisfies Same<SetupModelOptions, PiResponse<'/setup/models', 'get'>>,
-  rehearsal: true satisfies Same<SetupRehearsal, PiResponse<'/setup/rehearsal', 'get'>>,
-  agent: true satisfies Same<AgentProfile, PiResponse<'/agents/{identity}', 'get'>>,
-  targets: true satisfies Same<GatewayConfiguredTargets, PiResponse<'/system/inventory/configured/services', 'get'>>,
-  notes: true satisfies Same<GatewayAgentNote, PiResponse<'/jobs/agent/notes', 'get'>['results'][number]>,
 }

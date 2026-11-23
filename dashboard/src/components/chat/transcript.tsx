@@ -17,6 +17,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem,
 import type { Action, ChatContract, ChatMessage, MessageAction } from '@/lib/chat/contract'
 import { foldToolRequests } from '@/lib/chat/tool-requests'
 import { cn } from '@/lib/utils'
+import { formatDateTime, formatTime } from '@/lib/date-format'
 
 const labels: Record<MessageAction, string> = { copy: 'Copy message', link: 'Copy message link', edit: 'Edit', retry: 'Retry', fork: 'Fork', pin: 'Pin', rateUp: 'Good response', rateDown: 'Poor response', redact: 'Redact', saveArtifact: 'Save artifact' }
 const RichAnswer = lazy(() => import('@/components/rich-answer').then(module => ({ default: module.RichAnswer })))
@@ -35,7 +36,7 @@ export function ChatMessageRecord({ message }: { message: ChatMessage }) {
   const hasRule = useHasContextRule(message)
   const moreActions = (Object.keys(labels) as MessageAction[]).filter(kind => kind !== 'copy' && kind !== 'link' && message.actions[kind].availability !== 'unsupported')
   const createdAt = new Date(message.createdAt)
-  const shortTime = createdAt.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
+  const shortTime = formatTime(createdAt, { hour: 'numeric', minute: '2-digit' }), fullTime = formatDateTime(createdAt)
   async function invoke(action: Action, kind: MessageAction) {
     if (action.availability !== 'enabled') return
     try { await action.run(); setNotice(kind === 'copy' ? 'Message copied.' : kind === 'link' ? 'Local message link copied. Sign-in is required to open it.' : '') }
@@ -47,7 +48,7 @@ export function ChatMessageRecord({ message }: { message: ChatMessage }) {
   if (message.role === 'tool' && message.content.kind === 'text') return <ToolRecord text={message.content.text} sequence={message.sequence} />
   if (message.role === 'system' || message.role === 'tool') return <details className="min-w-0 rounded-lg border p-3"><summary className="cursor-pointer rounded-sm text-xs font-medium focus-visible:outline-2 focus-visible:outline-ring">{message.role === 'tool' ? 'Tool' : 'System'} record · {message.sequence}</summary><div className="mt-3 min-w-0">{body}</div></details>
   return <article aria-label={`${message.role} message ${message.sequence}`} className={cn('group/message relative min-w-0', message.role === 'user' ? 'ml-auto flex max-w-[92%] flex-col items-end sm:max-w-[85%]' : 'w-full')}>
-    {message.role === 'assistant' && <div className="mb-3 flex items-center gap-2 min-w-0"><CompanionPortrait portrait={message.agentId === 'companion' || !message.agentId ? "/conker.png" : undefined} name={message.agentName ?? 'Conker'} tone="graphite" className="size-7 rounded-md" /><span className="shrink-0 text-sm font-medium">{message.agentName ?? 'Conker'}</span><span className="truncate text-xs text-muted-foreground"><time dateTime={message.createdAt} title={createdAt.toLocaleString()} aria-label={createdAt.toLocaleString()}>{shortTime}</time>{message.details && ` · ${message.details}`}</span></div>}
+    {message.role === 'assistant' && <div className="mb-3 flex items-center gap-2 min-w-0"><CompanionPortrait portrait={message.agentId === 'companion' || !message.agentId ? "/conker.png" : undefined} name={message.agentName ?? 'Conker'} tone="graphite" className="size-7 rounded-md" /><span className="shrink-0 text-sm font-medium">{message.agentName ?? 'Conker'}</span><span className="truncate text-xs text-muted-foreground"><time dateTime={message.createdAt} title={fullTime} aria-label={fullTime}>{shortTime}</time>{message.details && ` · ${message.details}`}</span></div>}
     <div className={cn('min-w-0 max-w-full', message.role === 'user' && 'rounded-2xl bg-muted px-4 py-2.5')}>{body}</div>
     {message.memory && isMemoryNote(message.memory) && <MemoryNote memory={message.memory} />}
     {message.memory && !isMemoryNote(message.memory) && <details className="mt-1.5 max-w-full text-xs text-muted-foreground"><summary className="cursor-pointer rounded-sm text-right focus-visible:outline-2 focus-visible:outline-ring">{message.memory.label}</summary><div className="mt-2 max-w-sm space-y-2 text-left"><p className="leading-5">{message.memory.description}</p><Button type="button" variant="ghost" size="sm" disabled={message.memory.checking || message.memory.refresh.availability !== 'enabled'} onClick={() => { if (message.memory?.refresh.availability === 'enabled') void message.memory.refresh.run() }}>{message.memory.checking ? 'Checking…' : 'Check memory status'}</Button></div></details>}
@@ -68,7 +69,7 @@ export function ChatMessageRecord({ message }: { message: ChatMessage }) {
           </DropdownMenuItem>
         })}</DropdownMenuGroup></DropdownMenuContent>
       </DropdownMenu>}
-      {message.role === 'user' && <time className="ml-1 text-muted-foreground" dateTime={message.createdAt} title={createdAt.toLocaleString()} aria-label={createdAt.toLocaleString()}>{shortTime}</time>}
+      {message.role === 'user' && <time className="ml-1 text-muted-foreground" dateTime={message.createdAt} title={fullTime} aria-label={fullTime}>{shortTime}</time>}
     </div>
     <MessageContextRuleError message={message} />
     {notice && <p role="status" className="mt-1 text-xs text-muted-foreground">{notice}</p>}
@@ -93,7 +94,7 @@ export function ChatTranscript({ chat }: { chat: ChatContract }) {
       <div className="space-y-1"><h3 className="text-sm font-medium">{outcome.title}</h3><p className="text-sm leading-6 text-muted-foreground">{outcome.description}</p><p className="text-xs leading-5 text-muted-foreground">{outcome.consequence}</p></div>
       {outcome.status && <p role="status" className="text-sm leading-6 font-medium">{outcome.status}</p>}
       {outcome.controls.length > 0 && <div className="flex flex-wrap gap-2">{outcome.controls.map(control => <Button key={control.label} type="button" size="sm" variant={control.primary ? 'default' : 'outline'} className="h-auto min-h-(--control-height-sm) whitespace-normal" disabled={control.action.availability !== 'enabled'} onClick={() => { if (control.action.availability === 'enabled') void control.action.run() }}>{control.label}</Button>)}</div>}
-      <p className="text-xs text-muted-foreground">Saved turn · <time dateTime={outcome.recordedAt}>{new Date(outcome.recordedAt).toLocaleString()}</time></p>
+      <p className="text-xs text-muted-foreground">Saved turn · <time dateTime={outcome.recordedAt}>{formatDateTime(outcome.recordedAt)}</time></p>
     </section>)}
     {chat.history === 'ready' && !chat.messages.length && !chat.generation && pendingInput === null && <p className="text-sm text-muted-foreground">No saved messages in this conversation.</p>}
     {chat.history === 'error' && !chat.messages.length && <InlineError error={null} title="Messages didn’t load" description="Your draft is safe. This refreshes by itself when your server answers again." onRetry={chat.checkHistory.availability === 'enabled' ? chat.checkHistory.run : undefined} />}

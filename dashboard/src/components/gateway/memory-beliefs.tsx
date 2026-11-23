@@ -10,6 +10,7 @@ import type { Belief, BeliefFilter, BeliefPage, MemoryBeliefsClient } from '@/li
 import { GatewayHeader } from './header'
 import { GatewayPageFrame } from './page-frame'
 import { MemoryUsesLine } from './memory-uses-line'
+import { formatDateTime } from '@/lib/date-format'
 
 const filters: { id: string; label: string; value: BeliefFilter }[] = [
   { id: 'all', label: 'Everything', value: { origin: 'all', state: 'all' } },
@@ -18,7 +19,7 @@ const filters: { id: string; label: string; value: BeliefFilter }[] = [
   { id: 'review', label: 'Needs a look', value: { origin: 'all', state: 'needs_review' } },
 ]
 const memoryLink = (id: string) => `/memory?view=database&kind=memory&record=${encodeURIComponent(id)}`
-const day = (value: string | null) => (value ? new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(new Date(value)) : null)
+const day = (value: string | null) => (value ? formatDateTime(value, { dateStyle: 'medium' }) : null)
 const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`
 
 function why(belief: Belief) {

@@ -9,7 +9,7 @@ import { createPortal } from 'react-dom'
 import { useWorkspaceChrome } from '@/lib/workspace-chrome'
 import { WorkspaceRouteActions } from './workspace-chrome'
 import { UniversalSearchContext } from '@/lib/workspace-chrome'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import '@/components/resilience/resilience.css'
 export { WorkspaceAction } from './workspace-chrome'
@@ -140,17 +140,19 @@ export function WorkspaceSearch({ onSubmit, ...props }: Omit<CollectionSearchPro
         <ChevronDown />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuLabel>Search scope</DropdownMenuLabel>
-        <DropdownMenuItem disabled>{props.label}</DropdownMenuItem>
-        <DropdownMenuItem
-          onClick={() => {
-            const opener = chrome.compactSearch ? trigger.current : input.current
-            setExpanded(false)
-            openAll(typeof props.value === 'string' ? props.value.slice(0, 200) : '', opener)
-          }}
-        >
-          Search all Conker
-        </DropdownMenuItem>
+        <DropdownMenuGroup>
+          <DropdownMenuLabel>Search scope</DropdownMenuLabel>
+          <DropdownMenuItem disabled>{props.label}</DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => {
+              const opener = chrome.compactSearch ? trigger.current : input.current
+              setExpanded(false)
+              openAll(typeof props.value === 'string' ? props.value.slice(0, 200) : '', opener)
+            }}
+          >
+            Search all Conker
+          </DropdownMenuItem>
+        </DropdownMenuGroup>
       </DropdownMenuContent>
     </DropdownMenu>
   )

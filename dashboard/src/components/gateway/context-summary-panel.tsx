@@ -9,6 +9,7 @@ import { chatFeatureMessage } from '@/lib/gateway/chat-feature-errors'
 import { GatewayError } from '@/lib/gateway/transport'
 import type { ChatSummary, ChatSummaryClient, Compaction, SummaryDraft } from '@/lib/gateway/chat-summary'
 import { ChatFeatureError } from '@/components/chat/chat-feature-error'
+import { formatDateTime } from '@/lib/date-format'
 
 type Slot = 'edit' | 'fold' | 'restore' | 'fork'
 
@@ -157,7 +158,7 @@ function SummaryPanel({ client, sessionId, lastMessageId, disabled, onChanged }:
                 <li key={version.revision} className="space-y-1 rounded-md border p-2 text-xs">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <span className="text-muted-foreground">
-                      Version {version.revision} · {new Date(version.createdAt * 1000).toLocaleString()}
+                      Version {version.revision} · {formatDateTime(version.createdAt * 1000)}
                       {version.restoredFrom !== null && ` · restored from ${version.restoredFrom}`}
                     </span>
                     <Button size="sm" variant="ghost" disabled={locked} onClick={() => restore(version.revision)}>

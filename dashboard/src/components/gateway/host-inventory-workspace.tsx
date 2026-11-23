@@ -6,6 +6,7 @@ import { PageHeader, WorkspaceAction } from '@/components/design-system/primitiv
 import { GatewayPageFrame } from './page-frame'
 import { gatewayError } from '@/lib/gateway/transport'
 import { createHostInventoryRequestId, type GatewayConfiguredTargets, type GatewayHostInventory, type GatewayHostInventoryClient } from '@/lib/gateway/host-inventory'
+import { formatDateTime } from '@/lib/date-format'
 
 const storageKey = 'conker:last-host-inventory-request'
 const labels = { processes: 'Processes', ports: 'Ports', containers: 'Containers' } as const
@@ -78,7 +79,7 @@ export function GatewayHostInventoryWorkspace({ client, section }: { client: Gat
       {sample.state === 'unknown' && <div className="flex flex-wrap items-center justify-between gap-3 border p-4"><div><p className="text-sm font-medium">The observation outcome is unknown</p><p className="mt-1 text-sm text-muted-foreground">Inspect the saved request without dispatching another sample.</p></div><Button variant="outline" disabled={pending} onClick={() => void inspect(sample.requestId)}>Check request</Button></div>}
       {sample.state === 'failed' && <p className="text-sm text-destructive-foreground">The saved observation failed validation. No host data is shown.</p>}
       {sample.observation && <>
-        <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-muted-foreground"><span>Sampled {new Date(sample.observation.sampledAt).toLocaleString()}</span><span>Collection {sample.observation.collectionSeconds.toFixed(2)}s</span><span>{sample.observation.unavailableFieldCount} unavailable fields</span></div>
+        <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-muted-foreground"><span>Sampled {formatDateTime(sample.observation.sampledAt)}</span><span>Collection {sample.observation.collectionSeconds.toFixed(2)}s</span><span>{sample.observation.unavailableFieldCount} unavailable fields</span></div>
         {observed?.errors.length ? <p className="text-sm text-muted-foreground">Partial observation: {observed.errors.map(value => value.replaceAll('_', ' ')).join(', ')}.</p> : null}
         {rows.length === 0 ? <div className="border-y py-12 text-center"><p className="text-sm font-medium">No {labels[section].toLocaleLowerCase()} were returned</p><p className="mt-1 text-sm text-muted-foreground">Source scope: {sample.observation.sourceScopes[section === 'processes' ? 'process' : section === 'ports' ? 'network' : 'containers'].replaceAll('-', ' ')}</p></div> : <div className="divide-y border-y">
           {section === 'processes' && sample.observation.processes.results.map(item => <div key={item.id} className="grid gap-2 py-4 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center"><div className="min-w-0"><p className="truncate text-sm font-medium">{item.name || 'Unnamed process'}</p><p className="mt-1 font-mono text-xs text-muted-foreground">{shortId(item.id)}</p></div><Badge variant="outline">{item.status}</Badge><p className="text-xs text-muted-foreground">{memory(item.memoryBytes)}</p></div>)}

@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import type { GatewayAuthClient } from './auth'
-import { GatewayError } from './transport'
+import { createPiClient, piData } from './pi-client'
 
 const loop = z
   .object({
@@ -27,12 +27,11 @@ export type OpenLoopPage = z.infer<typeof loopPage>
 export type OpenLoopFilter = 'open' | 'done'
 
 export function createOpenLoopsClient(auth: Pick<GatewayAuthClient, 'request'>) {
+  const pi = createPiClient(auth)
   return {
     async list(state: OpenLoopFilter, after?: string | null, signal?: AbortSignal): Promise<OpenLoopPage> {
       const query = { state, limit: 50, ...(after ? { after } : {}) }
-      const result = loopPage.safeParse(await auth.request('/api/control/pi/open-loops', { query, signal }))
-      if (!result.success) throw new GatewayError('invalid-response')
-      return result.data
+      return piData(pi.GET('/open-loops', { params: { query }, signal }), loopPage)
     },
   }
 }

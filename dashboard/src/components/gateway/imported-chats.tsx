@@ -11,9 +11,10 @@ import { importRefusalMessage, importSourceNames, type GatewayImportsClient, typ
 import { cn } from '@/lib/utils'
 import { useListView, byName, byNewest } from '@/components/design-system/list-view'
 import { GatewayPageFrame } from './page-frame'
+import { formatDateTime } from '@/lib/date-format'
 
 const plural = (count: number, one: string, many = `${one}s`) => `${count.toLocaleString()} ${count === 1 ? one : many}`
-const date = (seconds: number | null) => (seconds === null ? null : new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(seconds * 1000)))
+const date = (seconds: number | null) => (seconds === null ? null : formatDateTime(seconds * 1000, { day: 'numeric', month: 'short', year: 'numeric' }))
 const memoryLabels = { offering: 'Waiting to be offered to memory', offered: 'Offered to memory', refused: 'Memory turned this down', not_offered: null } as const
 
 const NO_CHATS: ImportedChat[] = []

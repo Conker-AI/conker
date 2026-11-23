@@ -17,7 +17,7 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       include: [
-        'src/lib/{due-date,skill-label,tool-draft-id,command-query,route-actions,utils,inbox-buttons,recent-chats,refresh-state,theme-resolution,connection-store}.ts',
+        'src/lib/{date-format,due-date,skill-label,tool-draft-id,command-query,route-actions,utils,inbox-buttons,recent-chats,refresh-state,theme-resolution,connection-store}.ts',
         'src/lib/{tool-run,tool-workspace,tool-value-sources,tool-draft-origin,team-run-view,team-run-memory,memory-explorer,memory-layout}.ts',
         'src/lib/{conversation-research,conversation-attachments,artifact-html,artifact-media,plain-words,runtime-mode,rich-answer,job-starters,server-actions}.ts',
         'src/lib/chat/{smooth-text,tool-record,tool-requests,turn-details,message-context-rules,prompt-templates,template-fill,turn-outcomes,memory-feedback,template-editor}.ts',

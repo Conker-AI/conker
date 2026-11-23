@@ -11,7 +11,7 @@
     {
       "id": "external-mcp-tools", "name": "Remote MCP tool discovery and execution", "authority": "toolgate", "state": "active",
       "gatewayRoutes": ["/api/owner/mcp/discover", "/api/owner/mcp/import", "/api/owner/mcp/tools", "/api/owner/mcp/tools/{id}/state", "/api/owner/mcp/tools/{id}/access"], "uiRoutes": ["/tools?view=mcp"],
-      "cliCommands": ["python scripts/conker.py mcp discover URL", "python scripts/conker.py mcp import FILE --tool NAME --id ID", "python scripts/conker.py mcp access ID"],
+      "cliCommands": ["python scripts/conker.py mcp discover URL", "python scripts/conker.py mcp import FILE --tool NAME --id ID", "python scripts/conker.py mcp access ID", "python scripts/conker.py mcp class ID act_outward --expected-version N"],
       "deploymentRequirements": ["local workspace bundled Pi and ToolGate extensions", "public HTTPS MCP endpoint", "separate ToolGate owner and execution keys", "explicit caller grant", "owner approval per execution"],
       "evidence": [{"path": "dashboard/src/lib/gateway/mcp.ts", "contains": "/api/owner/mcp/import"}, {"path": "scripts/conker.py", "contains": "toolgate-owner"}]
     },
