@@ -1,5 +1,3 @@
-/* eslint-disable react-hooks/refs, react-hooks/set-state-in-effect, react-hooks/preserve-manual-memoization -- React Compiler skipped this whole component before the
-   send and chat-start handlers moved out (a handler called one declared after it); these older ref, effect and memo patterns are unchanged, not new. */
 import { createDraftController, draftCanSend, draftNeedsUnload } from './draft-controller'
 import { emptyDraft, mergeDraftPrivacy } from '@/lib/gateway/drafts'
 import { readDraftStart, clearDraftStart, type PendingDraftStart } from './draft-start-recovery'
@@ -12,7 +10,7 @@ import { createRuntimeDetailReader, useRefreshChat } from './runtime-detail-read
 import { useSessionDiscovery } from './session-discovery-context'
 import { gatewayChatContract, type GatewayChatState, type GatewayChatHandlers } from '@/lib/chat/gateway-adapter'
 import type { GatewayControlClient } from '@/lib/gateway/control'
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react'
 import { useStore } from 'zustand'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { visibleTaskDispatchIntent } from './task-dispatch-state'
@@ -43,6 +41,19 @@ async function copyMessage(message: RuntimeMessage, kind: 'copy' | 'link') {
   await navigator.clipboard.writeText(kind === 'copy' ? message.content.text : url.href)
 }
 
+/** Remembers the error the detail reader showed, so a later good background read clears only that error. */
+function readErrorMemory(setError: Dispatch<SetStateAction<string | null>>) {
+  let shown: string | null = null
+  return {
+    show: (error: unknown | null) => { shown = error === null ? null : gatewayError(error).message; setError(shown) },
+    settle: () => {
+      if (!shown) return
+      const oldError = shown
+      shown = null; setError(value => value === oldError ? null : value)
+    },
+  }
+}
+
 /** Live Pi records only. All drafts and mutation locks belong to this mounted workspace. */
 export function GatewayRuntimeWorkspace({ harnessBySession, control, client, activityClient, authStore, state, sourcePrivacy, visible = true, onSelectSession, headerExtra }: GatewayRuntimeWorkspaceProps) {
   const navigate = useNavigate()
@@ -55,11 +66,15 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
   const privacy = sourcePrivacy ?? localPrivacy
   const forgottenIds = useStore(privacy, value => value.sessionIds)
   const { selected, uncertain, createUnknown, operation, taskIntent, epoch: workspaceEpoch, turnCheck } = useStore(workspace)
-  const draftEpoch = useRef(workspaceEpoch)
-  const [draftController] = useState(() => createDraftController(client.drafts, () => {
-    const value = authStore.getState()
-    return workspace.getState().epoch === draftEpoch.current && value.phase === 'authenticated' && !!value.session?.authenticated && !value.pending && !value.logoutUnconfirmed
-  }))
+  // The controller saves only for the workspace epoch it was last reset for; the epoch lives in its closure, not in render data.
+  const [{ draftController, markDraftEpoch }] = useState(() => {
+    let draftEpoch = workspaceEpoch
+    const controller = createDraftController(client.drafts, () => {
+      const value = authStore.getState()
+      return workspace.getState().epoch === draftEpoch && value.phase === 'authenticated' && !!value.session?.authenticated && !value.pending && !value.logoutUnconfirmed
+    })
+    return { draftController: controller, markDraftEpoch: (epoch: number) => { draftEpoch = epoch } }
+  })
   const draftEntries = useStore(draftController.store, value => value.entries)
   const selectedValue = (selected ? draftEntries[selected]?.value : undefined) ?? emptyDraft()
   const firstValue = draftEntries.new?.value ?? emptyDraft()
@@ -104,12 +119,11 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
   const chatLatest = useRef<{ snapshot: GatewayChatState; handlers: GatewayChatHandlers } | null>(null)
   const mounted = useRef(false)
   const controllers = useRef(new Set<AbortController>())
-  const detailReadError = useRef<string | null>(null)
   const selectedRef = useRef(selected)
-  selectedRef.current = selected
   const active = auth.phase === 'authenticated' && auth.session?.authenticated && !auth.pending && !auth.logoutUnconfirmed
   const activeRef = useRef(active)
-  activeRef.current = active
+  // Callbacks read the committed selection and sign-in state; layout effects run before any passive effect or event.
+  useLayoutEffect(() => { selectedRef.current = selected; activeRef.current = active })
   const current = detail?.id === selected ? forgottenIds.includes(detail.id) ? maskForgottenConversation(detail) : detail : null
   const knownForgotten = !!selected && (forgottenIds.includes(selected) || current?.status === 'forgotten')
   const latestThinking = current?.thinking?.[0]
@@ -131,6 +145,7 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
     if (active) {
       const identity = authStore.getState().session?.sessionId
       const saved = identity ? readDraftStart(identity) : null
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- The saved chat start is read from browser storage after sign-in and on each reselect; reading it during render would read storage while rendering and change when the recovery notice appears.
       setPendingStart(saved)
       if (saved) workspace.setState({ createUnknown: 'unchecked' })
       void draftController.load(selected ?? 'new')
@@ -138,11 +153,11 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
   }, [active, auth.session?.sessionId, authStore, draftController, selected, workspace])
   useEffect(() => {
     const unsubscribe = workspace.subscribe((value, before) => {
-      if (value.epoch !== before.epoch) { draftController.reset(); draftEpoch.current = value.epoch; clearDraftStart(); setPendingStart(null) }
+      if (value.epoch !== before.epoch) { draftController.reset(); markDraftEpoch(value.epoch); clearDraftStart(); setPendingStart(null) }
     })
     const forget = privacy.subscribe(value => draftController.forget(value.sessionIds))
     return () => { unsubscribe(); forget(); draftController.setActive(false) }
-  }, [draftController, workspace, privacy])
+  }, [draftController, markDraftEpoch, workspace, privacy])
   useEffect(() => {
     if (!active) return
     const check = () => { if (document.visibilityState === 'visible') void draftController.load(selected ?? 'new') }
@@ -162,7 +177,7 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
     try { return await action(controller.signal) }
     finally { controllers.current.delete(controller) }
   }, [])
-  const detailReader = useMemo(() => createRuntimeDetailReader({
+  const { detailReader, settleDetailReadError } = useMemo(() => { const readError = readErrorMemory(setDetailError); const reader = createRuntimeDetailReader({
     read: (id, signal) => client.getSession(id, { signal }),
     scope: id => {
       const auth = authStore.getState(), state = workspace.getState()
@@ -170,7 +185,7 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
         ? JSON.stringify([auth.session.sessionId, state.epoch, id]) : null
     },
     pending: setDetailPending,
-    failure: error => { detailReadError.current = error === null ? null : gatewayError(error).message; setDetailError(detailReadError.current) },
+    failure: readError.show,
     apply: response => {
       const id = response.id
       if (response.status === 'forgotten') privacy.getState().markForgotten([id])
@@ -183,7 +198,8 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
         return { uncertain: updated }
       })
     },
-  }), [client, authStore, privacy, workspace])
+  })
+  return { detailReader: reader, settleDetailReadError: readError.settle } }, [client, authStore, privacy, workspace, setDetail, setDetailError, setDetailPending])
   const refreshDetail = useCallback((id: string) => detailReader.refresh(id), [detailReader])
   useRefreshChat({ active: !!active, selected, busy: !!operation, refreshDetail, draftController })
   useEffect(() => {
@@ -201,10 +217,7 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
     apply: response => {
       // Background reads update saved history only. Drafts, receipts and mutation locks keep their owners.
       setDetail(privacy.getState().sessionIds.includes(response.id) ? maskForgottenConversation(response) : response)
-      if (detailReadError.current) {
-        const oldError = detailReadError.current
-        detailReadError.current = null; setDetailError(value => value === oldError ? null : value)
-      }
+      settleDetailReadError()
     } })
   const historyLoading = Boolean(selected && !current && !observation.error && !knownForgotten)
 
@@ -216,7 +229,7 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
     // The submission receipt owns transcript reconciliation; polling only updates analysis.
     setDetail(previous => previous?.id !== id ? previous : privacy.getState().sessionIds.includes(id)
       ? maskForgottenConversation(previous) : { ...previous, thinking: result.results })
-  }, [client, privacy, detailReader])
+  }, [client, privacy, detailReader, setDetail])
   useEffect(() => {
     // A local send owns transcript reconciliation; the observer covers external/background work.
     if (!selected || !active || !visible || !sendPending) return
@@ -270,8 +283,9 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
   useEffect(() => {
     if (!forgottenIds.length) return
     workspace.setState(value => ({ taskIntent: value.taskIntent && forgottenIds.includes(value.taskIntent.sessionId) ? null : value.taskIntent, drafts: Object.fromEntries(Object.entries(value.drafts).filter(([id]) => !forgottenIds.includes(id))), skillChoices: Object.fromEntries(Object.entries(value.skillChoices).filter(([id]) => !forgottenIds.includes(id))), thinkChoices: Object.fromEntries(Object.entries(value.thinkChoices).filter(([id]) => !forgottenIds.includes(id))), uncertain: Object.fromEntries(Object.entries(value.uncertain).map(([id, attempt]) => [id, forgottenIds.includes(id) || attempt.requestedSessionId && forgottenIds.includes(attempt.requestedSessionId) ? { ...attempt, text: '', requestOptions: {}, submission: attempt.submission ? { ...attempt.submission, skillIds: [], modelId: null, think: false, draftRevision: null, researchMode: 'off', pendingText: null, contentStatus: 'forgotten', state: 'forgotten' } : undefined } : attempt])) }))
-    setDetail(value => value && forgottenIds.includes(value.id) ? maskForgottenConversation(value) : value)
   }, [forgottenIds, workspace])
+  // A forgotten chat is masked in saved state the moment it is forgotten, not one render later.
+  useEffect(() => privacy.subscribe(value => setDetail(detail => detail && value.sessionIds.includes(detail.id) ? maskForgottenConversation(detail) : detail)), [privacy])
   useEffect(() => {
     if (!Object.values(draftEntries).some(draftNeedsUnload) && !Object.keys(uncertain).length && !pendingStart && !taskIntent && !sendPending && !createPending) return
     const preventLoss = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = '' }
@@ -328,7 +342,7 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
   }
   // Event callbacks must see current committed props plus synchronous store/privacy changes.
   useEffect(() => { chatLatest.current = { snapshot: chatSnapshot, handlers: chatHandlers } })
-  const chat = gatewayChatContract(chatSnapshot, () => {
+  const readLatestChat = (): GatewayChatState => {
     const latest = chatLatest.current?.snapshot ?? chatSnapshot
     const store = workspace.getState()
     const ids = privacy.getState().sessionIds
@@ -337,7 +351,10 @@ export function GatewayRuntimeWorkspace({ harnessBySession, control, client, act
       sendPending: store.operation === 'send', pending: latest.pending || !!store.operation || !draftCanSend(draftController.current(store.selected ?? 'new')),
       forgotten: latest.forgotten || ids.includes(latest.sessionId) || !!latest.attempt?.requestedSessionId && ids.includes(latest.attempt.requestedSessionId),
     }
-  }, () => chatLatest.current?.handlers ?? chatHandlers)
+  }
+  const latestChatHandlers = () => chatLatest.current?.handlers ?? chatHandlers
+  // eslint-disable-next-line react-hooks/refs -- Actions must run the latest committed handlers at click time, so they read a ref; the contract also asks once while rendering whether undo exists. Removing the ref changes which handlers a click runs.
+  const chat = gatewayChatContract(chatSnapshot, readLatestChat, latestChatHandlers)
   const recoveryActions = 'actions' in chat.submission ? chat.submission.actions : null
   const recover = (name: keyof NonNullable<typeof recoveryActions>) => { const action = recoveryActions?.[name]; if (action?.availability === 'enabled') void action.run() }
   const safeSessions = sessions.map(session => forgottenIds.includes(session.id) ? maskForgottenSession(session) : session)

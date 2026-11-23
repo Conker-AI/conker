@@ -79,7 +79,7 @@ assert.match(workspaceSource, /GatewaySessionAgentControl[^\n]+activeAgentId=\{a
   'An open conversation must expose an explicit future-turn agent handoff')
 assert.match(workspaceSource, /createRequestOptions\(promotedDraft.modelId, promotedDraft.skillIds, promotedDraft.think, promotedDraft.revision, promotedDraft.researchMode\)/,
   'First-message options and exact draft revision cross atomic session promotion')
-assert.match(workspaceSource, /createRequestOptions\(modelOverride \?\? composer\?\.modelId/)
+assert.match(workspaceSource, /createRequestOptions\(\s*modelOverride \?\? composer\?\.modelId/)
 assert.match(workspaceSource, /client.submitRequest\([^\n]+\.\.\.requestOptions/,
   'The exact resolved model choice must be sent to the runtime')
 
