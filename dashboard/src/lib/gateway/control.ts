@@ -43,6 +43,7 @@ import { createChatGPTClient } from './chatgpt'
 import { createGatewaySkillsClient } from './skills'
 import type { GatewayMcpClient } from './mcp'
 import type { GatewayAuthClient } from './auth'
+import { createPiClient, piData } from './pi-client'
 import { GatewayError } from './transport'
 import {
   identity, count, short, kind, configuration, sessionSettings, modelSettings, providers, systemHealth, gatewayHealth, diagnostics, toolInventory, setupStatus, setupReceiptStep, setupReceiptWritableStep, setupReceipt, setupReceiptInput, setupProtectionPolicy, setupProtectionInput, setupRehearsal, setupChoiceStep, setupChoice, setupChoiceInput, setupModelOptions, setupModelActivation, setupBoundaryPolicy, agentConfiguration, agentProfile, agentCollection, library, connections, content, parse, objectPath, match,
@@ -77,6 +78,7 @@ export function createMemoryForgetRequest(preview: Pick<MemoryForgetPreview, 'me
 export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'request' | 'audio' | 'getSession' | 'download' | 'upload'>, onCurrentSessionRevoked: () => void) {
   const modelListeners = new Set<() => void>()
   const modelsChanged = () => { for (const listener of modelListeners) listener() }
+  const pi = createPiClient(auth)
   return {
     subscribeModels(listener: () => void) { modelListeners.add(listener); return () => { modelListeners.delete(listener) } },
     editorDrafts: createGatewayEditorDrafts(auth),
@@ -145,11 +147,11 @@ export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'reques
       return parse(diagnostics, await auth.request('/api/diagnostics', { signal }))
     },
     async agents(signal?: AbortSignal): Promise<AgentProfile[]> {
-      return parse(agentCollection, await auth.request('/api/control/pi/agents', { signal })).results
+      return (await piData(pi.GET('/agents', { signal }), agentCollection)).results
     },
     async agent(id: string, signal?: AbortSignal): Promise<AgentProfile> {
       const selected = parse(z.string().regex(/^(?:companion|agent_[0-9a-f]{32})$/), id, true)
-      const result = parse(agentProfile, await auth.request(`/api/control/pi/agents/${selected}`, { signal }))
+      const result = await piData(pi.GET('/agents/{identity}', { params: { path: { identity: selected } }, signal }), agentProfile)
       if (result.id !== selected) throw new GatewayError('invalid-response')
       return result
     },

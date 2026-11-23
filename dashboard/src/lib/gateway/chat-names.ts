@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import type { GatewayAuthClient } from './auth'
+import { createPiClient, piData } from './pi-client'
 import { GatewayError } from './transport'
 
 const sessionId = z.string().regex(/^ses_[0-9a-f]{16}$/)
@@ -44,11 +45,12 @@ function parse<T>(schema: z.ZodType<T>, value: unknown, input = false): T {
 
 /** A chat's name (rename, name automatically) and its output settings. */
 export function createChatNamesClient(auth: Pick<GatewayAuthClient, 'request'>) {
+  const pi = createPiClient(auth)
   const path = (sid: string) => `/api/control/pi/sessions/${parse(sessionId, sid, true)}`
 
   return {
-    async title(sessionId: string, signal?: AbortSignal) {
-      return parse(chatName, await auth.request(`${path(sessionId)}/title`, { signal }))
+    async title(id: string, signal?: AbortSignal) {
+      return piData(pi.GET('/sessions/{session_id}/title', { params: { path: { session_id: parse(sessionId, id, true) } }, signal }), chatName)
     },
 
     async rename(sessionId: string, title: string, expectedRevision: number) {
@@ -88,8 +90,8 @@ export function createChatNamesClient(auth: Pick<GatewayAuthClient, 'request'>) 
       }))
     },
 
-    async output(sessionId: string, signal?: AbortSignal) {
-      return parse(chatOutput, await auth.request(`${path(sessionId)}/output`, { signal }))
+    async output(id: string, signal?: AbortSignal) {
+      return piData(pi.GET('/sessions/{session_id}/output', { params: { path: { session_id: parse(sessionId, id, true) } }, signal }), chatOutput)
     },
 
     async saveOutput(sessionId: string, output: { format: OutputFormat; length: OutputLength; language: string; level?: ChatOutputLevel; effort?: ChatEffort }, expectedRevision: number) {
