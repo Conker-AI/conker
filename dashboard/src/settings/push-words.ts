@@ -12,7 +12,8 @@ export const PUSH_WORDS: Record<PushView, string> = {
   unknown: 'Can’t check right now: your Conker server didn’t answer.',
 }
 export const NOT_ALLOWED = 'Notifications weren’t allowed, so nothing changed.'
-export const LIMIT = 'Notifications are already on for 10 devices. Sign out everywhere (Account) to turn them all off, then turn this one on.'
+export const LIMIT = 'Notifications are already on for 10 devices. Remove one below, then turn this one on.'
+export const REMOVE_FAILED = 'That device wasn’t removed: your Conker server didn’t answer. Try again.'
 export const SERVER_OFF = 'Notifications are unavailable on your Conker server right now. Nothing changed.'
 export const BROWSER_FAILED = 'This browser couldn’t set up notifications. Nothing changed; try again.'
 export const OFF_UNCONFIRMED = 'Off on this device. Your Conker server didn’t confirm; it drops this device the next time it tries to reach it.'

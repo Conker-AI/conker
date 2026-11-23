@@ -137,18 +137,28 @@ self.addEventListener('fetch', event => {
 // read still says that something needs the owner, and every notification opens a page of this app.
 const PUSH_TITLE = 'Conker needs you'
 const PUSH_TAG = /^conker-[0-9a-f]{16}$/
+// Only a path on this origin ("/inbox", "/settings?group=notifications"): never a full address, a
+// "//host" address, a backslash or a scheme, whatever the payload or the notification's data says.
+const PUSH_PATH = /^\/(?![/\\])[^\\\s]*$/
 
-/** A page of this app (not a server route) for a notification to open; the Inbox otherwise. */
+/** The address of a page of this app (not a server route) for a notification to open; the Inbox
+ * for anything else. */
 function pushTarget(value) {
   const inbox = new URL('inbox', self.registration.scope).href
-  if (typeof value !== 'string' || value.length > 200) return inbox
+  if (typeof value !== 'string' || value.length > 200 || !PUSH_PATH.test(value)) return inbox
   try {
     const url = new URL(value, self.location.origin)
     const path = local(url)
-    return path === null || SERVER.test(path) ? inbox : url.href
+    return url.origin !== self.location.origin || path === null || SERVER.test(path) ? inbox : url.href
   } catch {
     return inbox
   }
+}
+
+/** The path a notification keeps in its data, so a click checks it again as a path. */
+function pushPath(href) {
+  const url = new URL(href)
+  return url.pathname + url.search
 }
 
 function pushMessage(data) {
@@ -160,7 +170,7 @@ function pushMessage(data) {
   }
   const title = value && typeof value.title === 'string' && value.title.trim() && value.title.length <= 80 ? value.title : PUSH_TITLE
   const tag = value && typeof value.tag === 'string' && PUSH_TAG.test(value.tag) ? value.tag : 'conker'
-  return { title, tag, url: pushTarget(value && value.url) }
+  return { title, tag, url: pushPath(pushTarget(value && value.url)) }
 }
 
 self.addEventListener('push', event => {

@@ -48,10 +48,15 @@ test('settings: notifications on this device turn on only when flipped, then off
   await expect(row.getByRole('status')).toHaveText(/^On\./)
   await expect(toggle).toBeChecked()
   expect(await page.evaluate(() => (window as unknown as { pushProbe: object }).pushProbe)).toEqual({ asked: 1, subscribed: 1 })
+  // The list names this device and when it was added, with a way to remove it.
+  const devices = row.getByRole('list', { name: 'Devices with notifications on' }).getByRole('listitem')
+  await expect(devices).toHaveText([/^A browser \(this device\)Added .+Remove$/])
+  await expect(devices.getByRole('button', { name: /^Remove A browser, added / })).toBeVisible()
 
   await toggle.click()
   await expect(row.getByRole('status')).toHaveText(/^Off\./)
   await expect(toggle).not.toBeChecked()
   await expect(row.getByRole('alert')).toHaveCount(0)
+  await expect(row.getByRole('list')).toHaveCount(0)
   expect(errors).toEqual([])
 })

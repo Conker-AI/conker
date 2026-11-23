@@ -5,16 +5,19 @@ import { GatewayError } from './transport'
 /**
  * Notifications on the owner's devices (Pi's docs/web-push.md): the gateway's public push key and
  * the devices that have them on. The server's private key never reaches the browser; a device id
- * is the first 32 hex digits of the SHA-256 of its endpoint.
+ * is the first 32 hex digits of the SHA-256 of its endpoint. Devices come newest first, each with
+ * when it was turned on (Unix seconds) and its browser's short name ("Chrome on Android").
  */
 const device = z.string().regex(/^[0-9a-f]{32}$/)
-const devices = { devices: z.array(device).max(10), limit: z.number().int().min(1).max(10) }
+const listed = z.object({ id: device, created: z.number().positive(), label: z.string().min(1).max(40) }).strict()
+const devices = { devices: z.array(listed).max(10), limit: z.number().int().min(1).max(10) }
 const state = z.object({ publicKey: z.string().regex(/^[A-Za-z0-9_-]{87}$/), ...devices }).strict()
 const added = z.object({ device, ...devices }).strict()
 const removed = z.object({ removed: z.boolean(), ...devices }).strict()
 const base64url = /^[A-Za-z0-9_-]{1,200}$/
 
 export type PushState = z.infer<typeof state>
+export type PushDeviceRow = z.infer<typeof listed>
 export type PushSubscriptionKeys = { endpoint: string; keys: { p256dh: string; auth: string } }
 
 function parse<T>(schema: z.ZodType<T>, value: unknown): T {
