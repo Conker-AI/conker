@@ -10,7 +10,7 @@ function load(relative) {
   const module = { exports: {} }; cache.set(relative, module)
   const code = ts.transpileModule(fs.readFileSync(path.join(root, relative), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
   const resolve = request => request.startsWith('@/') ? `src/${request.slice(2)}.ts` : `${path.posix.normalize(path.posix.join(path.posix.dirname(relative), request))}.ts`
-  new Function('require', 'module', 'exports', code)(request => request === 'zod' ? require('zod') : load(resolve(request)), module, module.exports)
+  new Function('require', 'module', 'exports', code)(request => request === 'zod' || request === 'openapi-fetch' ? require(request) : load(resolve(request)), module, module.exports)
   return module.exports
 }
 const { TEMPLATE_LIMITS, createPromptTemplatesClient, toPromptTemplate } = load('src/lib/gateway/prompt-templates.ts')

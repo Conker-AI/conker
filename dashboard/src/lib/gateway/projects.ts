@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import type { GatewayAuthClient } from './auth'
+import { createPiClient, piData } from './pi-client'
 import { GatewayError, gatewayError } from './transport'
 
 const projectId = z.string().regex(/^project_[0-9a-f]{32}$/)
@@ -70,6 +71,7 @@ export class GatewayProjectMutationError extends Error {
 }
 
 export function createGatewayProjectsClient(auth: Pick<GatewayAuthClient, 'request'>) {
+  const pi = createPiClient(auth)
   const path = (id: string) => `/api/control/pi/projects/${parse(projectId, id, true)}`
   async function write(target: string, body: Record<string, unknown>, expectedId?: string) {
     try {
@@ -83,13 +85,13 @@ export function createGatewayProjectsClient(auth: Pick<GatewayAuthClient, 'reque
       const limit = options.limit ?? 100
       if (!Number.isSafeInteger(limit) || limit < 1 || limit > 200) throw new GatewayError('validation')
       const cursor = options.cursor === undefined ? undefined : parse(projectId, options.cursor, true)
-      const page = parse(collection, await auth.request('/api/control/pi/projects', { query: { limit, ...(cursor ? { cursor } : {}) }, signal: options.signal }))
+      const page = await piData(pi.GET('/projects', { params: { query: { limit, ...(cursor ? { cursor } : {}) } }, signal: options.signal }), collection)
       if (page.results.length > limit || new Set(page.results.map(item => item.id)).size !== page.results.length) throw new GatewayError('invalid-response')
       return page
     },
     async get(id: string, signal?: AbortSignal): Promise<GatewayProject> {
       const selected = parse(projectId, id, true)
-      const saved = parse(project, await auth.request(path(selected), { signal }))
+      const saved = await piData(pi.GET('/projects/{identity}', { params: { path: { identity: selected } }, signal }), project)
       if (saved.id !== selected) throw new GatewayError('invalid-response')
       return saved
     },
