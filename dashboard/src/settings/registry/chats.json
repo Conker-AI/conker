@@ -19,7 +19,7 @@
           "default": "auto",
           "tier": "basic",
           "scope": "global",
-          "effect": "stored",
+          "effect": "live",
           "options": [
             {
               "value": "auto",
@@ -186,7 +186,7 @@
           "default": true,
           "tier": "basic",
           "scope": "global",
-          "effect": "stored"
+          "effect": "live"
         },
         {
           "id": "chats.suggestions_count",
@@ -279,7 +279,7 @@
           "default": "enter",
           "tier": "basic",
           "scope": "global",
-          "effect": "stored",
+          "effect": "live",
           "options": [
             {
               "value": "enter",
@@ -299,7 +299,7 @@
           "default": true,
           "tier": "basic",
           "scope": "global",
-          "effect": "stored"
+          "effect": "live"
         },
         {
           "id": "chats.paste_images",
@@ -402,7 +402,7 @@
           "default": "collapsed",
           "tier": "basic",
           "scope": "global",
-          "effect": "stored",
+          "effect": "live",
           "options": [
             {
               "value": "collapsed",
@@ -484,7 +484,7 @@
           "default": false,
           "tier": "advanced",
           "scope": "global",
-          "effect": "stored"
+          "effect": "live"
         },
         {
           "id": "chats.code_numbers",

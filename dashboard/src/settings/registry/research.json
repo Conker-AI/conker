@@ -93,7 +93,7 @@
           "default": [],
           "tier": "advanced",
           "scope": "global",
-          "effect": "stored",
+          "effect": "next-turn",
           "max_items": 50
         },
         {
@@ -157,12 +157,12 @@
         {
           "id": "research.votes",
           "title": "Your votes teach model profiles",
-          "description": "Your thumbs up and down shape which models Conker picks.",
+          "description": "Your thumbs up and down count in each model's profile.",
           "type": "toggle",
           "default": true,
           "tier": "advanced",
           "scope": "global",
-          "effect": "stored"
+          "effect": "live"
         }
       ]
     }
