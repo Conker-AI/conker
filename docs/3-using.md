@@ -129,7 +129,8 @@ one alert until its window resets. Turn the alerts off with
 model calls (OpenRouter's paid models and direct API keys) used today against the
 cap, in dollars and tokens. Once either limit is reached, Pi sends no paid call until
 the next day and roles fall back to their free or local model. Change it with
-`spending cap --dollars 10 --tokens 3000000`, or `--off` to count without stopping.
+`spending cap --dollars 10 --tokens 3000000`, or `--off` to count without stopping; it asks
+for your password, as Settings does.
 Subscriptions and local models are not counted.
 
 Model-role calls through a subscription runtime remain distinct from a full
