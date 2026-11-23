@@ -63,11 +63,20 @@ test('the model menu lists the Claude models with their numbers, a tick on the c
 test('the number keys choose a model and the button names it', async ({ page }) => {
   await page.addInitScript(() => sessionStorage.setItem('conker-fake-resume', 'empty'))
   const errors = await open(page, '/chat')
+  const menu = page.getByRole('menu')
+  // The button is disabled until the model list has loaded, then names the configured model: that is the ready signal.
+  await expect(modelButton(page)).toHaveAccessibleName('Answer model: Sonnet 5.5')
   await modelButton(page).click()
-  await expect(page.getByRole('menuitemradio').first()).toBeVisible()
+  // A key goes to whatever holds focus, so wait until the menu does, with all four numbered rows drawn.
+  await expect(menu).toBeFocused()
+  await expect(page.getByRole('menuitemradio')).toHaveCount(4)
   await page.keyboard.press('1')
   await expect(modelButton(page)).toHaveAccessibleName('Answer model: Opus 5.5')
+  // The pick closes the menu and hands focus back to the button; open it again only after that.
+  await expect(menu).toHaveCount(0)
+  await expect(modelButton(page)).toBeFocused()
   await modelButton(page).click()
+  await expect(menu).toBeFocused()
   await expect(page.getByRole('menuitemradio', { name: 'Opus 5.5' })).toBeChecked()
   await page.keyboard.press('4')
   await expect(modelButton(page)).toHaveAccessibleName('Answer model: Haiku 5.5')
