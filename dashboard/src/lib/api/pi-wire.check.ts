@@ -3,10 +3,8 @@
 // Routes called through gateway/pi-client.ts are bound at the call by piData instead.
 import type { paths } from './generated/pi'
 import type { Same } from '../gateway/pi-client'
-import type { GatewayArtifactWire } from '../gateway/artifacts'
 import type { GatewayHostInventory } from '../gateway/host-inventory'
 import type { GatewayJob } from '../gateway/jobs'
-import type { GatewayProject, GatewayProjectPage } from '../gateway/projects'
 import type { GatewayTeam } from '../gateway/teams'
 import type { GatewayDirectory } from '../gateway/filesystem'
 import type { GatewayCall, GatewayCallAudioTurn, GatewayCallAvailability } from '../gateway/calls'
@@ -16,7 +14,7 @@ import type { GatewayAgentNote } from '../gateway/jobs'
 import type { ChatOutput } from '../gateway/chat-names'
 import type { OpenLoopPage } from '../gateway/open-loops'
 import type { EnhancedPrompt } from '../gateway/prompt-enhance'
-import type { TemplateDeleted, TemplatePage, TemplateReceipt } from '../gateway/prompt-templates'
+import type { TemplateDeleted, TemplateReceipt } from '../gateway/prompt-templates'
 import type { TeamRunFinishBody, TeamRunStepBody } from '../gateway/team-runs'
 
 type Ok<R> = R[Extract<keyof R, 200 | 201 | 202>]
@@ -34,16 +32,11 @@ export const piWire = {
   openLoops: true satisfies Same<OpenLoopPage, PiResponse<'/open-loops', 'get'>>,
   chatOutput: true satisfies Same<ChatOutput, PiResponse<'/sessions/{session_id}/output', 'get'>>,
   promptEnhance: true satisfies Same<EnhancedPrompt, PiResponse<'/prompts/enhance', 'post'>>,
-  promptTemplates: true satisfies Same<TemplatePage, PiResponse<'/prompts/templates', 'get'>>,
-  promptTemplate: true satisfies Same<TemplateReceipt, PiResponse<'/prompts/templates/{template_id}', 'get'>>,
   promptTemplateSaved: true satisfies Same<TemplateReceipt, PiResponse<'/prompts/templates/{template_id}', 'post'>>,
   promptTemplateDeleted: true satisfies Same<TemplateDeleted, PiResponse<'/prompts/templates/{template_id}/delete', 'post'>>,
-  projects: true satisfies Same<GatewayProjectPage, PiResponse<'/projects', 'get'>>,
-  project: true satisfies Same<GatewayProject, PiResponse<'/projects/{identity}', 'get'>>,
   team: true satisfies Same<GatewayTeam, PiResponse<'/collaboration/teams/{identity}', 'get'>>,
   job: true satisfies Same<GatewayJob, PiResponse<'/jobs/{identity}', 'get'>>,
   inv: true satisfies Same<GatewayHostInventory, PiResponse<'/system/inventory', 'post'>>,
-  art: true satisfies Same<GatewayArtifactWire, PiResponse<'/artifacts/{identity}', 'get'>>,
   listing: true satisfies Same<GatewayDirectory, PiResponse<'/system/files/listings', 'post'>>,
   call: true satisfies Same<GatewayCall, PiResponse<'/calls/browser', 'post'>>,
   callAudio: true satisfies Same<GatewayCallAudioTurn, PiResponse<'/calls/browser/{identity}/audio', 'post'>>,
