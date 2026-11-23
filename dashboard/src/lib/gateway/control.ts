@@ -43,6 +43,7 @@ import { createChatGPTClient } from './chatgpt'
 import { createGatewaySkillsClient } from './skills'
 import type { GatewayMcpClient } from './mcp'
 import type { GatewayAuthClient } from './auth'
+import { createPiClient, piData } from './pi-client'
 import { GatewayError } from './transport'
 import {
   identity, count, short, kind, configuration, sessionSettings, modelSettings, providers, systemHealth, gatewayHealth, diagnostics, toolInventory, setupStatus, setupReceiptStep, setupReceiptWritableStep, setupReceipt, setupReceiptInput, setupProtectionPolicy, setupProtectionInput, setupRehearsal, setupChoiceStep, setupChoice, setupChoiceInput, setupModelOptions, setupModelActivation, setupBoundaryPolicy, agentConfiguration, agentProfile, agentCollection, library, connections, content, parse, objectPath, match,
@@ -77,6 +78,7 @@ export function createMemoryForgetRequest(preview: Pick<MemoryForgetPreview, 'me
 export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'request' | 'audio' | 'getSession' | 'download' | 'upload'>, onCurrentSessionRevoked: () => void) {
   const modelListeners = new Set<() => void>()
   const modelsChanged = () => { for (const listener of modelListeners) listener() }
+  const pi = createPiClient(auth)
   return {
     subscribeModels(listener: () => void) { modelListeners.add(listener); return () => { modelListeners.delete(listener) } },
     editorDrafts: createGatewayEditorDrafts(auth),
@@ -145,11 +147,11 @@ export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'reques
       return parse(diagnostics, await auth.request('/api/diagnostics', { signal }))
     },
     async agents(signal?: AbortSignal): Promise<AgentProfile[]> {
-      return parse(agentCollection, await auth.request('/api/control/pi/agents', { signal })).results
+      return (await piData(pi.GET('/agents', { signal }), agentCollection)).results
     },
     async agent(id: string, signal?: AbortSignal): Promise<AgentProfile> {
       const selected = parse(z.string().regex(/^(?:companion|agent_[0-9a-f]{32})$/), id, true)
-      const result = parse(agentProfile, await auth.request(`/api/control/pi/agents/${selected}`, { signal }))
+      const result = await piData(pi.GET('/agents/{identity}', { params: { path: { identity: selected } }, signal }), agentProfile)
       if (result.id !== selected) throw new GatewayError('invalid-response')
       return result
     },
@@ -184,14 +186,14 @@ export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'reques
       return parse(gatewayHealth, await auth.request('/health', { signal }))
     },
     async setupStatus(signal?: AbortSignal): Promise<SetupStatus> {
-      return parse(setupStatus, await auth.request('/api/control/pi/setup/status', { signal }))
+      return piData(pi.GET('/setup/status', { signal }), setupStatus)
     },
     async setupBoundaryPolicy(signal?: AbortSignal): Promise<SetupBoundaryPolicy> {
       return parse(setupBoundaryPolicy, await auth.request('/api/control/pi/setup/boundaries', { signal }))
     },
     async setupReceipt(step: SetupReceiptStep, signal?: AbortSignal): Promise<SetupReceipt> {
       const selected = parse(setupReceiptStep, step, true)
-      const result = parse(setupReceipt, await auth.request(`/api/control/pi/setup/receipts/${selected}`, { signal }))
+      const result = await piData(pi.GET('/setup/receipts/{step}', { params: { path: { step: selected } }, signal }), setupReceipt)
       if (result.step !== selected) throw new GatewayError('invalid-response')
       return result
     },
@@ -203,7 +205,7 @@ export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'reques
       return result
     },
     async setupProtection(signal?: AbortSignal): Promise<SetupProtectionPolicy> {
-      return parse(setupProtectionPolicy, await auth.request('/api/control/pi/setup/protection', { signal }))
+      return piData(pi.GET('/setup/protection', { signal }), setupProtectionPolicy)
     },
     async saveSetupProtection(value: SetupProtectionInput, signal?: AbortSignal): Promise<SetupProtectionPolicy> {
       const body = parse(setupProtectionInput, value, true)
@@ -212,7 +214,7 @@ export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'reques
       return result
     },
     async setupRehearsal(signal?: AbortSignal): Promise<SetupRehearsal> {
-      return parse(setupRehearsal, await auth.request('/api/control/pi/setup/rehearsal', { signal }))
+      return piData(pi.GET('/setup/rehearsal', { signal }), setupRehearsal)
     },
     async reviewSetupMemory(expectedChoiceRevision: number, requestId: string, signal?: AbortSignal): Promise<SetupRehearsal> {
       const body = {
@@ -236,7 +238,7 @@ export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'reques
     },
     async setupChoice(step: SetupChoiceStep, signal?: AbortSignal): Promise<SetupChoice> {
       const selected = parse(setupChoiceStep, step, true)
-      const result = parse(setupChoice, await auth.request(`/api/control/pi/setup/choices/${selected}`, { signal }))
+      const result = await piData(pi.GET('/setup/choices/{step}', { params: { path: { step: selected } }, signal }), setupChoice)
       if (result.step !== selected) throw new GatewayError('invalid-response')
       return result
     },
@@ -248,7 +250,7 @@ export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'reques
       return result
     },
     async setupModels(signal?: AbortSignal): Promise<SetupModelOptions> {
-      return parse(setupModelOptions, await auth.request('/api/control/pi/setup/models', { signal }))
+      return piData(pi.GET('/setup/models', { signal }), setupModelOptions)
     },
     async saveSetupModel(candidateId: string, expectedRevision: number, signal?: AbortSignal): Promise<OwnerModelSettings> {
       const selected = parse(z.string().min(1).max(200).refine(value => value.trim() === value), candidateId, true)
