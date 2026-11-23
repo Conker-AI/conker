@@ -53,6 +53,19 @@ describe('generated Pi client', () => {
     expect(calls).toEqual([])
   })
 
+  it('sends a number path parameter as its digits and refuses one that is not a whole number', async () => {
+    const { auth, calls } = fakeAuth({})
+    const pi = createPiClient(auth)
+    await pi.GET('/collaboration/teams/{identity}/versions/{revision}', { params: { path: { identity: 'team_1', revision: 3 } } })
+    expect(calls).toEqual([{ path: '/api/control/pi/collaboration/teams/team_1/versions/3', init: { signal: undefined } }])
+    for (const revision of [-1, 1.5, Number.NaN, Number.POSITIVE_INFINITY, 2 ** 53]) await kind(pi.GET('/collaboration/teams/{identity}/versions/{revision}', { params: { path: { identity: 'team_1', revision } } }), 'validation')
+    expect(calls).toHaveLength(1)
+    // The generated types keep a number parameter a number: text is a compile error (tsc -b). Never called.
+    // @ts-expect-error revision is a number in Pi's OpenAPI
+    const text = () => pi.GET('/collaboration/teams/{identity}/versions/{revision}', { params: { path: { identity: 'team_1', revision: '3' } } })
+    void text
+  })
+
   it('passes the session error through unchanged', async () => {
     const failure = new GatewayError('verification-required', 428)
     await expect(piData(createPiClient(fakeAuth(failure).auth).POST('/memory/recall-notices/{notice_id}/dismiss', { params: { path: { notice_id: 'mrn_1' } } }), anything)).rejects.toBe(failure)
