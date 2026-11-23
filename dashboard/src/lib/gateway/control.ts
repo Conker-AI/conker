@@ -8,7 +8,6 @@ import { createGatewayJobsClient } from './jobs'
 import { createChangeRequestsClient } from './change-requests'
 import { createAsksClient } from './asks'
 import { createRecallNoticesClient } from './recall-notices'
-import { createPushClient } from './push'
 import { createMemoryBeliefsClient } from './memory-beliefs'
 import { createMemoryUsesClient } from './memory-uses'
 import { createOpenLoopsClient } from './open-loops'
@@ -43,6 +42,7 @@ import { createNativeClaudeClient } from './native-claude'
 import { createChatGPTClient } from './chatgpt'
 import { createGatewaySkillsClient } from './skills'
 import type { GatewayMcpClient } from './mcp'
+import type { GatewayPushClient } from './push'
 import type { GatewayAuthClient } from './auth'
 import { createPiClient, piData } from './pi-client'
 import { GatewayError } from './transport'
@@ -96,8 +96,14 @@ export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'reques
     },
     claude: createNativeClaudeClient(auth),
     browserSessions: createBrowserSessionsClient(auth, onCurrentSessionRevoked),
-    /** Notifications on this device: the server's public push key and the devices that have them on. */
-    push: createPushClient(auth),
+    /** Notifications on this device: the server's public push key and the devices that have them on.
+     * Loaded on first use (Settings, or a signed-in browser that has them on), not with the first screen. */
+    push: {
+      async state(...args: Parameters<GatewayPushClient['state']>) { return (await import('./push')).createPushClient(auth).state(...args) },
+      async subscribe(...args: Parameters<GatewayPushClient['subscribe']>) { return (await import('./push')).createPushClient(auth).subscribe(...args) },
+      async renew(...args: Parameters<GatewayPushClient['renew']>) { return (await import('./push')).createPushClient(auth).renew(...args) },
+      async unsubscribe(...args: Parameters<GatewayPushClient['unsubscribe']>) { return (await import('./push')).createPushClient(auth).unsubscribe(...args) },
+    },
     projects: createGatewayProjectsClient(auth),
     artifacts: createGatewayArtifactsClient(auth),
     /** Answers and artifacts as Word, PDF, PowerPoint, Excel, CSV or JSON files. */

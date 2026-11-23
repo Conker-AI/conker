@@ -48,3 +48,5 @@ export function createPushClient(auth: Pick<GatewayAuthClient, 'request'>) {
     },
   }
 }
+
+export type GatewayPushClient = ReturnType<typeof createPushClient>
