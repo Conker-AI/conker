@@ -201,7 +201,7 @@
           ],
           "tier": "basic",
           "scope": "global",
-          "effect": "stored",
+          "effect": "live",
           "options": [
             {
               "value": "time",
@@ -229,7 +229,7 @@
           "default": 5,
           "tier": "advanced",
           "scope": "global",
-          "effect": "stored",
+          "effect": "live",
           "min": 1,
           "max": 1440,
           "step": 1,
@@ -243,7 +243,7 @@
           "default": 100,
           "tier": "advanced",
           "scope": "global",
-          "effect": "stored",
+          "effect": "live",
           "min": 1,
           "max": 1000,
           "step": 1
@@ -323,7 +323,7 @@
           "default": 60,
           "tier": "advanced",
           "scope": "global",
-          "effect": "stored",
+          "effect": "live",
           "min": 1,
           "max": 600,
           "step": 1
@@ -336,7 +336,7 @@
           "default": 16,
           "tier": "advanced",
           "scope": "global",
-          "effect": "stored",
+          "effect": "live",
           "min": 1,
           "max": 16,
           "step": 1,
