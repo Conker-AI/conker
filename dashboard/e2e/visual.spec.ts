@@ -1,5 +1,5 @@
-// Screenshot baselines for the main places at phone (320) and desktop (1280) width, light and dark, on the preview gateway.
-// The memory screens, open loops and the Inbox's memory-recall card are also taken at 390.
+// Screenshot baselines for the main places at small phone (320), large phone (390) and desktop (1280) width,
+// light and dark, on the preview gateway.
 // The baselines are Linux Chromium renders (CI); on other systems the file names differ and the test skips.
 // To refresh them after an intended look change: run the Dashboard workflow, download the
 // `playwright-report-N` artifacts (they hold e2e/visual.spec.ts-snapshots), commit the new PNGs.
@@ -12,7 +12,7 @@ type Place = {
   name: string
   /** Shows times and dates, so the clock is fixed. */
   frozen?: boolean
-  /** Widths beyond the default phone and desktop pair. */
+  /** Widths other than the default three. */
   widths?: readonly Viewport[]
   /** Photograph one element instead of the screen. */
   target?: (page: Page) => ReturnType<Page['locator']>
@@ -34,14 +34,13 @@ const PLACES: Place[] = [
   { path: '/setup', name: 'setup' },
   { path: '/chat?session=ses_1111111111111111', name: 'chat', frozen: true },
   { path: '/overview', name: 'home', frozen: true },
-  { path: '/memory?view=beliefs', name: 'memory-beliefs', frozen: true, widths: ALL_WIDTHS },
-  { path: '/memory?view=care', name: 'memory-care', frozen: true, widths: ALL_WIDTHS },
-  { path: '/loops', name: 'open-loops', frozen: true, widths: ALL_WIDTHS },
+  { path: '/memory?view=beliefs', name: 'memory-beliefs', frozen: true },
+  { path: '/memory?view=care', name: 'memory-care', frozen: true },
+  { path: '/loops', name: 'open-loops', frozen: true },
   {
     path: '/inbox',
     name: 'inbox-recall-card',
     frozen: true,
-    widths: ALL_WIDTHS,
     target: page => page.getByRole('article', { name: RECALL_CARD }),
   },
 ]
@@ -54,7 +53,7 @@ test.use({ reducedMotion: 'reduce', locale: 'en-US', timezoneId: 'UTC' })
 
 for (const theme of THEMES)
   for (const place of PLACES)
-    for (const viewport of place.widths ?? [PHONE, DESKTOP]) {
+    for (const viewport of place.widths ?? ALL_WIDTHS) {
       test(`looks right: ${place.name} at ${viewport.width}px, ${theme}`, async ({ page }) => {
         await page.setViewportSize(viewport)
         await page.emulateMedia({ colorScheme: theme, reducedMotion: 'reduce' })
