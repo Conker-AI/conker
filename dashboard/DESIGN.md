@@ -546,7 +546,7 @@ Every sidebar destination is an independent navigation root. Home is the entry p
 
 Pages with sections use `?tab=` URLs. Their first section is the default; unknown values fall back to it. `AppbarSections` renders them as real links with `aria-current` on the open one, not ARIA tabs: normal Tab/Enter and open-in-new-tab behavior apply.
 
-The appbar is sticky on scrolling pages. Global search becomes an icon below 1024px of viewport or 900px of appbar width, keeping its keyboard shortcut. Run `npm run check:navigation` alongside the design guard, affected-file lint, and build when changing route metadata or section behavior.
+The appbar is sticky on scrolling pages. Global search becomes an icon below 1024px of viewport or 900px of appbar width, keeping its keyboard shortcut. Run `npm run check:gateway` (it includes the navigation check) alongside the design guard, affected-file lint, and build when changing route metadata or section behavior.
 
 
 ## Rich answers, continuity and execution

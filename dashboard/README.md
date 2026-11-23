@@ -87,20 +87,26 @@ TypeScript build does not establish visual correctness.
 ## Verification
 
 ```sh
-npm run build
+npm run lint
+npm run typecheck
+npm run format:check
 npm run design:check:test
-npm run check:gateway
+npm run build
+npm run check
+npm run test:unit
+npm run e2e
 ```
 
-`build` runs the design guard, TypeScript and the production Vite build. Use the
-feature checks relevant to a change:
+These are the steps of the Dashboard CI workflow (`.github/workflows/dashboard.yml`), in
+its order; `python scripts/prepush.py` from the repo root runs lint, build and check for a
+dashboard change. `build` runs the design guard, TypeScript and the production Vite build.
+Use the feature checks relevant to a change:
 
 ```sh
-npm run check:navigation
+npm run check:gateway
 npm run check:theme
 npm run check:jobs
 npm run check:voice
-npm run lint
 ```
 
 These commands are available checks, not a claim that every command passed in the
