@@ -186,7 +186,7 @@ How requests, questions and the daily ritual work.
 | **Later means**<br>`inbox.later` | When a card you moved to Later comes back. Choices: Next ritual, Tonight, Tomorrow morning. (saved, not used yet) | Next ritual | owner settings |
 | **Badge count**<br>`inbox.badge` | What the Inbox count includes. Choices: Everything, Urgent only, Off. (saved, not used yet) | Everything | owner settings |
 | **Keep Handled**<br>`inbox.handled_days` | How long the list of what Conker did stays. 1 to 90 days. (saved, not used yet) | `7` days | owner settings |
-| **Keep AI-job notes**<br>`inbox.notes_days` | How long findings from jobs stay in the Inbox. 1 to 90 days. (saved, not used yet) | `14` days | owner settings |
+| **Keep AI-job notes**<br>`inbox.notes_days` | How long findings from jobs stay in the Inbox. 1 to 90 days. (applies right away) | `14` days | owner settings |
 | **Approve similar together**<br>`inbox.batch` | Lets you approve many of one kind at once; never for messages, money or deleting. (saved, not used yet) | off | owner settings |
 
 ## Notifications
@@ -350,7 +350,7 @@ What the AI sees when it answers.
 | **Context meter**<br>`context.meter` | Shows how full the context is in the message box. (saved, not used yet) | on | owner settings |
 | **Web page size**<br>`context.web_page_limit` | The most text taken from one web page. 1000 to 12000 characters. (applies from the next message) | `12000` characters | owner settings |
 | **Keep web pages**<br>`context.web_keep` | How long a fetched page stays in context. Choices: For one answer, For the whole chat. (saved, not used yet) | For one answer | owner settings |
-| **Decisions list**<br>`context.decisions` | Who can add to a chat's list of decisions. Choices: Only you, You and Conker, marked. (saved, not used yet) | You and Conker, marked | owner settings |
+| **Decisions list**<br>`context.decisions` | Who can add to a chat's list of decisions. Choices: Only you, You and Conker, marked. (applies right away) | You and Conker, marked | owner settings |
 | **Open threads**<br>`context.threads` | Tracks questions that are still open in a chat. (saved, not used yet) | off | owner settings |
 
 ## Research and review
@@ -363,7 +363,7 @@ How Conker searches the web and checks its answers.
 |---|---|---|---|
 | **Research by default**<br>`research.default` | Whether new chats search the web. Choices: Off, Web, Deep. (saved, not used yet) | Off | owner settings |
 | **Searches in deep research**<br>`research.deep_searches` | The most searches one deep research makes. 1 to 4. (applies from the next message) | `4` | owner settings |
-| **Sources per answer**<br>`research.sources` | The most sources one answer cites. 1 to 20. (saved, not used yet) | `5` | owner settings |
+| **Sources per answer**<br>`research.sources` | The most sources one answer cites. 1 to 20. (applies from the next message) | `5` | owner settings |
 | **Prefer recent**<br>`research.recent` | How new sources should be. Choices: Any age, Last year, Last month. (applies from the next message) | Any age | owner settings |
 | **Trusted sites**<br>`research.trusted_sites` | Sites Conker prefers when it searches. (saved, not used yet) | none | owner settings |
 | **Sites to skip**<br>`research.skip_sites` | Sites Conker never uses as sources or reads, such as example.com. (applies right away) | none | toolgate `/v2/owner/settings` `web_skip_sites` |
@@ -580,9 +580,9 @@ What Conker does on its own and on a schedule.
 |---|---|---|---|
 | **Access for new jobs**<br>`proactivity.jobs.access` | Whether a new job uses its agent's access or a stricter one. Choices: Agent's access, One step stricter. (saved, not used yet) | Agent's access | owner settings |
 | **When a run is still going**<br>`proactivity.jobs.overlap` | What happens when a job is due while its last run still works. Choices: Skip the new run, Run it after. (saved, not used yet) | Skip the new run | owner settings |
-| **Allowed triggers**<br>`proactivity.jobs.triggers` | What may start a job. Choices: A time, A tool's answer changing, A webhook, Something in Conker. (saved, not used yet) | A time, A tool's answer changing, A webhook, Something in Conker | owner settings |
-| **Shortest interval**<br>`proactivity.jobs.min_interval` | How often a job may run at most. 1 to 1440 minutes. (saved, not used yet) | `5` minutes | owner settings |
-| **Runs a day**<br>`proactivity.jobs.max_runs` | The most runs one job makes in a day. 1 to 1000. (saved, not used yet) | `100` | owner settings |
+| **Allowed triggers**<br>`proactivity.jobs.triggers` | What may start a job. Choices: A time, A tool's answer changing, A webhook, Something in Conker. (applies right away) | A time, A tool's answer changing, A webhook, Something in Conker | owner settings |
+| **Shortest interval**<br>`proactivity.jobs.min_interval` | How often a job may run at most. 1 to 1440 minutes. (applies right away) | `5` minutes | owner settings |
+| **Runs a day**<br>`proactivity.jobs.max_runs` | The most runs one job makes in a day. 1 to 1000. (applies right away) | `100` | owner settings |
 | **Results in the Inbox**<br>`proactivity.jobs.results` | When a job's result shows in the Inbox. Choices: Only when something needs you, Always, Never. (applies right away) | Only when something needs you | owner settings |
 | **When a job fails**<br>`proactivity.jobs.on_failure` | What happens after a failed run. Choices: Tell me, Try again, Pause the job. (saved, not used yet) | Tell me | owner settings |
 | **Tries after a failure**<br>`proactivity.jobs.retries` | How many times a failed run is tried again. 0 to 5. (saved, not used yet) | `1` | owner settings |
@@ -591,8 +591,8 @@ What Conker does on its own and on a schedule.
 
 | Setting | What it does | Default | Home |
 |---|---|---|---|
-| **Webhook calls an hour**<br>`proactivity.hooks.rate` | The most webhook calls one job accepts in an hour. 1 to 600. (saved, not used yet) | `60` | owner settings |
-| **Largest webhook payload**<br>`proactivity.hooks.size` | The largest payload a webhook accepts. 1 to 16 KB. (saved, not used yet) | `16` KB | owner settings |
+| **Webhook calls an hour**<br>`proactivity.hooks.rate` | The most webhook calls one job accepts in an hour. 1 to 600. (applies right away) | `60` | owner settings |
+| **Largest webhook payload**<br>`proactivity.hooks.size` | The largest payload a webhook accepts. 1 to 16 KB. (applies right away) | `16` KB | owner settings |
 | **Keep webhook payloads**<br>`proactivity.hooks.keep_days` | How long webhook payloads are kept. 1 to 90 days. (saved, not used yet) | `7` days | owner settings |
 
 ## Tools
