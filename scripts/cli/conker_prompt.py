@@ -38,7 +38,7 @@ def enhance_body(args):
         raise ValueError("Give the draft as text.")
     if len(text) > TEXT_LIMIT:
         raise ValueError(f"The draft is too long: {len(text)} characters, at most {TEXT_LIMIT}.")
-    body = {"text": args.text}
+    body = {"text": text}
     if args.chat is not None:
         if not re.fullmatch(CHAT, args.chat):
             raise ValueError("Use a chat identity (ses_ followed by 16 hex digits).")
