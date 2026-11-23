@@ -167,7 +167,7 @@
           "default": "both",
           "tier": "advanced",
           "scope": "global",
-          "effect": "stored",
+          "effect": "live",
           "options": [
             {
               "value": "owner",

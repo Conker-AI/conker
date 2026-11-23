@@ -25,6 +25,9 @@ const skips: Record<string, string> = {
   OVER_BUDGET: 'daily limit reached',
   PROACTIVITY_OFF: 'proactive work off',
   URGENT_ONLY: 'only urgent work allowed',
+  TRIGGER_OFF: 'trigger not allowed',
+  TOO_SOON: 'shortest interval',
+  RUN_LIMIT: 'runs a day reached',
 }
 
 export function skippedRunLabel(code: string | null): string {

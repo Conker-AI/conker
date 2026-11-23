@@ -255,7 +255,7 @@
           "default": 14,
           "tier": "advanced",
           "scope": "global",
-          "effect": "stored",
+          "effect": "live",
           "min": 1,
           "max": 90,
           "step": 1,
