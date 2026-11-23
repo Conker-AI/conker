@@ -5,6 +5,7 @@ import type { GatewayRuntimeClient, RuntimeSessionDetail, RuntimeThinking, Runti
 import type { GatewaySourcePrivacyState } from './source-privacy'
 import { TurnUsageDisclosure } from './turn-usage-disclosure'
 import { conversationViews, type ConversationView } from './conversation-view-list'
+import { formatTime } from '@/lib/date-format'
 
 export function ConversationViewStrip({ open, onToggle }: { open: ConversationView | null; onToggle: (view: ConversationView) => void }) {
   return (
@@ -59,7 +60,7 @@ export function ConversationViewContent({ view, detail, error, loading, onRetry,
   )
 }
 
-const time = (value: string) => new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+const time = (value: string) => formatTime(value, { hour: '2-digit', minute: '2-digit' })
 const seconds = (turn: RuntimeTurn) => (turn.endedAt ? Math.max(0, Math.round((Date.parse(turn.endedAt) - Date.parse(turn.startedAt)) / 1000)) : null)
 const label = (status: string) => status.replaceAll('_', ' ')
 

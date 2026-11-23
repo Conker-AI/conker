@@ -1,6 +1,7 @@
 import type { GatewayTask } from '@/lib/gateway/activity'
 import type { HistoryChat } from '@/lib/gateway/session-history'
 import type { OpenedChat } from '@/lib/recent-chats'
+import { formatDateTime } from '../../lib/date-format'
 
 /** At most this many cards in "Jump back in" (two rows of three on wide screens). */
 export const RESUME_LIMIT = 6
@@ -100,5 +101,5 @@ export function resumeAge(at: number, now = Date.now()): string {
   today.setHours(0, 0, 0, 0)
   if (at >= today.getTime()) return `${Math.floor(minutes / 60)} h ago`
   if (at >= today.getTime() - 86_400_000) return 'Yesterday'
-  return new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short' }).format(at)
+  return formatDateTime(at, { day: 'numeric', month: 'short' })
 }

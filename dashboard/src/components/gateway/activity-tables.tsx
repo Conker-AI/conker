@@ -11,9 +11,10 @@ import { Button } from '@/components/ui/button'
 import type { GatewayActivityEvent, GatewayActivityRun, GatewayTask } from '@/lib/gateway/activity'
 import { isTerminalTask, taskStatusLabels, taskTitle } from './activity-state'
 import { plainStatus } from './plain-status'
+import { formatDateTime } from '@/lib/date-format'
 
-const date = (value: string) => new Date(value).toLocaleString()
-const when = (value: string) => new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(new Date(value))
+const date = (value: string) => formatDateTime(value)
+const when = (value: string) => formatDateTime(value, { month: 'short', day: 'numeric' })
 const runTitle = (run: GatewayActivityRun) => `Attempt from ${date(run.startedAt)}`
 
 export type TaskFilter = 'active' | 'history' | 'archived' | 'all'

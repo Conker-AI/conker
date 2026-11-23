@@ -9,6 +9,7 @@ import { ReferenceSection } from '@/components/reference-section'
 import { useListView, byName, byNewest } from '@/components/design-system/list-view'
 import { GatewayPageFrame } from './page-frame'
 import { useCodexSessions } from './use-codex-sessions'
+import { formatDateTime } from '@/lib/date-format'
 
 const sources = { cli: 'Codex CLI', vscode: 'Editor extension', exec: 'Codex exec', appServer: 'App server', subAgent: 'Subagent', custom: 'Custom', unknown: 'Not reported' }
 function codexThreadTitle(row: CodexThread) {
@@ -24,7 +25,7 @@ const CODEX_SORTS = {
 }
 function when(seconds: number) {
   const date = new Date(seconds * 1000)
-  return Number.isFinite(date.getTime()) ? date.toLocaleString() : 'Timestamp outside display range'
+  return Number.isFinite(date.getTime()) ? formatDateTime(date) : 'Timestamp outside display range'
 }
 export function GatewayCodexSessionsWorkspace({
   client,

@@ -1,12 +1,14 @@
 import { useEffect } from 'react'
 import { refreshState } from '@/lib/refresh-state'
 import type { GatewayControlClient } from '@/lib/gateway/control'
+import { setDateFormatChoice } from '@/lib/date-format'
 import { cachedServerSetting, cacheServerSetting, DEVICE_EVENT, readDeviceValue } from './device'
 import { publishServerSettings, serverSetting, subscribeServerSettings } from './server-setting'
 
 /**
- * The appearance settings that work today, applied to the page: accent color, corners and bigger
- * focus outlines (everywhere, from the server), text size and animations (this device). Theme stays
+ * The appearance settings that work today, applied to the page: accent color, corners, bigger
+ * focus outlines and how times and dates are written (everywhere, from the server), text size and
+ * animations (this device). Theme stays
  * with the theme provider. Accent colors keep 4.5:1 contrast with their text in both themes
  * (rationale ledger, Accent hue). Kept apart from the registry so the app's first load stays small.
  */
@@ -29,7 +31,14 @@ function applyShell() {
   else root.dataset.corners = corners
   if (serverSetting('accessibility.focus', false)) root.dataset.focus = 'large'
   else delete root.dataset.focus
+  applyDateFormat()
 }
+
+/** Times and dates on every screen (src/lib/date-format.ts); set once at load too, so the first paint uses the last value seen. */
+function applyDateFormat() {
+  setDateFormatChoice({ time: serverSetting<'device' | '24h' | '12h'>('you.time_format', 'device'), date: serverSetting<'device' | 'dmy' | 'mdy' | 'ymd'>('you.date_format', 'device') })
+}
+applyDateFormat()
 
 export function applyAccent(value: unknown) {
   const accent = typeof value === 'string' && ACCENTS.has(value) ? value : 'neutral'
