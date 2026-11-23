@@ -51,14 +51,21 @@ The dev server shows the live (gateway) screens against an in-memory fake gatewa
 email asks for an approval; a first message containing `[fail]` exercises the
 create-failure path.
 
-Before handing off:
+Before handing off, run what CI runs (`.github/workflows/dashboard.yml`), from `dashboard/`:
 
 ```sh
-npm run build
+npm run lint
+npm run typecheck          # app and e2e/config files
+npm run format:check
 npm run design:check:test
-npm run check:gateway
+npm run build
+npm run check              # every feature check, including check:gateway
+npm run test:unit
 npm run e2e                # chat, approval and forget in Chromium (Playwright)
 ```
+
+`python scripts/prepush.py` from the repo root runs lint, build and check for a dashboard
+change (plus the Python checks for anything else you touched) in parallel.
 
 - UI rules: [dashboard/DESIGN.md](../dashboard/DESIGN.md). Colours and fonts come from the design
   tokens. Don't add raw hex values or font-families; CI rejects them.
