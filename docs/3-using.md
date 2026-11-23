@@ -63,6 +63,10 @@ conker config set appearance.accent blue
 conker config reset appearance.accent
 ```
 
+The sign-out time, a new chat's access and the daily budgets ask for your password there too,
+as in Settings: Pi refuses the change without it, the command asks once (typed without echo)
+and the gateway checks it.
+
 ## Keep talking while Conker thinks
 
 In **Settings > Models**, choose a **Talking model** and, optionally, a separate

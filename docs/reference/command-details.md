@@ -92,7 +92,11 @@ accepts only `{operation: "decide", id, status, note?}`, where status is
 `approved`, `rejected` or `dismissed`. It sends only the ToolGate owner credential
 to one compiled decision route; the execution credential, arbitrary ToolGate paths,
 and automatic retries are unavailable. A successful response records ToolGate's
-decision and does not claim that an external effect completed.
+decision and does not claim that an external effect completed. It asks for your password
+exactly when the Inbox does: a yes to a level-3 request (delete, pay) or to one whose level
+the gateway cannot read. The gateway then decides nothing; the command asks for the password
+(typed without echo, never read from the file) and sends the same decision once more with it.
+A no, a dismissal and any other yes ask for nothing.
 
 Use `conker inspect submission REQUEST_ID` after a lost or malformed send
 acknowledgement. It reads the durable receipt for that exact retained identity and

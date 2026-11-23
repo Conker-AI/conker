@@ -7,6 +7,9 @@ source tree and every value is checked here before anything is sent. Each read o
 recovery key Pi was started with: the key never leaves the container, and it reaches every home a
 setting can have, chat settings included, exactly like the development CLI. ToolGate's settings
 are reached the same way from the gateway container, with the owner key the gateway already holds.
+A preferences save Pi refuses on that key because it asks for the owner's password (the sign-out
+time, a new chat's access, the daily budgets) is asked for and sent to the gateway with it
+(owner_password).
 """
 
 from __future__ import annotations
@@ -19,7 +22,8 @@ import sys
 from pathlib import Path
 from urllib.parse import urlencode
 
-from conker_config import REGISTRY, config_operation, register
+import owner_password
+from conker_config import REGISTRY, PasswordRequired, config_operation, password_required, register
 
 # Runs inside the pi container. Prints the HTTP status on the first line and the body after it.
 RELAY = """
@@ -169,6 +173,11 @@ def request(
             + (f" ({said[-1][:200]})" if said else "")
             + ". Check it with: conker status"
         )
+    if status == b"403" and password_required(content):
+        # Nothing was saved: the setting asks for the owner's password (conker_config).
+        raise PasswordRequired(
+            f"{name} asks for your password for this setting. Nothing was saved."
+        )
     if status == b"409":
         raise NotConfirmed(
             "These settings changed while the command ran, so nothing was saved. Run it again."
@@ -195,9 +204,10 @@ def main(argv: list[str] | None = None) -> int:
     if not any(REGISTRY.glob("*.json")):
         print(f"The settings registry is missing: {REGISTRY}", file=sys.stderr)
         return 1
+    command = compose(installed.root, installed.layout)
     try:
-        return config_operation(args, compose(installed.root, installed.layout), request)
-    except NotConfirmed as error:
+        return config_operation(args, command, request, owner_password.installed(command))
+    except (NotConfirmed, PasswordRequired, owner_password.NotSaved) as error:
         print(str(error), file=sys.stderr)
         return 1
     except ValueError as error:

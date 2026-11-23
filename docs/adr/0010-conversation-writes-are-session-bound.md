@@ -60,3 +60,24 @@ that can be undone is friction with no protection. The rule is turned around.
   it asks for the password only when the gateway answers 428.
 - Adding a route to the password list, or taking one off, is a security decision and updates this
   ADR and Pi's `tests/test_password_scope.py`.
+
+## Update, 23 November 2026: the server's shell asks for the same things
+
+The host CLI used Pi's recovery key and the gateway's ToolGate owner key, so `conker config set`
+changed the sign-out time, a new chat's access and the daily budgets, and `conker apply
+approvals` approved a delete or a payment, without the password. The server now asks the shell
+for exactly what it asks the browser for, no more and no less:
+
+- **Preferences.** Pi refuses a save on the recovery key that would change any of
+  `pi.core.owner_preferences.PASSWORD_FIELDS` (sign-out time, new chat access, daily budgets,
+  spending cap), 403 `password_required`, and saves nothing; the other preferences still save
+  on that key. The CLI keeps no list: on that refusal it asks for the password once and sends
+  the same save to the gateway's `owner-preferences` host command.
+- **Approvals.** `gateway apply approvals` reads the request's level as the Inbox route does
+  (`gateway/approval_levels.py`): a yes at level 3, or at a level it cannot read, needs the
+  password; a yes at level 1 or 2, a no and a dismissal do not. Without it nothing is decided
+  and the command exits 3; the CLI asks once and resends the same decision with it.
+- The password goes on stdin only, is checked by `AuthStore.host_password` (five wrong per five
+  minutes, a budget of its own), and no error repeats it or the request.
+
+This guards the commands, not the server: anyone with its shell can still reset the password.
