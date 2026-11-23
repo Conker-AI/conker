@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import type { GatewayAuthClient } from './auth'
+import { createPiClient, piData } from './pi-client'
 import { GatewayError, gatewayError } from './transport'
 
 const reference = z.string().min(1).max(200).refine(value => value.trim() === value)
@@ -65,6 +66,7 @@ export class GatewayTeamMutationError extends Error {
 }
 
 export function createGatewayTeamsClient(auth: Pick<GatewayAuthClient, 'request'>) {
+  const pi = createPiClient(auth)
   const base = '/api/control/pi/collaboration/teams'
   const mutate = async (path: string, body: Record<string, unknown>, signal?: AbortSignal) => {
     try { return parse(view, await auth.request(path, { method: 'POST', body, signal })) }
@@ -72,12 +74,12 @@ export function createGatewayTeamsClient(auth: Pick<GatewayAuthClient, 'request'
   }
   return {
     async list(options: { limit?: number; cursor?: string; signal?: AbortSignal } = {}) {
-      const query: Record<string, string | number> = { limit: parse(z.number().int().min(1).max(100), options.limit ?? 100, true) }
-      if (options.cursor) query.cursor = parse(teamId, options.cursor, true)
-      return parse(collection, await auth.request(base, { query, signal: options.signal }))
+      const limit = parse(z.number().int().min(1).max(100), options.limit ?? 100, true)
+      const query = options.cursor ? { limit, cursor: parse(teamId, options.cursor, true) } : { limit }
+      return piData(pi.GET('/collaboration/teams', { params: { query }, signal: options.signal }), collection)
     },
     async get(id: string, signal?: AbortSignal): Promise<GatewayTeam> {
-      const selected = parse(teamId, id, true), value = parse(view, await auth.request(`${base}/${selected}`, { signal }))
+      const selected = parse(teamId, id, true), value = await piData(pi.GET('/collaboration/teams/{identity}', { params: { path: { identity: selected } }, signal }), view)
       if (value.id !== selected) throw new GatewayError('invalid-response')
       return value
     },
@@ -92,7 +94,7 @@ export function createGatewayTeamsClient(auth: Pick<GatewayAuthClient, 'request'
     },
     async history(id: string, signal?: AbortSignal) {
       const selected = parse(teamId, id, true)
-      return parse(history, await auth.request(`${base}/${selected}/versions`, { query: { limit: 100, after: 0 }, signal }))
+      return piData(pi.GET('/collaboration/teams/{identity}/versions', { params: { path: { identity: selected }, query: { limit: 100, after: 0 } }, signal }), history)
     },
     async revision(id: string, number: number, signal?: AbortSignal): Promise<GatewayTeamRevision> {
       const selected = parse(teamId, id, true), selectedRevision = parse(z.number().int().positive(), number, true)
