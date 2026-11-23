@@ -41,6 +41,7 @@ from scripts.cli.conker_messages import operation as message_operation
 from scripts.cli.conker_parser import build_parser
 from scripts.cli.conker_prompt import operation as prompt_operation
 from scripts.cli.conker_spending import spending_operation
+from scripts.cli.conker_tomorrow import operation as tomorrow_operation
 from scripts.cli.conker_workflows import TOOL_REQUESTS, tool_request, workflow_operation
 from scripts.workspace import read_config
 
@@ -491,6 +492,10 @@ def main():
     elif args.command == "prompt":
         value = prompt_operation(args, config, request)
         if value is None:  # the rewrite printed itself
+            return 0
+    elif args.command == "tomorrow":
+        value = tomorrow_operation(args, config, request)
+        if value is None:  # the forecast printed itself
             return 0
     elif args.command == "config":
         return config_operation(args, config, request)

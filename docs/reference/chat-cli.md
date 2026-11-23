@@ -114,7 +114,7 @@ model while chat stays on yours.
 
 `inbox [--json]` - Everything that happened and everything that needs you. Shows needs you items, handled items, upcoming items, and impact metrics. With --json, outputs raw JSON data. Conker's requests show with a `?` and what approving would make (cron job, tool, memory, new agent, new team).
 
-An installed stack runs `inbox`, `spending`, `loops`, `prompt enhance`, `prompt templates`, `memory search`, `memory beliefs`, `memory upkeep`, `memory used`, `agent create` and `team create` as `./conker inbox` and so on (scripts/owner_cli.py: Pi reached in its container, only these commands' routes).
+An installed stack runs `inbox`, `spending`, `loops`, `tomorrow`, `prompt enhance`, `prompt templates`, `memory search`, `memory beliefs`, `memory upkeep`, `memory used`, `agent create` and `team create` as `./conker inbox` and so on (scripts/owner_cli.py: Pi reached in its container, only these commands' routes).
 
 ## Open loops
 
@@ -125,6 +125,10 @@ Promises across every chat you can see: what you said you would do and what Conk
 `conker loops add CHAT_ID "TEXT" [--by owner|conker] [--due YYYY-MM-DD] [--message MESSAGE_ID]` - File a promise (1-500 characters) for a chat, optionally pointing at the message it came from; prints the new promise with its id.
 
 `conker loops done LOOP_ID`, `conker loops drop LOOP_ID`, `conker loops reopen LOOP_ID` - Mark a promise done, dropped, or open again. This works in a chat that has since been forked or closed.
+
+## Tomorrow
+
+`conker tomorrow [--hours N] [--json]` - What Conker will start on its own in the next day (default 24 hours, at most 168), read only: each AI job's next runs, watches (checked every N minutes) and the ideas pass, each marked `runs` or `held:` with the reason the runner would give then (your quiet hours, proactive work off, today's suggestion budget, your job limits, the last run still waiting). Times are in your time zone. An empty day says "Nothing planned".
 
 ## Prompt enhance
 

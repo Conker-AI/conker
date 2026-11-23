@@ -53,6 +53,10 @@ async function main() {
   await assert.rejects(transport.request('/api/control/pi/memory/mem_judo/uses/extra'), error => error.kind === 'validation')
   await assert.rejects(transport.request('/api/control/pi/memory/unknown'), error => error.kind === 'validation')
   assert.throws(() => snapshotGatewayOperation('/api/control/pi/prompts/other', {}), error => error.kind === 'validation')
+  // The forecast of what Conker will do on its own (R-U10): a read, never a write.
+  await transport.request('/api/control/pi/insights/tomorrow')
+  assert.ok(urls.at(-1).endsWith('/api/control/pi/insights/tomorrow'))
+  await assert.rejects(transport.request('/api/control/pi/insights/tomorrow', { method: 'POST', csrfToken, body: {} }), error => error.kind === 'validation')
   console.log('Pi routes: memory care, beliefs, recall notices, team runs, prompt enhance and prompt templates pass the transport; unknown routes are refused')
 }
 main().catch(error => { console.error(error); process.exit(1) })
