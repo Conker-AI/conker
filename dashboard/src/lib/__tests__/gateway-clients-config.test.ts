@@ -138,7 +138,7 @@ describe('MCP client', () => {
     await kind(createGatewayMcpClient(fakeAuth({ ...access, requiredScope: 'x' }).auth).setAccess(tool, true), 'invalid-response')
   })
 
-  it('sends a read class for the version he saw and returns the class ToolGate stored', async () => {
+  it('sends a read class for the version he saw and returns the stored class', async () => {
     const { auth, calls } = fakeAuth({ schemaVersion: 1, tool: { ...tool, read_class: 'observe', version: 2 } })
     const client = createGatewayMcpClient(auth)
     expect((await client.setClass({ ...tool, read_class: 'act_outward' }, 'observe')).read_class).toBe('observe')
@@ -162,7 +162,7 @@ describe('MCP read class refusal words', () => {
     expect(coded(409, 'schema_changed')).toBe('It still asks every time: its server now describes this tool differently. Import the new version to review it.')
     expect(coded(422, 'unsupported_schema')).toBe(coded(409, 'schema_changed'))
     expect(coded(409, 'definition_conflict')).toBe('This tool changed since you opened it. Reload it, then choose again.')
-    expect(coded(422, 'refused')).toBe('ToolGate didn’t change it. Reload the tool, then choose again.')
+    expect(coded(422, 'refused')).toBe('Conker didn’t change it. Reload the tool, then choose again.')
     expect(coded(409)).toBe(coded(422, 'refused'))
     expect(coded(404)).toBe('This tool is no longer saved. Reload the list.')
   })

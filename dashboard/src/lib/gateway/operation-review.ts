@@ -61,7 +61,7 @@ export function describeGatewayOperation(operation: GatewayVerifiedOperation): G
     const observe = body.read_class === 'observe'
     title = observe ? 'Let this MCP tool run without asking' : 'Make this MCP tool ask every time'
     target = parts[5]
-    details.push(observe ? 'Its calls run without an Inbox card. Its limits, spending and the action log still apply. ToolGate refuses if its name or its server says it could act.' : 'Each call asks you in the Inbox again, for its exact inputs.')
+    details.push(observe ? 'Its calls run without an Inbox card. Its limits, spending and the action log still apply. Conker refuses if its name or its server says it could act.' : 'Each call asks you in the Inbox again, for its exact inputs.')
     if (typeof body.expected_version === 'number' && Number.isSafeInteger(body.expected_version)) details.push(`Only if version ${body.expected_version} is still the saved one.`)
     return { title, path, target, details }
   }

@@ -31,7 +31,7 @@ export function readClassMessage(cause: unknown): string {
   if (error.code === 'act_outward_hint') return 'It still asks every time: its server doesn’t say this tool is read-only.'
   if (error.code === 'schema_changed' || error.code === 'unsupported_schema') return 'It still asks every time: its server now describes this tool differently. Import the new version to review it.'
   if (error.code === 'definition_conflict') return 'This tool changed since you opened it. Reload it, then choose again.'
-  if (error.status === 409 || error.status === 422) return 'ToolGate didn’t change it. Reload the tool, then choose again.'
+  if (error.status === 409 || error.status === 422) return 'Conker didn’t change it. Reload the tool, then choose again.'
   if (error.status === 404) return 'This tool is no longer saved. Reload the list.'
   return error.message
 }

@@ -42,19 +42,19 @@ const radio = (name: RegExp) => screen.getByRole('radio', { name }) as HTMLEleme
 const checked = (name: RegExp) => radio(name).getAttribute('aria-checked') === 'true'
 
 describe('MCP read class control', () => {
-  it('shows the class ToolGate stored, one of the two choices', () => {
+  it('shows the stored class, one of the two choices', () => {
     setup('observe')
     expect(screen.getByRole('radiogroup', { name: 'Before each call' })).toBeTruthy()
     expect(checked(/Runs without asking \(read only\)/)).toBe(true)
     expect(checked(/Asks every time/)).toBe(false)
   })
 
-  it('shows nothing when ToolGate stores no class (a ToolGate from before it)', () => {
+  it('shows nothing when no class is stored (a server from before it)', () => {
     const { view } = setup(null)
     expect(view.container.innerHTML).toBe('')
   })
 
-  it('keeps the stored class while saving and moves only when ToolGate answers', async () => {
+  it('keeps the stored class while saving and moves only when the server answers', async () => {
     const { answer, setClass, onStored } = setup()
     fireEvent.click(radio(/Runs without asking/))
     expect(setClass).toHaveBeenCalledWith(expect.objectContaining({ id: 'mcp.weather', version: 3 }), 'observe')
@@ -76,7 +76,7 @@ describe('MCP read class control', () => {
     await act(async () => answer.resolve({ ...tool, version: 4 }))
   })
 
-  it('shows why ToolGate refused Observe and keeps the stored class', async () => {
+  it('shows why running without asking was refused and keeps the stored class', async () => {
     const { answer, onStored, onReload } = setup()
     fireEvent.click(radio(/Runs without asking/))
     await act(async () => answer.reject(new GatewayError('http', 422, undefined, 'act_outward_name')))
