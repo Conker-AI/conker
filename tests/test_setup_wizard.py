@@ -361,8 +361,7 @@ def test_the_launcher_starts_the_wizard_only_in_a_terminal(ubuntu_cli):
 
 def test_the_wizard_drives_the_real_launcher_commands(ubuntu_cli):
     shell = bash()
-    if not shell:
-        pytest.skip("bash is required")
+    assert shell, "bash is required: Linux and macOS have it, Windows needs Git for Windows"
     launcher = wizard.Launcher(
         str(ubuntu_cli.deployment / "sources/companion/conker"),
         shell=shell,
