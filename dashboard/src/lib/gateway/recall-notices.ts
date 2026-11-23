@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import type { GatewayAuthClient } from './auth'
+import { createPiClient, piData } from './pi-client'
 import { GatewayError } from './transport'
 
 const noticeId = z.string().regex(/^mrn_[0-9a-f]{32}$/)
@@ -21,21 +22,14 @@ const page = z.object({ items: z.array(notice).max(100) }).strict()
 export type RecallNotice = z.infer<typeof notice>
 export type RecallNoticePage = z.infer<typeof page>
 
-function parse<T>(schema: z.ZodType<T>, value: unknown): T {
-  const result = schema.safeParse(value)
-  if (!result.success) throw new GatewayError('invalid-response')
-  return result.data
-}
-
 export function createRecallNoticesClient(auth: Pick<GatewayAuthClient, 'request'>) {
+  const pi = createPiClient(auth)
   return {
-    async list(signal?: AbortSignal): Promise<RecallNotice[]> {
-      return parse(page, await auth.request('/api/control/pi/memory/recall-notices', { signal })).items
-    },
+    list: async (signal?: AbortSignal): Promise<RecallNotice[]> => (await piData(pi.GET('/memory/recall-notices', { signal }), page)).items,
     /** Hides the card. The answers stay listed in Pi (`conker memory used ID`). */
     async dismiss(id: string, signal?: AbortSignal): Promise<void> {
       if (!noticeId.safeParse(id).success) throw new GatewayError('validation')
-      parse(z.object({ id: z.literal(id), dismissed: z.literal(true), changed: z.boolean() }).strict(), await auth.request(`/api/control/pi/memory/recall-notices/${id}/dismiss`, { method: 'POST', body: {}, signal }))
+      await piData(pi.POST('/memory/recall-notices/{notice_id}/dismiss', { params: { path: { notice_id: id } }, signal }), z.object({ id: z.literal(id), dismissed: z.literal(true), changed: z.boolean() }).strict())
     },
   }
 }

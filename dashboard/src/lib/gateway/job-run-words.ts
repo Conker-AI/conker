@@ -18,3 +18,15 @@ const reasons: Record<string, string> = {
 export function failedRunReason(code: string | null): string {
   return (code && reasons[code]) || 'The job started but did not finish.'
 }
+
+/** Which of your own limits held a skipped run back, from its outcome code; a skip is never a failure. */
+const skips: Record<string, string> = {
+  QUIET_HOURS: 'quiet hours',
+  OVER_BUDGET: 'daily limit reached',
+  PROACTIVITY_OFF: 'proactive work off',
+  URGENT_ONLY: 'only urgent work allowed',
+}
+
+export function skippedRunLabel(code: string | null): string {
+  return `Skipped: ${(code && skips[code]) || 'your limits'}`
+}
