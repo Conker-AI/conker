@@ -75,8 +75,8 @@ def main(*arguments):
     return config_cli.main(["--root", "/srv/conker", "--layout", "ubuntu", *arguments])
 
 
-def saved(revision=8, **changes):
-    document = {"revision": revision, "preferences": {**PREFERENCES, **changes}}
+def saved(**changes):
+    document = {"revision": 8, "preferences": {**PREFERENCES, **changes}}
     return SimpleNamespace(returncode=0, stdout=json.dumps(document).encode(), stderr=b"")
 
 
