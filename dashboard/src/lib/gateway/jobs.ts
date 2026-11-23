@@ -40,7 +40,8 @@ const job = z.object({
   authority: z.literal('none'), contentIncluded: z.literal(false), execution: z.literal('not-triggered'),
 }).strict()
 const jobCollection = z.object({ schemaVersion: z.literal(1), results: z.array(job).max(100), nextCursor: jobId.nullable() }).strict()
-const runStatus = z.enum(['ready', 'awaiting_budget', 'dispatching', 'completed', 'failed', 'awaiting_approval', 'outcome_unknown', 'cancelled'])
+// skipped: your own limits (quiet hours, the daily limit, proactive work off) held an AI job's run back before it started.
+const runStatus = z.enum(['ready', 'awaiting_budget', 'dispatching', 'completed', 'failed', 'awaiting_approval', 'outcome_unknown', 'cancelled', 'skipped'])
 const run = z.object({
   schemaVersion: z.literal(1), id: runId, jobId, jobRevision: revision, scheduledAt: timestamp, startedAt: timestamp,
   status: runStatus, manual: z.boolean(), budgetBound: z.boolean(), receiptRecorded: z.boolean(),
