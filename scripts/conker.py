@@ -16,6 +16,7 @@ if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from conker_config import config_operation
+from owner_password import asking, development
 from plan_limits import limits_operation
 
 from scripts.cli import assistant_imports, conker_models, conker_toolgate, tool_drafts
@@ -493,7 +494,7 @@ def main():
         if value is None:  # the rewrite printed itself
             return 0
     elif args.command == "config":
-        return config_operation(args, config, request)
+        return config_operation(args, config, asking(request), development(config))
     elif args.command == "context":
         value = context_operation(args, config, request)
     elif args.command == "message":

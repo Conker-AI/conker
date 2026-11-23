@@ -290,11 +290,11 @@ cmd_apply() {
         agents|approvals|artifacts|asks|calls|character|files|inventory|jobs|memory|models|projects|proposals|requests|sessions|tasks|teams|tools|turns) ;;
         *) printf 'conker apply supports: agents, approvals, artifacts, asks, calls, character, files, inventory, jobs, memory, models, projects, proposals, requests, sessions, tasks, teams, tools, turns.\n' >&2; exit 2 ;;
     esac
-    [ -f "$file" ] || {
-        printf 'Configuration file not found: %s\n' "$file" >&2
-        exit 2
-    }
-    compose exec -T gateway python -m gateway apply "$resource" < "$file"
+    [ -f "$file" ] || { printf 'Configuration file not found: %s\n' "$file" >&2; exit 2; }
+    if [ "$resource" = approvals ]; then  # a yes may ask for the password (scripts/approval_cli.py)
+        command -v python3 >/dev/null 2>&1 || { printf 'Python 3.11+ is required for conker apply approvals. Install python3, then retry.\n' >&2; exit 1; }
+        python3 "$SOURCE_ROOT/scripts/approval_cli.py" --root "$ROOT" --layout "$LAYOUT" "$file"
+    else compose exec -T gateway python -m gateway apply "$resource" < "$file"; fi
 }
 
 cmd_config() {

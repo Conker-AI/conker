@@ -31,11 +31,26 @@ OWNER_SETTINGS = {
 # sends {"enabled": value}, with no revision. Turning it off from the host needs no password: the
 # host's owner key is the owner, as for every other home here.
 LOCKDOWN = "/v2/owner/lockdown"
+# Pi's owner preferences: a save Pi refuses for the password goes to the gateway with it.
+PREFERENCES = ("pi", "/owner/preferences")
 DATE = re.compile(r"\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])")
 MODEL_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:/-]{0,199}")
 CHAT_ID = re.compile(r"[A-Za-z0-9_-]{1,128}")
 TIME = re.compile(r"([01]\d|2[0-3]):[0-5]\d")
 TRUE, FALSE = {"true", "on", "yes", "1"}, {"false", "off", "no", "0"}
+
+
+class PasswordRequired(OSError):
+    """Pi refused the save before saving anything, 403 `password_required` (ADR-0010)."""
+
+
+def password_required(content: bytes) -> bool:
+    """Whether a refusal's body is Pi's `password_required`."""
+    try:
+        detail = json.loads(content).get("detail")
+    except (ValueError, AttributeError):
+        return False
+    return isinstance(detail, dict) and detail.get("code") == "password_required"
 
 
 def register(commands):
@@ -287,7 +302,9 @@ def matches(setting: dict, text: str) -> bool:
     return text.lower() in haystack.lower()
 
 
-def config_operation(args, config, request) -> int:
+def config_operation(args, config, request, save_with_password=None) -> int:
+    """`save_with_password(body)` sends a preferences save Pi refused for the password again, once,
+    with it (owner_password): the server decides which settings ask for it, never this list."""
     settings = load_registry()
     chat = getattr(args, "chat", None)
     if args.operation == "list":
@@ -350,25 +367,30 @@ def config_operation(args, config, request) -> int:
                 "This chat has no context settings yet. Start them with: "
                 f"conker context budget {chat} --window TOKENS --reserve TOKENS"
             )
-        saved = request(
-            config,
-            service(setting),
-            home(setting, chat),
-            {
-                "expected_revision": revision,
-                setting["home"]["key"]: (
-                    {
-                        key: value
-                        for key, value in document.items()
-                        if key != setting["home"]["field"]
-                    }
-                    if flat and args.operation == "reset"
-                    else with_value(document, setting["home"]["field"], at_rest(setting, new), flat)
-                ),
-            },
-            # ToolGate replaces its whole document with PUT; Pi's homes take POST.
-            **({"method": "PUT"} if setting["home"]["service"] == "toolgate" else {}),
-        )
+        body = {
+            "expected_revision": revision,
+            setting["home"]["key"]: (
+                {key: value for key, value in document.items() if key != setting["home"]["field"]}
+                if flat and args.operation == "reset"
+                else with_value(document, setting["home"]["field"], at_rest(setting, new), flat)
+            ),
+        }
+        try:
+            saved = request(
+                config,
+                service(setting),
+                home(setting, chat),
+                body,
+                # ToolGate replaces its whole document with PUT; Pi's homes take POST.
+                **({"method": "PUT"} if setting["home"]["service"] == "toolgate" else {}),
+            )
+        except PasswordRequired:
+            # Nothing was saved. As Settings does after the gateway's 428: ask once, send the
+            # same save once more, now with the password, to the gateway, which checks it.
+            where = (setting["home"]["service"], setting["home"]["path"])
+            if save_with_password is None or where != PREFERENCES:
+                raise
+            saved = save_with_password(body)
         value = {
             "id": setting["id"],
             "value": setting["default"]

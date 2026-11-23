@@ -59,7 +59,7 @@ def ubuntu_cli(tmp_path: Path):
         shutil.copy2(ROOT / "scripts" / name, companion / "scripts" / name)
     shutil.copy2(ROOT / "scripts/speech_config.py", companion / "scripts/speech_config.py")
     shutil.copy2(ROOT / "scripts/setup_wizard.py", companion / "scripts/setup_wizard.py")
-    for name in ("conker_config.py", "config_cli.py"):
+    for name in ("conker_config.py", "config_cli.py", "owner_password.py", "approval_cli.py"):
         shutil.copy2(ROOT / "scripts" / name, companion / "scripts" / name)
     registry = "dashboard/src/settings/registry"
     shutil.copytree(ROOT / registry, companion / registry)

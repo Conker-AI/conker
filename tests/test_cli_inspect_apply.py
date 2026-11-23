@@ -319,7 +319,11 @@ def test_apply_sessions_uses_the_same_bounded_gateway_entrypoint(ubuntu_cli, tmp
     assert "gateway python -m gateway apply sessions" in ubuntu_cli.docker_log.read_text()
 
 
-def test_apply_approvals_uses_the_same_bounded_gateway_entrypoint(ubuntu_cli, tmp_path):
+def test_apply_approvals_goes_through_the_password_helper(ubuntu_cli, tmp_path):
+    # scripts/approval_cli.py sends the file to `gateway apply approvals` and asks for the
+    # password only if the gateway says this yes needs it (tests/test_approval_cli.py).
+    helper = ubuntu_cli.deployment / "sources/companion/scripts/approval_cli.py"
+    helper.write_text("import json, sys\nprint(json.dumps(sys.argv[1:]))\n", encoding="utf-8")
     document = tmp_path / "approval.json"
     document.write_text(
         json.dumps(
@@ -336,8 +340,10 @@ def test_apply_approvals_uses_the_same_bounded_gateway_entrypoint(ubuntu_cli, tm
     result = ubuntu_cli("apply", "approvals", str(document))
 
     assert result.returncode == 0, result.stderr
-    assert json.loads(result.stdout)["status"] == "approved"
-    assert "gateway python -m gateway apply approvals" in ubuntu_cli.docker_log.read_text()
+    arguments = json.loads(result.stdout)
+    assert arguments[-1].endswith("approval.json")
+    assert arguments[arguments.index("--layout") + 1] == "ubuntu"
+    assert not ubuntu_cli.docker_log.exists()  # only through the helper
 
 
 def test_apply_turns_uses_the_same_bounded_gateway_entrypoint(ubuntu_cli, tmp_path):
