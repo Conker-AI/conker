@@ -6,6 +6,13 @@ which module versions a release pins.
 
 ## Unreleased
 
+## 0.6.11
+
+Beta build from main. Changes since the last tag:
+
+- docs: make CONTRIBUTING true again (#418)
+- test: screenshot baselines for beliefs, memory care, open loops, recall notice (#417)
+
 ## 0.6.0
 
 - **The folded update card says "Updating to X.Y.Z...".** While an update runs, the card in the Inbox no longer loses its button in silence. (#391)
