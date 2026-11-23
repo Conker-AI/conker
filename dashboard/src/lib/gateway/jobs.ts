@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import type { GatewayAuthClient } from './auth'
+import { createPiClient, piData } from './pi-client'
 import { GatewayError, gatewayError } from './transport'
 
 const jobId = z.string().regex(/^job_[0-9a-f]{32}$/)
@@ -100,6 +101,7 @@ export class GatewayJobMutationError extends Error {
 }
 
 export function createGatewayJobsClient(auth: Pick<GatewayAuthClient, 'request'>) {
+  const pi = createPiClient(auth)
   const jobPath = (id: string) => `/api/control/pi/jobs/${parse(jobId, id, true)}`
   const runPath = (id: string) => `/api/control/pi/jobs/runs/${parse(runId, id, true)}`
   async function write<T>(schema: z.ZodType<T>, path: string, body?: Record<string, unknown>): Promise<T> {
@@ -111,12 +113,12 @@ export function createGatewayJobsClient(auth: Pick<GatewayAuthClient, 'request'>
       const limit = options.limit ?? 100
       if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) throw new GatewayError('validation')
       const cursor = options.cursor === undefined ? undefined : parse(jobId, options.cursor, true)
-      const result = parse(jobCollection, await auth.request('/api/control/pi/jobs', { query: { limit, ...(cursor ? { cursor } : {}) }, signal: options.signal }))
+      const result = await piData(pi.GET('/jobs', { params: { query: cursor ? { limit, cursor } : { limit } }, signal: options.signal }), jobCollection)
       if (result.results.length > limit || new Set(result.results.map(item => item.id)).size !== result.results.length) throw new GatewayError('invalid-response')
       return result
     },
     async get(id: string, signal?: AbortSignal): Promise<GatewayJob> {
-      const selected = parse(jobId, id, true), result = parse(job, await auth.request(jobPath(selected), { signal }))
+      const selected = parse(jobId, id, true), result = await piData(pi.GET('/jobs/{identity}', { params: { path: { identity: selected } }, signal }), job)
       if (result.id !== selected) throw new GatewayError('invalid-response')
       return result
     },
@@ -145,7 +147,7 @@ export function createGatewayJobsClient(auth: Pick<GatewayAuthClient, 'request'>
       return write(job, `${jobPath(parse(jobId, id, true))}/adopt`, { expected_revision: parse(revision, expectedRevision, true) })
     },
     async agentNotes(signal?: AbortSignal): Promise<GatewayAgentNote[]> {
-      return parse(agentNotes, await auth.request('/api/control/pi/jobs/agent/notes', { signal })).results
+      return (await piData(pi.GET('/jobs/agent/notes', { signal }), agentNotes)).results
     },
     /** A new webhook secret for an AI job, shown once; any earlier one stops working. Asks for the password. */
     async issueHook(id: string) {

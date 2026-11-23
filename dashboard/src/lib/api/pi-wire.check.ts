@@ -4,11 +4,8 @@
 import type { paths } from './generated/pi'
 import type { Same } from '../gateway/pi-client'
 import type { GatewayHostInventory } from '../gateway/host-inventory'
-import type { GatewayJob } from '../gateway/jobs'
 import type { GatewayDirectory } from '../gateway/filesystem'
 import type { GatewayCall, GatewayCallAudioTurn } from '../gateway/calls'
-import type { SetupChoice, SetupModelOptions, SetupProtectionPolicy, SetupReceipt, SetupRehearsal, SetupStatus } from '../gateway/control'
-import type { GatewayAgentNote } from '../gateway/jobs'
 import type { EnhancedPrompt } from '../gateway/prompt-enhance'
 import type { TemplateDeleted, TemplateReceipt } from '../gateway/prompt-templates'
 import type { TeamRunFinishBody, TeamRunStepBody } from '../gateway/team-runs'
@@ -28,16 +25,8 @@ export const piWire = {
   promptEnhance: true satisfies Same<EnhancedPrompt, PiResponse<'/prompts/enhance', 'post'>>,
   promptTemplateSaved: true satisfies Same<TemplateReceipt, PiResponse<'/prompts/templates/{template_id}', 'post'>>,
   promptTemplateDeleted: true satisfies Same<TemplateDeleted, PiResponse<'/prompts/templates/{template_id}/delete', 'post'>>,
-  job: true satisfies Same<GatewayJob, PiResponse<'/jobs/{identity}', 'get'>>,
   inv: true satisfies Same<GatewayHostInventory, PiResponse<'/system/inventory', 'post'>>,
   listing: true satisfies Same<GatewayDirectory, PiResponse<'/system/files/listings', 'post'>>,
   call: true satisfies Same<GatewayCall, PiResponse<'/calls/browser', 'post'>>,
   callAudio: true satisfies Same<GatewayCallAudioTurn, PiResponse<'/calls/browser/{identity}/audio', 'post'>>,
-  setup: true satisfies Same<SetupStatus, PiResponse<'/setup/status', 'get'>>,
-  setupReceipt: true satisfies Same<SetupReceipt, PiResponse<'/setup/receipts/{step}', 'get'>>,
-  setupChoice: true satisfies Same<SetupChoice, PiResponse<'/setup/choices/{step}', 'get'>>,
-  setupProtection: true satisfies Same<SetupProtectionPolicy, PiResponse<'/setup/protection', 'get'>>,
-  setupModels: true satisfies Same<SetupModelOptions, PiResponse<'/setup/models', 'get'>>,
-  rehearsal: true satisfies Same<SetupRehearsal, PiResponse<'/setup/rehearsal', 'get'>>,
-  notes: true satisfies Same<GatewayAgentNote, PiResponse<'/jobs/agent/notes', 'get'>['results'][number]>,
 }

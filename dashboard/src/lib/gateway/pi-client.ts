@@ -16,6 +16,7 @@ import { GatewayError, type GatewayRequest } from './transport'
 export type PiClient = Pick<Client<paths>, 'GET' | 'POST' | 'PUT'>
 
 // Every Pi id in a path: a letter or digit first, so a value can never be '.', '..' or a path.
+// A number in a path (a revision) is a whole number, never negative.
 const segment = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,199}$/
 
 function refuse(): never {
@@ -60,6 +61,7 @@ function build(createClient: typeof import('openapi-fetch').default, auth: Pick<
         prefix +
         schemaPath.replace(/\{([^{}]+)\}/g, (_, name: string) => {
           const value = params.path?.[name]
+          if (typeof value === 'number') return Number.isSafeInteger(value) && value >= 0 ? String(value) : refuse()
           return typeof value === 'string' && segment.test(value) ? value : refuse()
         })
       const method = request.method

@@ -98,7 +98,7 @@ export function createGatewayTeamsClient(auth: Pick<GatewayAuthClient, 'request'
     },
     async revision(id: string, number: number, signal?: AbortSignal): Promise<GatewayTeamRevision> {
       const selected = parse(teamId, id, true), selectedRevision = parse(z.number().int().positive(), number, true)
-      const value = parse(revision, await auth.request(`${base}/${selected}/versions/${selectedRevision}`, { signal }))
+      const value = await piData(pi.GET('/collaboration/teams/{identity}/versions/{revision}', { params: { path: { identity: selected, revision: selectedRevision } }, signal }), revision)
       if (value.id !== selected || value.revision !== selectedRevision) throw new GatewayError('invalid-response')
       return value
     },
