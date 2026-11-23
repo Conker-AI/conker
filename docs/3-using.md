@@ -52,8 +52,9 @@ agent and the tool; the defaults are in **Settings > Access and safety**.
 **Settings** lists every topic on the left (on a phone, tap a topic to open it). Each
 setting is one row: its name, one line on what it does, the control, and **Reset**
 once it differs from the default. **Search settings** finds any of them; **Changed
-only** shows what you changed; **Show advanced** reveals the rest. A row marked
-**Not used yet** is saved now and read by a feature that comes later.
+only** shows what you changed; **Show advanced** reveals the rest. Settings for
+features still being built are hidden until you turn on **Planned**; they then show
+marked **Planned**, greyed out, because nothing uses them yet.
 
 The same settings work from the terminal:
 

@@ -84,7 +84,7 @@ These work and stay working, but get no new features for now.
   hosted model.
 - **An answer can be lost** if Pi restarts while delivering it.
 - **The profile photo is kept per browser** for now.
-- **Some settings say "Not used yet":** they are saved, and the feature that reads them comes later.
+- **Planned settings are hidden in Settings:** nothing reads them yet. **Planned** shows them, greyed out; `conker config` can still set them.
 
 Open work is tracked in [GitHub issues](https://github.com/Conker-AI/conker/issues).
 
