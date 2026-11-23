@@ -42,11 +42,5 @@ open an issue or a draft pull request to claim one.
 - **Fix the dashboard README's commands.** `dashboard/README.md` names `npm run check:navigation`,
   which `dashboard/package.json` does not have, and the same short hand-off list as the developer
   guide. Done when every `npm run` there is a real script and the hand-off list matches CI.
-- **Split a MemoryGate test file so the formatter covers it.** In the
-  [memorygate](https://github.com/Conker-AI/memorygate) repo, `ruff.toml` keeps
-  `services/api/tests/test_briefing_and_pattern_routes.py` out of `ruff format` because formatting
-  takes it past 600 lines. Move the briefing tests and the observation/pattern tests into two
-  files, unchanged, and drop the exclude line; done when `ruff format --check`, the file-size
-  check and both test files pass.
 
 Never commit secrets, `.env` files, real conversations, recordings or backups.
