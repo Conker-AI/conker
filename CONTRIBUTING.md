@@ -39,16 +39,14 @@ open an issue or a draft pull request to claim one.
   `docs/5-developing.md` lists `build`, `design:check:test`, `check:gateway` and `e2e`; CI
   (`.github/workflows/dashboard.yml`) also runs `lint`, `typecheck`, `format:check`, `check` and
   `test:unit`. Done when the list matches CI and names `python scripts/prepush.py`.
-- **Turn the React lint rules back on in the runtime workspace.**
-  `dashboard/src/components/gateway/runtime-workspace.tsx` starts with an `eslint-disable` for
-  three rules: `react-hooks/refs`, `react-hooks/set-state-in-effect` and
-  `react-hooks/preserve-manual-memoization`. Fix what they find and delete the comment; done when
-  `npm run lint`, `npm run build` and `npm run check` pass.
-- **Format the files moved out by the dashboard split.** `dashboard/.prettierignore` skips
-  `runtime-chat-start.ts`, `runtime-submissions.ts`, `fake-gateway-agents.ts`,
-  `fake-gateway-projects.ts`, `fake-gateway-search.ts`, `fake-gateway-usage.ts` and
-  `control-schemas.ts` (its last block). Drop those lines, run `npm run format`, and fix any
-  `npm run check` script that matched the old text; done when `npm run format:check` and
-  `npm run check` pass.
+- **Fix the dashboard README's commands.** `dashboard/README.md` names `npm run check:navigation`,
+  which `dashboard/package.json` does not have, and the same short hand-off list as the developer
+  guide. Done when every `npm run` there is a real script and the hand-off list matches CI.
+- **Split a MemoryGate test file so the formatter covers it.** In the
+  [memorygate](https://github.com/Conker-AI/memorygate) repo, `ruff.toml` keeps
+  `services/api/tests/test_briefing_and_pattern_routes.py` out of `ruff format` because formatting
+  takes it past 600 lines. Move the briefing tests and the observation/pattern tests into two
+  files, unchanged, and drop the exclude line; done when `ruff format --check`, the file-size
+  check and both test files pass.
 
 Never commit secrets, `.env` files, real conversations, recordings or backups.
