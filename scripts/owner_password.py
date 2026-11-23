@@ -31,7 +31,10 @@ class NotSaved(OSError):
 def ask(
     prompt: str = PROMPT, refusal: str = "This setting needs your password. Nothing was changed."
 ) -> str:
-    password = getpass.getpass(prompt)
+    try:
+        password = getpass.getpass(prompt)
+    except EOFError:  # no terminal and nothing on stdin: nobody to ask
+        password = ""
     if not password:
         raise ValueError(refusal)
     return password

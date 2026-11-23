@@ -137,3 +137,14 @@ def test_a_gateway_command_that_cannot_start_decided_nothing(monkeypatch, tmp_pa
     monkeypatch.setattr(subprocess, "run", missing)
     assert apply(tmp_path) == 1
     assert "Nothing was decided" in capsys.readouterr().err
+
+
+def test_with_nobody_to_ask_nothing_is_decided(monkeypatch, tmp_path, capsys):
+    calls, _ = gateway(monkeypatch, NEEDS)
+
+    def closed(prompt):
+        raise EOFError
+
+    monkeypatch.setattr(getpass, "getpass", closed)
+    assert apply(tmp_path) == 1
+    assert len(calls) == 1 and "Nothing was decided" in capsys.readouterr().err
