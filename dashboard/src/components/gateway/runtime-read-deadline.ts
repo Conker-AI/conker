@@ -10,7 +10,10 @@ export function readRuntimeWithDeadline<T>(action: (signal: AbortSignal) => Prom
   const schedule = timing.schedule ?? ((run, delay) => setTimeout(run, delay))
   const unschedule = timing.unschedule ?? (timer => clearTimeout(timer))
   return new Promise((resolve, reject) => {
-    if (request.signal.aborted) { reject(new Error('History read interrupted or timed out')); return }
+    if (request.signal.aborted) {
+      reject(new Error('History read interrupted or timed out'))
+      return
+    }
     let settled = false
     const deadline = schedule(() => request.abort(), timing.timeout ?? 15_000)
     const finish = (complete: () => void) => {
@@ -22,7 +25,13 @@ export function readRuntimeWithDeadline<T>(action: (signal: AbortSignal) => Prom
     }
     const abort = () => finish(() => reject(new Error('History read interrupted or timed out')))
     request.signal.addEventListener('abort', abort, { once: true })
-    try { action(request.signal).then(value => finish(() => resolve(value)), error => finish(() => reject(error))) }
-    catch (error) { finish(() => reject(error)) }
+    try {
+      action(request.signal).then(
+        value => finish(() => resolve(value)),
+        error => finish(() => reject(error)),
+      )
+    } catch (error) {
+      finish(() => reject(error))
+    }
   })
 }

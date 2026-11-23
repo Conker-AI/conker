@@ -4,7 +4,7 @@
  * is on every card: your words go back to Conker instead, and nothing on the card runs.
  */
 export const cardTemplates = ['do', 'send', 'publish', 'ship', 'run', 'delete', 'pay', 'save'] as const
-export type CardTemplate = typeof cardTemplates[number]
+export type CardTemplate = (typeof cardTemplates)[number]
 
 export const cardLabels: Record<CardTemplate, { yes: string; no: string }> = {
   do: { yes: 'Do it', no: 'Don’t' },

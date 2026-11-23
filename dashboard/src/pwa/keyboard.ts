@@ -24,22 +24,24 @@ export function trackKeyboard(root: HTMLElement = document.documentElement, view
   const apply = () => {
     frame = 0
     if (keyboardInset({ layoutHeight: view.innerHeight, visualHeight: viewport.height, scale: viewport.scale })) {
-      root.dataset.keyboard = "open"
-      root.style.setProperty("--visual-height", `${Math.round(viewport.height)}px`)
-      root.style.setProperty("--visual-top", `${Math.round(viewport.offsetTop)}px`)
+      root.dataset.keyboard = 'open'
+      root.style.setProperty('--visual-height', `${Math.round(viewport.height)}px`)
+      root.style.setProperty('--visual-top', `${Math.round(viewport.offsetTop)}px`)
     } else if (root.dataset.keyboard) {
       delete root.dataset.keyboard
-      root.style.removeProperty("--visual-height")
-      root.style.removeProperty("--visual-top")
+      root.style.removeProperty('--visual-height')
+      root.style.removeProperty('--visual-top')
     }
   }
-  const schedule = () => { if (!frame) frame = view.requestAnimationFrame(apply) }
-  viewport.addEventListener("resize", schedule)
-  viewport.addEventListener("scroll", schedule)
+  const schedule = () => {
+    if (!frame) frame = view.requestAnimationFrame(apply)
+  }
+  viewport.addEventListener('resize', schedule)
+  viewport.addEventListener('scroll', schedule)
   apply()
   return () => {
-    viewport.removeEventListener("resize", schedule)
-    viewport.removeEventListener("scroll", schedule)
+    viewport.removeEventListener('resize', schedule)
+    viewport.removeEventListener('scroll', schedule)
     if (frame) view.cancelAnimationFrame(frame)
   }
 }

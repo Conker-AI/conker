@@ -5,10 +5,22 @@ export type EditorField = { key: string; id: string | null; label: string; type:
 export type EditorState = { name: string; description: string; fields: EditorField[] }
 
 export const FIELD_TYPE_LABELS: Record<FieldType, string> = {
-  shortText: 'Short text', longText: 'Long text', list: 'List', choice: 'Choice', number: 'Number', date: 'Date', switch: 'Yes or no',
+  shortText: 'Short text',
+  longText: 'Long text',
+  list: 'List',
+  choice: 'Choice',
+  number: 'Number',
+  date: 'Date',
+  switch: 'Yes or no',
 }
 export const FIELD_TYPE_HINTS: Record<FieldType, string> = {
-  shortText: 'One line.', longText: 'Several lines.', list: 'Items added one by one.', choice: 'Pick from options you list.', number: 'A number.', date: 'A day.', switch: 'Left out of the request unless it is on.',
+  shortText: 'One line.',
+  longText: 'Several lines.',
+  list: 'Items added one by one.',
+  choice: 'Pick from options you list.',
+  number: 'A number.',
+  date: 'A day.',
+  switch: 'Left out of the request unless it is on.',
 }
 let counter = 0
 const nextKey = () => `field-${++counter}`
@@ -18,20 +30,41 @@ export const blankTemplate = (): EditorState => ({ name: '', description: '', fi
 
 export function editorFrom(template: PiTemplate): EditorState {
   return {
-    name: template.name, description: template.description,
-    fields: template.fields.map(field => ({ key: nextKey(), id: field.id, label: field.label, type: field.type, required: field.required, multiple: field.multiple, example: field.example ?? '', help: field.help ?? '', optionsText: (field.options ?? []).join('\n') })),
+    name: template.name,
+    description: template.description,
+    fields: template.fields.map(field => ({
+      key: nextKey(),
+      id: field.id,
+      label: field.label,
+      type: field.type,
+      required: field.required,
+      multiple: field.multiple,
+      example: field.example ?? '',
+      help: field.help ?? '',
+      optionsText: (field.options ?? []).join('\n'),
+    })),
   }
 }
 
-const optionList = (text: string) => text.split('\n').map(line => line.trim()).filter(Boolean)
+const optionList = (text: string) =>
+  text
+    .split('\n')
+    .map(line => line.trim())
+    .filter(Boolean)
 
 /** A field id from its label: letters and digits, camel case, never starting with a digit, not already taken. */
 export function fieldIdFor(label: string, taken: ReadonlySet<string>): string {
-  const words = label.normalize('NFKD').replace(/[^A-Za-z0-9]+/g, ' ').trim().split(' ').filter(Boolean)
-  let base = words.map((word, index) => index ? word[0].toUpperCase() + word.slice(1) : word[0].toLowerCase() + word.slice(1)).join('')
+  const words = label
+    .normalize('NFKD')
+    .replace(/[^A-Za-z0-9]+/g, ' ')
+    .trim()
+    .split(' ')
+    .filter(Boolean)
+  let base = words.map((word, index) => (index ? word[0].toUpperCase() + word.slice(1) : word[0].toLowerCase() + word.slice(1))).join('')
   if (!/^[A-Za-z]/.test(base)) base = `field${base}`
   base = base.slice(0, TEMPLATE_LIMITS.fieldId - 3)
-  let id = base, number = 2
+  let id = base,
+    number = 2
   while (taken.has(id)) id = `${base}${number++}`
   return id
 }
@@ -39,13 +72,14 @@ export function fieldIdFor(label: string, taken: ReadonlySet<string>): string {
 /** The draft Pi gets, or the plain sentences that say what to fix. Pi checks everything again. */
 export function toDraft(state: EditorState): { draft: TemplateDraft | null; problems: string[] } {
   const problems: string[] = []
-  const name = state.name.trim(), description = state.description.trim()
+  const name = state.name.trim(),
+    description = state.description.trim()
   if (!name) problems.push('Give the template a name.')
   else if (name.length > TEMPLATE_LIMITS.name) problems.push(`The name has at most ${TEMPLATE_LIMITS.name} characters.`)
   if (description.length > TEMPLATE_LIMITS.description) problems.push(`The description has at most ${TEMPLATE_LIMITS.description} characters.`)
   if (!state.fields.length) problems.push('Add at least one field.')
   if (state.fields.length > TEMPLATE_LIMITS.fields) problems.push(`A template has at most ${TEMPLATE_LIMITS.fields} fields.`)
-  const taken = new Set(state.fields.flatMap(field => field.id ? [field.id] : []))
+  const taken = new Set(state.fields.flatMap(field => (field.id ? [field.id] : [])))
   const fields: PiTemplateField[] = []
   state.fields.forEach((field, index) => {
     const where = field.label.trim() ? `The field "${field.label.trim()}"` : `Field ${index + 1}`
@@ -62,7 +96,8 @@ export function toDraft(state: EditorState): { draft: TemplateDraft | null; prob
     }
     const id = field.id ?? fieldIdFor(label || 'field', taken)
     taken.add(id)
-    const example = field.example.trim(), help = field.help.trim()
+    const example = field.example.trim(),
+      help = field.help.trim()
     fields.push({ id, label, type: field.type, required: field.required, multiple: field.type === 'choice' && field.multiple, ...(example ? { example } : {}), ...(help ? { help } : {}), ...(field.type === 'choice' ? { options } : {}) })
   })
   return { draft: problems.length ? null : { name, description, fields }, problems }

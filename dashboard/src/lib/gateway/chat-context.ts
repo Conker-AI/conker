@@ -6,36 +6,47 @@ const sessionIdPattern = /^ses_[0-9a-f]{16}$/
 const messageIdPattern = /^msg_[0-9a-f]{16}$/
 const itemIdPattern = /^(?:dec|thr)_[0-9a-f]{16}$/
 // Every control character except a line feed (tab, carriage return and backspace are refused too).
-const hasControlCharacter = (text: string) => [...text].some(char => { const code = char.charCodeAt(0); return (code < 32 && code !== 10) || code === 127 })
+const hasControlCharacter = (text: string) =>
+  [...text].some(char => {
+    const code = char.charCodeAt(0)
+    return (code < 32 && code !== 10) || code === 127
+  })
 const messageRules = ['keep-exact', 'allow-summary', 'retrieve', 'exclude'] as const
 
 /** Pi's Policy: already camelCase on the wire. */
-const policySchema = z.object({
-  sessionInstructions: z.string().max(16000),
-  messagePolicies: z.record(z.string().min(1).max(200), z.enum(messageRules)),
-  budget: z.object({
-    contextWindowTokens: z.number().int().min(2).max(10_000_000),
-    outputReserveTokens: z.number().int().min(1),
-    otherInputTokens: z.number().int().min(0),
-  }).strict().refine(budget => budget.outputReserveTokens < budget.contextWindowTokens),
-}).strict()
+const policySchema = z
+  .object({
+    sessionInstructions: z.string().max(16000),
+    messagePolicies: z.record(z.string().min(1).max(200), z.enum(messageRules)),
+    budget: z
+      .object({
+        contextWindowTokens: z.number().int().min(2).max(10_000_000),
+        outputReserveTokens: z.number().int().min(1),
+        otherInputTokens: z.number().int().min(0),
+      })
+      .strict()
+      .refine(budget => budget.outputReserveTokens < budget.contextWindowTokens),
+  })
+  .strict()
 
 const revisionSchema = z.number().int().min(0)
 const settingsSchema = z.object({ revision: revisionSchema, policy: policySchema.nullable() }).strict()
 const savedSchema = z.object({ revision: revisionSchema, policy: policySchema }).strict()
 
 /** Pi's item: snake_case timestamps on the wire. */
-const itemSchema = z.object({
-  id: z.string().regex(itemIdPattern),
-  kind: z.enum(['decision', 'thread']),
-  text: z.string(),
-  author: z.enum(['owner', 'ai']),
-  cites: z.array(z.string()),
-  state: z.enum(['active', 'open', 'resolved', 'withdrawn', 'superseded']),
-  replaces: z.string().nullable(),
-  created_at: z.number(),
-  updated_at: z.number(),
-}).strict()
+const itemSchema = z
+  .object({
+    id: z.string().regex(itemIdPattern),
+    kind: z.enum(['decision', 'thread']),
+    text: z.string(),
+    author: z.enum(['owner', 'ai']),
+    cites: z.array(z.string()),
+    state: z.enum(['active', 'open', 'resolved', 'withdrawn', 'superseded']),
+    replaces: z.string().nullable(),
+    created_at: z.number(),
+    updated_at: z.number(),
+  })
+  .strict()
 const itemsSchema = z.object({ revision: revisionSchema, items: z.array(itemSchema) }).strict()
 const addedSchema = z.object({ revision: revisionSchema, item: itemSchema }).strict()
 const stateSchema = z.object({ revision: revisionSchema }).strict()

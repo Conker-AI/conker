@@ -8,9 +8,9 @@ export function registerServiceWorker(base: string, view: Window = window) {
   const register = () => {
     // The app works the same without it; only the fast start and the offline page are missing.
     workers.register(`${base}sw.js`, { scope: base }).catch((error: unknown) => {
-      console.warn("Conker could not install its offline support.", error)
+      console.warn('Conker could not install its offline support.', error)
     })
   }
-  if (view.document.readyState === "complete") register()
-  else view.addEventListener("load", register, { once: true })
+  if (view.document.readyState === 'complete') register()
+  else view.addEventListener('load', register, { once: true })
 }

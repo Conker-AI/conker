@@ -34,4 +34,4 @@ export function effectiveMode(mode: ComposerMode, values: ModeValues, proposal: 
   return same ? mode : 'custom'
 }
 
-export const modeLabel = (mode: ComposerMode | 'custom') => mode === 'custom' ? 'Custom' : composerModes.find(item => item.id === mode)!.label
+export const modeLabel = (mode: ComposerMode | 'custom') => (mode === 'custom' ? 'Custom' : composerModes.find(item => item.id === mode)!.label)

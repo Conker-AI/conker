@@ -33,7 +33,7 @@ export type ModelRow = { id: string | null; name: string; number?: number; provi
 export type ModelMenuLayout = { top: ModelRow[]; more: ModelRow[] }
 
 const entryFor = (config: Catalogue, claude: ClaudeModel) => config.models.find(model => model.providerId === CLAUDE_PROVIDER_ID && model.route === claude.route)
-const claudeFor = (model: CatalogueModel) => model.providerId === CLAUDE_PROVIDER_ID ? claudeModels.find(claude => claude.route === model.route) : undefined
+const claudeFor = (model: CatalogueModel) => (model.providerId === CLAUDE_PROVIDER_ID ? claudeModels.find(claude => claude.route === model.route) : undefined)
 
 /** Whether the owner's list has the Claude plan to run Claude models on. */
 export function hasClaudePlan(config: Catalogue) {
@@ -63,7 +63,8 @@ export function addClaudeModels(config: Catalogue): Catalogue {
     if (entryFor(config, claude)) continue
     let id = claude.route
     for (let n = 2; taken.has(id); n++) id = `${claude.route}-${n}`
-    taken.add(id); added.push(id)
+    taken.add(id)
+    added.push(id)
     models.push({ id, providerId: CLAUDE_PROVIDER_ID, name: claude.name, route: claude.route, enabled: true, routingDescription: '' })
   }
   const answer = config.roleSettings.roles.answer
@@ -88,8 +89,15 @@ export function modelMenuLayout(config: Catalogue, selectable: readonly Catalogu
       if (entry) used.add(entry.id)
       return { id: entry?.id ?? null, name: claude.name, number: index + 1, providerName: claudeName }
     })
-    const older = (model: CatalogueModel) => { const index = claudeModels.findIndex(claude => claude.route === claudeFor(model)?.route); return index < 0 ? Infinity : index }
-    rest = selectable.filter(model => !used.has(model.id)).map((model, index) => ({ model, index })).sort((a, b) => older(a.model) - older(b.model) || a.index - b.index).map(item => item.model)
+    const older = (model: CatalogueModel) => {
+      const index = claudeModels.findIndex(claude => claude.route === claudeFor(model)?.route)
+      return index < 0 ? Infinity : index
+    }
+    rest = selectable
+      .filter(model => !used.has(model.id))
+      .map((model, index) => ({ model, index }))
+      .sort((a, b) => older(a.model) - older(b.model) || a.index - b.index)
+      .map(item => item.model)
   } else {
     top = selectable.slice(0, NUMBERED).map((model, index) => row(model, index + 1))
     rest = selectable.slice(NUMBERED)
@@ -98,6 +106,6 @@ export function modelMenuLayout(config: Catalogue, selectable: readonly Catalogu
   // The provider joins a name only where two rows would otherwise look the same.
   const seen = new Map<string, number>()
   for (const item of [...top, ...more]) seen.set(item.name, (seen.get(item.name) ?? 0) + 1)
-  const named = (item: ModelRow): ModelRow => (seen.get(item.name) ?? 0) > 1 && item.providerName ? { ...item, name: `${item.name} · ${item.providerName}` } : item
+  const named = (item: ModelRow): ModelRow => ((seen.get(item.name) ?? 0) > 1 && item.providerName ? { ...item, name: `${item.name} · ${item.providerName}` } : item)
   return { top: top.map(named), more: more.map(named) }
 }

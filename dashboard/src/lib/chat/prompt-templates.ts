@@ -47,11 +47,11 @@ export function missingRequired(template: PromptTemplate, values: TemplateValues
 export function compilePrompt(template: PromptTemplate, values: TemplateValues): string {
   const lines: string[] = [`${template.name} request`]
   const blocks: string[] = []
-  
+
   for (const field of template.fields) {
     const value = values[field.id]
     let isEmpty = false
-    
+
     switch (field.type) {
       case 'switch':
         if (value === true) {
@@ -106,15 +106,15 @@ export function compilePrompt(template: PromptTemplate, values: TemplateValues):
         }
         break
     }
-    
+
     if (!isEmpty) {
       blocks.push('')
     }
   }
-  
+
   if (blocks.length > 0) {
     lines.push('', ...blocks.slice(0, -1))
   }
-  
+
   return lines.join('\n')
 }

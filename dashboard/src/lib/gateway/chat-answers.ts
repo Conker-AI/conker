@@ -8,44 +8,54 @@ const turnIdSchema = z.string().regex(/^trn_[0-9a-f]{16}$/)
 const requestIdSchema = z.string().regex(/^[A-Za-z0-9_-]{16,128}$/)
 
 /** One answer and every retried version of it. The shown version is `selectedId`; `revision` guards a switch. */
-const answerFamily = z.object({
-  root_message_id: messageIdSchema,
-  session_id: sessionIdSchema,
-  selected_message_id: messageIdSchema,
-  revision: z.number().int().min(1),
-  versions: z.array(z.object({ message_id: messageIdSchema, retry_of: messageIdSchema.nullable(), turn_id: turnIdSchema }).strict()),
-}).strict()
+const answerFamily = z
+  .object({
+    root_message_id: messageIdSchema,
+    session_id: sessionIdSchema,
+    selected_message_id: messageIdSchema,
+    revision: z.number().int().min(1),
+    versions: z.array(z.object({ message_id: messageIdSchema, retry_of: messageIdSchema.nullable(), turn_id: turnIdSchema }).strict()),
+  })
+  .strict()
 
 /** The receipt of a retry. Only the new message's id is read from `message`; the chat reload brings the rest. */
-const retryReceipt = z.object({
-  request_id: requestIdSchema,
-  session_id: sessionIdSchema,
-  source_message_id: messageIdSchema,
-  source_turn_id: turnIdSchema,
-  turn_id: turnIdSchema,
-  model_id: z.string().min(1).max(200),
-  status: z.string(),
-  input_message_id: messageIdSchema.nullable(),
-  replayed: z.boolean(),
-  message: z.object({ id: messageIdSchema }).passthrough().nullable(),
-}).strict()
+const retryReceipt = z
+  .object({
+    request_id: requestIdSchema,
+    session_id: sessionIdSchema,
+    source_message_id: messageIdSchema,
+    source_turn_id: turnIdSchema,
+    turn_id: turnIdSchema,
+    model_id: z.string().min(1).max(200),
+    status: z.string(),
+    input_message_id: messageIdSchema.nullable(),
+    replayed: z.boolean(),
+    message: z.object({ id: messageIdSchema }).passthrough().nullable(),
+  })
+  .strict()
 
-const forkReceipt = z.object({
-  session_id: sessionIdSchema,
-  parent_id: sessionIdSchema,
-  message_id: messageIdSchema,
-  replayed: z.boolean(),
-  privacy: z.object({ memoryDisabled: z.boolean(), harnessDisabled: z.boolean() }).strict().optional(),
-}).strict()
+const forkReceipt = z
+  .object({
+    session_id: sessionIdSchema,
+    parent_id: sessionIdSchema,
+    message_id: messageIdSchema,
+    replayed: z.boolean(),
+    privacy: z.object({ memoryDisabled: z.boolean(), harnessDisabled: z.boolean() }).strict().optional(),
+  })
+  .strict()
 
 // The three reads of a branch belong to other screens: only the one field needed is read.
 const revisionOf = z.object({ revision: z.number().int().min(0) }).passthrough()
 const summaryOf = z.object({ summary: z.string().max(16000).nullable() }).passthrough()
-const modelSettings = z.object({
-  configuration: z.object({
-    models: z.array(z.object({ id: z.string().min(1).max(200), name: z.string(), enabled: z.boolean() }).passthrough()),
-  }).passthrough(),
-}).passthrough()
+const modelSettings = z
+  .object({
+    configuration: z
+      .object({
+        models: z.array(z.object({ id: z.string().min(1).max(200), name: z.string(), enabled: z.boolean() }).passthrough()),
+      })
+      .passthrough(),
+  })
+  .passthrough()
 
 export type AnswerFamily = { rootId: string; selectedId: string; revision: number; versions: { messageId: string; retryOf: string | null; turnId: string }[] }
 export type RetryReceipt = { requestId: string; turnId: string; modelId: string; status: string; replayed: boolean; messageId: string | null }
@@ -61,7 +71,9 @@ function parse<T>(schema: z.ZodType<T>, value: unknown, input = false): T {
 
 function toFamily(value: z.infer<typeof answerFamily>): AnswerFamily {
   return {
-    rootId: value.root_message_id, selectedId: value.selected_message_id, revision: value.revision,
+    rootId: value.root_message_id,
+    selectedId: value.selected_message_id,
+    revision: value.revision,
     versions: value.versions.map(version => ({ messageId: version.message_id, retryOf: version.retry_of, turnId: version.turn_id })),
   }
 }
@@ -101,9 +113,17 @@ export function createChatAnswersClient(auth: Pick<GatewayAuthClient, 'request'>
     /** Starts a new chat from this message; returns the new chat's id. */
     async fork(sessionId: string, messageId: string, basis: ForkBasis): Promise<{ sessionId: string }> {
       const path = `${sessionPath(sessionId)}/messages/${parse(messageIdSchema, messageId, true)}/fork`
-      const checked = parse(z.object({
-        settingsRevision: z.number().int().min(0), contextRevision: z.number().int().min(0), reviewedSummary: z.string().max(16000).nullable(),
-      }).strict(), basis, true)
+      const checked = parse(
+        z
+          .object({
+            settingsRevision: z.number().int().min(0),
+            contextRevision: z.number().int().min(0),
+            reviewedSummary: z.string().max(16000).nullable(),
+          })
+          .strict(),
+        basis,
+        true,
+      )
       const body = { request_id: crypto.randomUUID(), expected_settings_revision: checked.settingsRevision, expected_context_revision: checked.contextRevision, reviewed_summary: checked.reviewedSummary }
       return { sessionId: parse(forkReceipt, await auth.request(path, { method: 'POST', body })).session_id }
     },

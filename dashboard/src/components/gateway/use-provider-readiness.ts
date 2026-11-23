@@ -7,6 +7,8 @@ import { createProviderReadiness } from './provider-readiness'
 export function useProviderReadiness(client: GatewayControlClient, authStore: GatewayAuthStore, refreshKey: number) {
   const controller = useMemo(() => createProviderReadiness({ authStore, read: signal => client.providers(signal) }), [client, authStore])
   useEffect(() => controller.start(), [controller])
-  useEffect(() => { void controller.refresh(true) }, [controller, refreshKey])
+  useEffect(() => {
+    void controller.refresh(true)
+  }, [controller, refreshKey])
   return { ...useStore(controller.store), refresh: controller.refresh }
 }
