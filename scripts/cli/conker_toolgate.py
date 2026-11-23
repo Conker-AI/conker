@@ -21,6 +21,14 @@ def check(args) -> None:
     """Refuse malformed ids and half-specified changes before anything is read or sent."""
     if args.command == "mcp" and args.operation == "class":
         identity(args.id, MCP_ID, "MCP capability ID")
+        if args.read_class == "observe":
+            # Observe is a security setting: it needs his password, which the CLI never asks.
+            raise ValueError(
+                "observe needs the owner's password, which the CLI cannot ask for; "
+                "the CLI only sets act_outward."
+            )
+        if args.read_class != "act_outward":
+            raise ValueError("Use act_outward: every call of the tool then asks the owner.")
         if args.expected_version < 1:
             raise ValueError("Use the tool version `mcp list` showed (1 or more).")
     if args.command == "mcp" and args.operation in {"state", "access"}:
@@ -70,8 +78,7 @@ def operation(args, config, request):
         path = "/v2/owner/mcp/import"
         body = imported_mcp(args)
     elif args.operation == "class":
-        # Observe lets Conker run this one tool without asking; ToolGate refuses it for a tool
-        # whose name says it acts and for a version other than the one he saw.
+        # Only Act outward (check refuses observe): it tightens, for the version he saw.
         path += "/" + args.id + "/class"
         body = {"read_class": args.read_class, "expected_version": args.expected_version}
     elif args.operation in {"state", "access"}:

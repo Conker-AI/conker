@@ -179,10 +179,11 @@ def build_parser(description):
     mcp_import.add_argument("--secret-ref")
     mcp_class = mcp_commands.add_parser(
         "class",
-        help="observe: runs without asking; act_outward: asks for every exact call (the default)",
+        help="act_outward: every call asks for the exact call (the default); observe needs the "
+        "owner's password and is not set here",
     )
     mcp_class.add_argument("id")
-    mcp_class.add_argument("read_class", choices=["observe", "act_outward"])
+    mcp_class.add_argument("read_class", help="act_outward")
     mcp_class.add_argument(
         "--expected-version", type=int, required=True, help="The version `mcp list` showed"
     )

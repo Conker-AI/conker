@@ -249,8 +249,9 @@ def test_unicode_skill_and_chat_flags_are_preserved(invoke, tmp_path):
         ["mcp", "access", "other.echo"],
         ["mcp", "access", "mcp.echo", "--expected-digest", "b" * 64],
         ["mcp", "access", "mcp.echo", "--enabled", "true"],
-        ["mcp", "class", "other.echo", "observe", "--expected-version", "1"],
-        ["mcp", "class", "mcp.echo", "observe", "--expected-version", "0"],
+        ["mcp", "class", "other.echo", "act_outward", "--expected-version", "1"],
+        ["mcp", "class", "mcp.echo", "act_outward", "--expected-version", "0"],
+        ["mcp", "class", "mcp.echo", "always", "--expected-version", "1"],
     ],
 )
 def test_invalid_identifiers_and_flags_fail_without_traceback(invoke, capsys, arguments):
@@ -349,24 +350,28 @@ def test_access_change_binds_exact_digest_and_read_has_no_write(invoke):
     assert calls[-1][2] == {"enabled": False, "expected_digest": "b" * 64}
 
 
-def test_mcp_class_sends_the_exact_version_and_needs_both_values(invoke):
+def test_mcp_class_sets_act_outward_for_the_exact_version(invoke):
     run, calls = invoke
-    assert run("mcp", "class", "mcp.search", "observe", "--expected-version", "3") == 0
+    assert run("mcp", "class", "mcp.search", "act_outward", "--expected-version", "4") == 0
     assert calls[-1] == (
         "toolgate-owner",
         "/v2/owner/mcp/tools/mcp.search/class",
-        {"read_class": "observe", "expected_version": 3},
+        {"read_class": "act_outward", "expected_version": 4},
     )
-    assert run("mcp", "class", "mcp.search", "act_outward", "--expected-version", "4") == 0
-    assert calls[-1][2] == {"read_class": "act_outward", "expected_version": 4}
     calls.clear()
-    for arguments in (
-        ["mcp", "class", "mcp.search", "observe"],
-        ["mcp", "class", "mcp.search", "always", "--expected-version", "1"],
-    ):
-        with pytest.raises(SystemExit):
-            run(*arguments)
+    with pytest.raises(SystemExit):
+        run("mcp", "class", "mcp.search", "act_outward")
     assert calls == []
+
+
+def test_mcp_class_refuses_observe_because_it_needs_his_password(invoke, capsys):
+    run, calls = invoke
+    capsys.readouterr()
+    assert run("mcp", "class", "mcp.search", "observe", "--expected-version", "3") == 1
+    assert calls == []
+    error = capsys.readouterr().err
+    assert "observe needs the owner's password" in error and "act_outward" in error
+    assert "Traceback" not in error
 
 
 def test_owner_access_transport_uses_both_scoped_keys_and_no_proxy(monkeypatch):
