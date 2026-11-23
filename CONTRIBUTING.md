@@ -26,21 +26,11 @@ lives, how to run checks and what "done" means. To try Conker first, follow the
 Small, self-contained and open as of November 2026. Each says where to look and when it is done;
 open an issue or a draft pull request to claim one.
 
-- **Docs name npm scripts that exist.** Add a test that every `npm run NAME` named in `docs/` and
-  the READMEs is in `dashboard/package.json` (`dashboard/README.md` still names a missing
-  `check:navigation`).
 - **Keep the ADR table complete.** Add a test that every `docs/adr/NNNN-*.md` has a row in the
   decisions table of `docs/5-developing.md` (0012-0014 were just added by hand).
 - **Find paths and names that no longer exist.** Add a test that every backticked repo path in
   `docs/` exists (a short allowlist for Pi's own docs and archived permalinks, each with a reason).
 - **Check heading anchors.** `tests/test_doc_links.py` skips `#anchor` links; resolve them against
   the target file's headings with GitHub's slug rules, with a self-test for a broken one.
-- **Bring the developer guide's frontend checks up to date.** "Before handing off" in
-  `docs/5-developing.md` lists `build`, `design:check:test`, `check:gateway` and `e2e`; CI
-  (`.github/workflows/dashboard.yml`) also runs `lint`, `typecheck`, `format:check`, `check` and
-  `test:unit`. Done when the list matches CI and names `python scripts/prepush.py`.
-- **Fix the dashboard README's commands.** `dashboard/README.md` names `npm run check:navigation`,
-  which `dashboard/package.json` does not have, and the same short hand-off list as the developer
-  guide. Done when every `npm run` there is a real script and the hand-off list matches CI.
 
 Never commit secrets, `.env` files, real conversations, recordings or backups.

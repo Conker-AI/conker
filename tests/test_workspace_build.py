@@ -163,8 +163,7 @@ def test_failed_restoration_never_leaves_a_partial_tree_at_the_serving_path(proj
 
 def test_real_bundle_guard_keeps_limits_for_an_isolated_stage(tmp_path):
     node = shutil.which("node")
-    if not node:
-        pytest.skip("Node.js is unavailable")
+    assert node, "Node.js is required (the dashboard build needs it; CI's runner has it)"
     assets = tmp_path / "isolated/assets"
     assets.mkdir(parents=True)
     entry = assets / "gateway-entry-test.js"
