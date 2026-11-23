@@ -7,50 +7,62 @@ const messageIdPattern = /^msg_[0-9a-f]{16}$/
 const messageId = z.string().regex(messageIdPattern)
 
 /** Pi sends the summary routes in snake_case; the types below are what the screen uses. */
-const wireVersion = z.object({
-  revision: z.number().int().nonnegative(),
-  summary: z.string().nullable(),
-  source_session_id: z.string().nullable(),
-  created_at: z.number(),
-  restored_from: z.number().int().nonnegative().nullable(),
-}).strict()
+const wireVersion = z
+  .object({
+    revision: z.number().int().nonnegative(),
+    summary: z.string().nullable(),
+    source_session_id: z.string().nullable(),
+    created_at: z.number(),
+    restored_from: z.number().int().nonnegative().nullable(),
+  })
+  .strict()
 
-const wireSummary = z.object({
-  revision: z.number().int().nonnegative(),
-  summary: z.string().nullable(),
-  source_session_id: z.string().nullable(),
-  versions: z.array(wireVersion).max(100),
-}).strict()
+const wireSummary = z
+  .object({
+    revision: z.number().int().nonnegative(),
+    summary: z.string().nullable(),
+    source_session_id: z.string().nullable(),
+    versions: z.array(wireVersion).max(100),
+  })
+  .strict()
 
-const wireFork = z.object({
-  session_id: z.string().regex(sessionIdPattern),
-  parent_id: z.string().regex(sessionIdPattern),
-  replayed: z.boolean(),
-}).strict()
+const wireFork = z
+  .object({
+    session_id: z.string().regex(sessionIdPattern),
+    parent_id: z.string().regex(sessionIdPattern),
+    replayed: z.boolean(),
+  })
+  .strict()
 
 /** The draft, the compaction record and the compact result are camelCase on the wire. */
-const summaryDraftSchema = z.object({
-  summary: z.string().min(1).max(16000),
-  messageIds: z.array(messageId),
-  truncated: z.boolean(),
-  earlierSummaryIncluded: z.boolean(),
-  summaryRevision: z.number().int().nonnegative(),
-  modelId: z.string(),
-  configurationRevision: z.number().int().nonnegative(),
-}).strict()
+const summaryDraftSchema = z
+  .object({
+    summary: z.string().min(1).max(16000),
+    messageIds: z.array(messageId),
+    truncated: z.boolean(),
+    earlierSummaryIncluded: z.boolean(),
+    summaryRevision: z.number().int().nonnegative(),
+    modelId: z.string(),
+    configurationRevision: z.number().int().nonnegative(),
+  })
+  .strict()
 
-const compactionSchema = z.object({
-  summaryRevision: z.number().int().nonnegative(),
-  covered: z.array(messageId),
-  folded: z.array(messageId),
-}).strict()
+const compactionSchema = z
+  .object({
+    summaryRevision: z.number().int().nonnegative(),
+    covered: z.array(messageId),
+    folded: z.array(messageId),
+  })
+  .strict()
 
-const compactResultSchema = z.object({
-  policyRevision: z.number().int().nonnegative(),
-  summaryRevision: z.number().int().nonnegative(),
-  covered: z.array(messageId),
-  folded: z.array(messageId),
-}).strict()
+const compactResultSchema = z
+  .object({
+    policyRevision: z.number().int().nonnegative(),
+    summaryRevision: z.number().int().nonnegative(),
+    covered: z.array(messageId),
+    folded: z.array(messageId),
+  })
+  .strict()
 
 /** Only the revision is read here; the context settings screen owns the rest of this route. */
 const policyHead = z.object({ revision: z.number().int().nonnegative() }).passthrough()

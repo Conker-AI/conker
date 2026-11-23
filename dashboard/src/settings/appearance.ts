@@ -52,21 +52,39 @@ export function useAppearanceSync(client: GatewayControlClient) {
     const unsubscribe = subscribeServerSettings(applyShell)
     let controller = new AbortController()
     const read = () => {
-      controller.abort(); controller = new AbortController()
-      client.settings.read(controller.signal).then(settings => {
-        publishServerSettings(settings)
-        applyAccent(settings.values['appearance.accent'] ?? 'neutral')
-      }).catch(() => { /* keep the cached look */ })
+      controller.abort()
+      controller = new AbortController()
+      client.settings
+        .read(controller.signal)
+        .then(settings => {
+          publishServerSettings(settings)
+          applyAccent(settings.values['appearance.accent'] ?? 'neutral')
+        })
+        .catch(() => {
+          /* keep the cached look */
+        })
     }
-    const returned = () => { if (document.visibilityState === 'visible') read() }
+    const returned = () => {
+      if (document.visibilityState === 'visible') read()
+    }
     read()
     document.addEventListener('visibilitychange', returned)
-    const refreshed = refreshState.subscribe((state, before) => { if (state.reads !== before.reads) read() })
-    return () => { refreshed(); window.removeEventListener(DEVICE_EVENT, applyDevice); document.removeEventListener('visibilitychange', returned); unsubscribe(); controller.abort() }
+    const refreshed = refreshState.subscribe((state, before) => {
+      if (state.reads !== before.reads) read()
+    })
+    return () => {
+      refreshed()
+      window.removeEventListener(DEVICE_EVENT, applyDevice)
+      document.removeEventListener('visibilitychange', returned)
+      unsubscribe()
+      controller.abort()
+    }
   }, [client])
 }
 
 /** For the Settings screen: follows the accent as it changes there. */
 export function useAppearance(accent: unknown) {
-  useEffect(() => { if (accent !== undefined) applyAccent(accent) }, [accent])
+  useEffect(() => {
+    if (accent !== undefined) applyAccent(accent)
+  }, [accent])
 }

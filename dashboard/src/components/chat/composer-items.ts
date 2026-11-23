@@ -9,7 +9,7 @@ import { Children, cloneElement, createContext, Fragment, isValidElement, useCon
 
 /** The composer items, in bar order after the mode and agent controls. */
 export const composerItemIds = ['model', 'template', 'skills', 'output', 'think', 'search', 'access', 'incognito', 'media', 'enhance'] as const
-export type ComposerItemId = typeof composerItemIds[number]
+export type ComposerItemId = (typeof composerItemIds)[number]
 export type ComposerItemValues = Partial<Record<ComposerItemId, string>>
 
 /** The toolbar width in px under which an item folds into the overflow menu; the highest folds first, so the call buttons (media) fold last. A phone bar wraps before they fold: the two call buttons wrap together onto the next row. */
@@ -34,15 +34,23 @@ export function composerItem<P>(component: ComponentType<P>, id: ComposerItemId)
 
 /** Splits the composer's settings and actions children: registered items sorted by id, the rest keeps order and keys. */
 export function splitComposerItems(settings: ReactNode, actions: ReactNode) {
-  const found: { id: ComposerItemId; node: ReactNode }[] = [], rest: ReactNode[] = []
-  const walk = (node: ReactNode, prefix: string) => Children.toArray(node).forEach(child => {
-    if (!isValidElement<{ children?: ReactNode }>(child)) { rest.push(child); return }
-    if (child.type === Fragment) { walk(child.props.children, `${prefix}${child.key}/`); return }
-    const keyed = cloneElement(child, { key: `${prefix}${child.key}` })
-    const id = items.get(child.type as object)
-    if (id) found.push({ id, node: keyed })
-    else rest.push(keyed)
-  })
+  const found: { id: ComposerItemId; node: ReactNode }[] = [],
+    rest: ReactNode[] = []
+  const walk = (node: ReactNode, prefix: string) =>
+    Children.toArray(node).forEach(child => {
+      if (!isValidElement<{ children?: ReactNode }>(child)) {
+        rest.push(child)
+        return
+      }
+      if (child.type === Fragment) {
+        walk(child.props.children, `${prefix}${child.key}/`)
+        return
+      }
+      const keyed = cloneElement(child, { key: `${prefix}${child.key}` })
+      const id = items.get(child.type as object)
+      if (id) found.push({ id, node: keyed })
+      else rest.push(keyed)
+    })
   walk(settings, 's/')
   walk(actions, 'a/')
   const byId = (a: { id: ComposerItemId }, b: { id: ComposerItemId }) => composerItemIds.indexOf(a.id) - composerItemIds.indexOf(b.id)
@@ -64,7 +72,7 @@ export function useComposerValue(id: ComposerItemId, value: string | null) {
 
 /** The values the composer names on its overflow button and above the bar, in control order. */
 export function itemSummary(values: ComposerItemValues) {
-  return composerItemIds.flatMap(id => values[id] ? [values[id]] : [])
+  return composerItemIds.flatMap(id => (values[id] ? [values[id]] : []))
 }
 
 /** The next set of values after one control reports; the same object when nothing changed. */

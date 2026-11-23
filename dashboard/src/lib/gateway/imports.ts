@@ -14,29 +14,61 @@ const digest = z.string().regex(/^[0-9a-f]{64}$/)
 const memory = z.object({ on: z.boolean(), reason: z.string().max(500).nullable(), configured: z.boolean() })
 const skipped = z.record(z.string().max(64), count)
 const preview = z.object({
-  schemaVersion: z.literal(1), source, digest, bytes: count,
+  schemaVersion: z.literal(1),
+  source,
+  digest,
+  bytes: count,
   chats: z.object({ inFile: count, new: count, updated: count, unchanged: count }),
   messages: z.object({ inFile: count, new: count, yours: count, offeredToMemory: count }),
-  firstAt: moment, lastAt: moment, sampleTitles: z.array(z.string().max(1000)).max(20), skipped, memory,
+  firstAt: moment,
+  lastAt: moment,
+  sampleTitles: z.array(z.string().max(1000)).max(20),
+  skipped,
+  memory,
 })
 const result = z.object({
-  schemaVersion: z.literal(1), batchId: z.string().regex(/^impb_[0-9a-f]{32}$/), source, digest, importedAt: z.number().finite(),
-  chats: z.object({ new: count, updated: count, unchanged: count }), messages: z.object({ added: count, offeredToMemory: count }), skipped, memory,
+  schemaVersion: z.literal(1),
+  batchId: z.string().regex(/^impb_[0-9a-f]{32}$/),
+  source,
+  digest,
+  importedAt: z.number().finite(),
+  chats: z.object({ new: count, updated: count, unchanged: count }),
+  messages: z.object({ added: count, offeredToMemory: count }),
+  skipped,
+  memory,
 })
 const offers = z.object({ configured: z.boolean(), waiting: count, offered: count, refused: count, problem: z.string().max(1000).nullable() })
 const listing = z.object({ schemaVersion: z.literal(1), imports: z.array(result).max(50), memory: offers })
 const chatView = z.object({
-  id: z.string().regex(/^imp_[0-9a-f]{32}$/), source, title: z.string().max(1000).nullable(),
-  startedAt: moment, updatedAt: moment, importedAt: z.number().finite(), messageCount: count, readOnly: z.literal(true),
+  id: z.string().regex(/^imp_[0-9a-f]{32}$/),
+  source,
+  title: z.string().max(1000).nullable(),
+  startedAt: moment,
+  updatedAt: moment,
+  importedAt: z.number().finite(),
+  messageCount: count,
+  readOnly: z.literal(true),
 })
 const chats = z.object({ schemaVersion: z.literal(1), total: count, chats: z.array(chatView).max(100), nextOffset: count.nullable() })
 const message = z.object({
-  id: z.string().regex(/^impmsg_[0-9a-f]{32}$/), seq: count, author: z.enum(['user', 'assistant']), text: z.string().max(60_000),
-  createdAt: moment, shortened: z.boolean(), memory: z.enum(['offering', 'offered', 'refused', 'not_offered']).nullable(),
+  id: z.string().regex(/^impmsg_[0-9a-f]{32}$/),
+  seq: count,
+  author: z.enum(['user', 'assistant']),
+  text: z.string().max(60_000),
+  createdAt: moment,
+  shortened: z.boolean(),
+  memory: z.enum(['offering', 'offered', 'refused', 'not_offered']).nullable(),
 })
 const deleted = z.object({
-  schemaVersion: z.literal(1), chatId: z.string().regex(/^imp_[0-9a-f]{32}$/), source, label: z.string().max(200), deletedAt: z.number().finite(),
-  messagesDeleted: count, offeredToMemory: count, memoryNote: z.string().max(500).nullable(), fileScrubbed: z.boolean().nullable(),
+  schemaVersion: z.literal(1),
+  chatId: z.string().regex(/^imp_[0-9a-f]{32}$/),
+  source,
+  label: z.string().max(200),
+  deletedAt: z.number().finite(),
+  messagesDeleted: count,
+  offeredToMemory: count,
+  memoryNote: z.string().max(500).nullable(),
+  fileScrubbed: z.boolean().nullable(),
 })
 const chat = chatView.extend({ schemaVersion: z.literal(1), messages: z.array(message).max(200), nextAfter: count.nullable() })
 
@@ -72,7 +104,7 @@ export function importRefusalMessage(error: unknown, chosen?: ImportSource): str
     return `No chat in this file matches a ${importSourceNames[chosen ?? 'chatgpt']} export.${other ? ` It looks like a ${importSourceNames[other]} export: choose ${importSourceNames[other]} instead.` : ''}`
   }
   if (!(error instanceof GatewayRefusal) && gatewayError(error).status === 404) return refusals.not_found as string
-  return error instanceof GatewayRefusal && refusals[error.refusal] || gatewayError(error).message
+  return (error instanceof GatewayRefusal && refusals[error.refusal]) || gatewayError(error).message
 }
 
 export function createGatewayImportsClient(auth: Pick<GatewayAuthClient, 'request' | 'upload'>) {
@@ -99,9 +131,13 @@ export function createGatewayImportsClient(auth: Pick<GatewayAuthClient, 'reques
       return parse(listing, await auth.request('/api/control/pi/imports', { signal }))
     },
     async chats(options: { offset?: number; limit?: number; source?: ImportSource } = {}, signal?: AbortSignal): Promise<ImportedChatPage> {
-      const query = { limit: parse(z.number().int().min(1).max(100), options.limit ?? 50, true), offset: parse(z.number().int().min(0).max(1_000_000), options.offset ?? 0, true), ...(options.source ? { source: parse(source, options.source, true) } : {}) }
+      const query = {
+        limit: parse(z.number().int().min(1).max(100), options.limit ?? 50, true),
+        offset: parse(z.number().int().min(0).max(1_000_000), options.offset ?? 0, true),
+        ...(options.source ? { source: parse(source, options.source, true) } : {}),
+      }
       const value = parse(chats, await auth.request('/api/control/pi/imports/chats', { query, signal }))
-      if (value.chats.length > query.limit || new Set(value.chats.map(item => item.id)).size !== value.chats.length || options.source && value.chats.some(item => item.source !== options.source)) throw new GatewayError('invalid-response')
+      if (value.chats.length > query.limit || new Set(value.chats.map(item => item.id)).size !== value.chats.length || (options.source && value.chats.some(item => item.source !== options.source))) throw new GatewayError('invalid-response')
       return value
     },
     async chat(id: string, after = 0, signal?: AbortSignal): Promise<ImportedChatDetail> {

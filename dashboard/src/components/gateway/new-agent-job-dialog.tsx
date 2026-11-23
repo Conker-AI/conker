@@ -13,14 +13,21 @@ import { gatewayError } from '@/lib/gateway/transport'
 import { jobIntervalHours, type JobStarter } from '@/lib/job-starters'
 
 type Repeat = 'hours' | 'daily' | 'weekly' | 'tool' | 'webhook'
-const repeats: { value: Repeat; label: string }[] = [{ value: 'hours', label: 'Every few hours' }, { value: 'daily', label: 'Every day' }, { value: 'weekly', label: 'Every week' }, { value: 'tool', label: 'When a tool has something new' }, { value: 'webhook', label: 'When its webhook is called' }]
+const repeats: { value: Repeat; label: string }[] = [
+  { value: 'hours', label: 'Every few hours' },
+  { value: 'daily', label: 'Every day' },
+  { value: 'weekly', label: 'Every week' },
+  { value: 'tool', label: 'When a tool has something new' },
+  { value: 'webhook', label: 'When its webhook is called' },
+]
 const looks = [5, 15, 30, 60]
 const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 const blank = { name: '', instructions: '', repeat: 'daily' as Repeat, hours: '2', time: '09:00', day: '0', tool: '', minutes: '15', inputs: {} as Record<string, string>, agent: 'companion' }
 
 /** A starter's words and timing in the form; the owner changes what they like before creating it. */
 function fromStarter(starter: JobStarter): typeof blank {
-  const when = starter.when, agent = starter.agentId ?? blank.agent
+  const when = starter.when,
+    agent = starter.agentId ?? blank.agent
   if (when.kind === 'hours') return { ...blank, name: starter.name, instructions: starter.instructions, repeat: 'hours', hours: String(when.every), agent }
   return { ...blank, name: starter.name, instructions: starter.instructions, repeat: when.kind, time: when.time, day: when.kind === 'weekly' ? String(when.day) : '0', agent }
 }
@@ -35,80 +42,299 @@ function timing(value: typeof blank): GatewayJobTiming {
  * A new AI job: what Conker should do, and when. Tools still ask before changing anything. A
  * starter only fills the form in; mount it with a new key for each opening so the values start fresh.
  */
-export function NewAgentJobDialog({ open, onOpenChange, client, loadTools, loadAgents, starter = null, onCreated }: {
-  open: boolean; onOpenChange: (open: boolean) => void; client: Pick<GatewayJobsClient, 'createAgentJob'>
-  loadTools?: (signal?: AbortSignal) => Promise<ToolInventory>; loadAgents?: (signal?: AbortSignal) => Promise<AgentProfile[]>
-  starter?: JobStarter | null; onCreated: (job: GatewayJob) => void
+export function NewAgentJobDialog({
+  open,
+  onOpenChange,
+  client,
+  loadTools,
+  loadAgents,
+  starter = null,
+  onCreated,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  client: Pick<GatewayJobsClient, 'createAgentJob'>
+  loadTools?: (signal?: AbortSignal) => Promise<ToolInventory>
+  loadAgents?: (signal?: AbortSignal) => Promise<AgentProfile[]>
+  starter?: JobStarter | null
+  onCreated: (job: GatewayJob) => void
 }) {
-  const [value, setValue] = useState(() => starter ? fromStarter(starter) : blank), [pending, setPending] = useState(false), [error, setError] = useState<string | null>(null)
-  const [tools, setTools] = useState<ToolInventory['results'] | null>(null), [toolsFailed, setToolsFailed] = useState(false), [agents, setAgents] = useState<AgentProfile[] | null>(null)
+  const [value, setValue] = useState(() => (starter ? fromStarter(starter) : blank)),
+    [pending, setPending] = useState(false),
+    [error, setError] = useState<string | null>(null)
+  const [tools, setTools] = useState<ToolInventory['results'] | null>(null),
+    [toolsFailed, setToolsFailed] = useState(false),
+    [agents, setAgents] = useState<AgentProfile[] | null>(null)
   const watching = value.repeat === 'tool'
   useEffect(() => {
     if (!open || !watching || tools || !loadTools) return
     const controller = new AbortController()
-    loadTools(controller.signal).then(found => { if (!controller.signal.aborted) { setToolsFailed(false); setTools(found.status === 'ok' ? found.results : []) } }).catch(() => { if (!controller.signal.aborted) { setTools([]); setToolsFailed(true) } })
+    loadTools(controller.signal)
+      .then(found => {
+        if (!controller.signal.aborted) {
+          setToolsFailed(false)
+          setTools(found.status === 'ok' ? found.results : [])
+        }
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) {
+          setTools([])
+          setToolsFailed(true)
+        }
+      })
     return () => controller.abort()
   }, [open, watching, tools, loadTools])
   // Only the owner's active agents; with just the default one there is nothing to choose.
   useEffect(() => {
     if (!open || agents || !loadAgents) return
     const controller = new AbortController()
-    loadAgents(controller.signal).then(found => { if (!controller.signal.aborted) setAgents(found.filter(agent => agent.archived_at === null)) }).catch(() => { if (!controller.signal.aborted) setAgents([]) })
+    loadAgents(controller.signal)
+      .then(found => {
+        if (!controller.signal.aborted) setAgents(found.filter(agent => agent.archived_at === null))
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setAgents([])
+      })
     return () => controller.abort()
   }, [open, agents, loadAgents])
   const chosen = tools?.find(tool => tool.id === value.tool)
   const [discarding, setDiscarding] = useState(false)
   const initial = starter ? fromStarter(starter) : blank
   const edited = value.name !== initial.name || value.instructions !== initial.instructions
-  const leave = () => { setValue(blank); setError(null); onOpenChange(false) }
-  const close = () => { if (edited) setDiscarding(true); else leave() }
+  const leave = () => {
+    setValue(blank)
+    setError(null)
+    onOpenChange(false)
+  }
+  const close = () => {
+    if (edited) setDiscarding(true)
+    else leave()
+  }
   const submit = async (event: FormEvent) => {
-    event.preventDefault(); setPending(true); setError(null)
+    event.preventDefault()
+    setPending(true)
+    setError(null)
     try {
       const inputs = Object.fromEntries(Object.entries(value.inputs).filter(([name, text]) => text.trim() && chosen?.inputs.some(input => input.name === name)))
-      onCreated(await client.createAgentJob({ name: value.name, instructions: value.instructions, timing: timing(value), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone, agentId: value.agent,
-        ...(watching ? { watch: { toolId: value.tool, args: inputs, everyMinutes: Number(value.minutes) } } : {}), ...(value.repeat === 'webhook' ? { clock: false } : {}) }))
+      onCreated(
+        await client.createAgentJob({
+          name: value.name,
+          instructions: value.instructions,
+          timing: timing(value),
+          timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          agentId: value.agent,
+          ...(watching ? { watch: { toolId: value.tool, args: inputs, everyMinutes: Number(value.minutes) } } : {}),
+          ...(value.repeat === 'webhook' ? { clock: false } : {}),
+        }),
+      )
       setValue(blank)
-    } catch (cause) { setError(cause instanceof GatewayJobMutationError ? cause.message : gatewayError(cause).message) } finally { setPending(false) }
+    } catch (cause) {
+      setError(cause instanceof GatewayJobMutationError ? cause.message : gatewayError(cause).message)
+    } finally {
+      setPending(false)
+    }
   }
-  const select = (id: string, current: string, items: { value: string; label: string }[], onChange: (next: string) => void) =>
-    <Select value={current} onValueChange={next => { if (next !== null) onChange(next) }} disabled={pending} items={items}>
-      <SelectTrigger id={id}><SelectValue /></SelectTrigger>
-      <SelectContent>{items.map(item => <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>)}</SelectContent>
+  const select = (id: string, current: string, items: { value: string; label: string }[], onChange: (next: string) => void) => (
+    <Select
+      value={current}
+      onValueChange={next => {
+        if (next !== null) onChange(next)
+      }}
+      disabled={pending}
+      items={items}
+    >
+      <SelectTrigger id={id}>
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {items.map(item => (
+          <SelectItem key={item.value} value={item.value}>
+            {item.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
     </Select>
-  return <><Dialog open={open} onOpenChange={next => !pending && !next && close()} disablePointerDismissal>
-    <TaskDialogContent title="New AI job" description="Tell Conker what to do and when. It works with its tools on that schedule and asks before changing, sending or creating anything." showCloseButton={!pending}>
-      <form onSubmit={submit} className="flex min-h-0 flex-1 flex-col"><OverlayBody>
-        {starter && <div className="space-y-1 text-sm leading-6"><p className="text-muted-foreground">Filled in from the idea “{starter.name}”. Change anything you like; nothing is made until you create it.</p>{starter.needs && <p>It needs {starter.needs}. If you haven’t connected one yet, add it in Tools first.</p>}</div>}
-        <div className="space-y-2"><Label htmlFor="agent-job-name">Name</Label><Input id="agent-job-name" required maxLength={80} disabled={pending} value={value.name} placeholder="Weekly life review" onChange={event => setValue({ ...value, name: event.target.value })} /></div>
-        <div className="space-y-2"><Label htmlFor="agent-job-instructions">What to do</Label><Textarea id="agent-job-instructions" required maxLength={4000} disabled={pending} value={value.instructions} placeholder="Look at my whole week: chats, calendar and memory. Suggest better ways to organize it, and tell me only if something needs me." onChange={event => setValue({ ...value, instructions: event.target.value })} className="min-h-32 resize-y" />
-          <p className="text-xs leading-5 text-muted-foreground">Add conditions in your own words, like “only if a deadline is within three days”. When there’s nothing for you, it stays quiet.</p></div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className={watching || value.repeat === 'webhook' ? 'space-y-2 sm:col-span-2' : 'space-y-2'}><Label htmlFor="agent-job-repeat">When</Label>{select('agent-job-repeat', value.repeat, repeats, repeat => setValue({ ...value, repeat: repeat as Repeat }))}</div>
-          {watching || value.repeat === 'webhook' ? null : value.repeat === 'hours' ? <div className="space-y-2"><Label htmlFor="agent-job-hours">How often</Label>{select('agent-job-hours', value.hours, jobIntervalHours.map(hours => ({ value: String(hours), label: hours === 1 ? 'Every hour' : `Every ${hours} hours` })), hours => setValue({ ...value, hours }))}</div>
-            : <div className="grid grid-cols-2 gap-2">
-              {value.repeat === 'weekly' && <div className="space-y-2"><Label htmlFor="agent-job-day">Day</Label>{select('agent-job-day', value.day, days.map((day, index) => ({ value: String(index), label: day })), day => setValue({ ...value, day }))}</div>}
-              <div className={value.repeat === 'weekly' ? 'space-y-2' : 'col-span-2 space-y-2'}><Label htmlFor="agent-job-time">Time</Label><Input id="agent-job-time" type="time" required disabled={pending} value={value.time} onChange={event => setValue({ ...value, time: event.target.value })} /></div>
-            </div>}
-        </div>
-        {watching && <div className="space-y-4 rounded-lg border p-3">
-          <div className="space-y-2"><Label htmlFor="agent-job-tool">Tool to watch</Label>
-            {tools === null ? <p role="status" className="text-sm text-muted-foreground">Loading tools…</p> : toolsFailed ? <p role="alert" className="text-sm text-destructive-foreground">Your tools couldn’t be loaded. <button type="button" className="underline" onClick={() => { setToolsFailed(false); setTools(null) }}>Try again</button>.</p> : tools.length ? select('agent-job-tool', value.tool, tools.map(tool => ({ value: tool.id, label: tool.name || tool.id })), tool => setValue({ ...value, tool, inputs: {} }))
-              : <p className="text-sm text-muted-foreground">No tools are available. Connect one in Tools first, like an MCP server for your messages.</p>}
-          </div>
-          {chosen?.inputs.map(input => <div key={input.name} className="space-y-2"><Label htmlFor={`agent-job-input-${input.name}`}>{input.name}{input.required ? '' : ' (optional)'}</Label>
-            <Input id={`agent-job-input-${input.name}`} disabled={pending} required={input.required} maxLength={4000} value={value.inputs[input.name] ?? ''} placeholder={input.description} onChange={event => setValue({ ...value, inputs: { ...value.inputs, [input.name]: event.target.value } })} /></div>)}
-          <div className="space-y-2"><Label htmlFor="agent-job-minutes">Look every</Label>{select('agent-job-minutes', value.minutes, looks.map(minutes => ({ value: String(minutes), label: minutes === 60 ? '1 hour' : `${minutes} minutes` })), minutes => setValue({ ...value, minutes }))}</div>
-          <p className="text-xs leading-5 text-muted-foreground">Pick a tool that reads, like “new messages”. Conker looks every few minutes and starts this job only when the answer changes. A tool that asks for your OK each time can’t be watched.</p>
-        </div>}
-        <p className="text-xs leading-5 text-muted-foreground">{value.repeat === 'webhook' ? 'After you create it, make its webhook on the job’s page to get the address and secret.' : watching ? 'Watching pauses in your quiet hours; anything new then starts the job at the first look after.' : value.repeat === 'hours' ? 'Repeating jobs skip your quiet hours (set in Settings), so they never run at night.' : 'It runs at the time you set, in this device’s time zone.'}</p>
-        {agents && agents.length > 1 && <div className="space-y-2"><Label htmlFor="agent-job-agent">Agent</Label>{select('agent-job-agent', value.agent, agents.map(agent => ({ value: agent.id, label: agent.configuration.name })), agent => setValue({ ...value, agent }))}</div>}
-        {error && <p role="alert" className="text-sm text-destructive-foreground">{error}</p>}
-      </OverlayBody>
-      <FormActions inset>
-        <Button type="button" variant="outline" disabled={pending} onClick={close}>Cancel</Button>
-        <Button type="submit" disabled={pending || !value.name.trim() || !value.instructions.trim() || (watching ? !chosen : value.repeat !== 'hours' && value.repeat !== 'webhook' && !/^([01]\d|2[0-3]):[0-5]\d$/.test(value.time))}><Sparkles />{pending ? 'Creating…' : 'Create AI job'}</Button>
-      </FormActions></form>
-    </TaskDialogContent>
-  </Dialog><ConfirmationDialog open={discarding} onOpenChange={setDiscarding} title="Discard this AI job?" description="The name and instructions you entered will be discarded." actionLabel="Discard job" pending={false} onConfirm={() => { setDiscarding(false); leave() }} /></>
+  )
+  return (
+    <>
+      <Dialog open={open} onOpenChange={next => !pending && !next && close()} disablePointerDismissal>
+        <TaskDialogContent title="New AI job" description="Tell Conker what to do and when. It works with its tools on that schedule and asks before changing, sending or creating anything." showCloseButton={!pending}>
+          <form onSubmit={submit} className="flex min-h-0 flex-1 flex-col">
+            <OverlayBody>
+              {starter && (
+                <div className="space-y-1 text-sm leading-6">
+                  <p className="text-muted-foreground">Filled in from the idea “{starter.name}”. Change anything you like; nothing is made until you create it.</p>
+                  {starter.needs && <p>It needs {starter.needs}. If you haven’t connected one yet, add it in Tools first.</p>}
+                </div>
+              )}
+              <div className="space-y-2">
+                <Label htmlFor="agent-job-name">Name</Label>
+                <Input id="agent-job-name" required maxLength={80} disabled={pending} value={value.name} placeholder="Weekly life review" onChange={event => setValue({ ...value, name: event.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="agent-job-instructions">What to do</Label>
+                <Textarea
+                  id="agent-job-instructions"
+                  required
+                  maxLength={4000}
+                  disabled={pending}
+                  value={value.instructions}
+                  placeholder="Look at my whole week: chats, calendar and memory. Suggest better ways to organize it, and tell me only if something needs me."
+                  onChange={event => setValue({ ...value, instructions: event.target.value })}
+                  className="min-h-32 resize-y"
+                />
+                <p className="text-xs leading-5 text-muted-foreground">Add conditions in your own words, like “only if a deadline is within three days”. When there’s nothing for you, it stays quiet.</p>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className={watching || value.repeat === 'webhook' ? 'space-y-2 sm:col-span-2' : 'space-y-2'}>
+                  <Label htmlFor="agent-job-repeat">When</Label>
+                  {select('agent-job-repeat', value.repeat, repeats, repeat => setValue({ ...value, repeat: repeat as Repeat }))}
+                </div>
+                {watching || value.repeat === 'webhook' ? null : value.repeat === 'hours' ? (
+                  <div className="space-y-2">
+                    <Label htmlFor="agent-job-hours">How often</Label>
+                    {select(
+                      'agent-job-hours',
+                      value.hours,
+                      jobIntervalHours.map(hours => ({ value: String(hours), label: hours === 1 ? 'Every hour' : `Every ${hours} hours` })),
+                      hours => setValue({ ...value, hours }),
+                    )}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-2">
+                    {value.repeat === 'weekly' && (
+                      <div className="space-y-2">
+                        <Label htmlFor="agent-job-day">Day</Label>
+                        {select(
+                          'agent-job-day',
+                          value.day,
+                          days.map((day, index) => ({ value: String(index), label: day })),
+                          day => setValue({ ...value, day }),
+                        )}
+                      </div>
+                    )}
+                    <div className={value.repeat === 'weekly' ? 'space-y-2' : 'col-span-2 space-y-2'}>
+                      <Label htmlFor="agent-job-time">Time</Label>
+                      <Input id="agent-job-time" type="time" required disabled={pending} value={value.time} onChange={event => setValue({ ...value, time: event.target.value })} />
+                    </div>
+                  </div>
+                )}
+              </div>
+              {watching && (
+                <div className="space-y-4 rounded-lg border p-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="agent-job-tool">Tool to watch</Label>
+                    {tools === null ? (
+                      <p role="status" className="text-sm text-muted-foreground">
+                        Loading tools…
+                      </p>
+                    ) : toolsFailed ? (
+                      <p role="alert" className="text-sm text-destructive-foreground">
+                        Your tools couldn’t be loaded.{' '}
+                        <button
+                          type="button"
+                          className="underline"
+                          onClick={() => {
+                            setToolsFailed(false)
+                            setTools(null)
+                          }}
+                        >
+                          Try again
+                        </button>
+                        .
+                      </p>
+                    ) : tools.length ? (
+                      select(
+                        'agent-job-tool',
+                        value.tool,
+                        tools.map(tool => ({ value: tool.id, label: tool.name || tool.id })),
+                        tool => setValue({ ...value, tool, inputs: {} }),
+                      )
+                    ) : (
+                      <p className="text-sm text-muted-foreground">No tools are available. Connect one in Tools first, like an MCP server for your messages.</p>
+                    )}
+                  </div>
+                  {chosen?.inputs.map(input => (
+                    <div key={input.name} className="space-y-2">
+                      <Label htmlFor={`agent-job-input-${input.name}`}>
+                        {input.name}
+                        {input.required ? '' : ' (optional)'}
+                      </Label>
+                      <Input
+                        id={`agent-job-input-${input.name}`}
+                        disabled={pending}
+                        required={input.required}
+                        maxLength={4000}
+                        value={value.inputs[input.name] ?? ''}
+                        placeholder={input.description}
+                        onChange={event => setValue({ ...value, inputs: { ...value.inputs, [input.name]: event.target.value } })}
+                      />
+                    </div>
+                  ))}
+                  <div className="space-y-2">
+                    <Label htmlFor="agent-job-minutes">Look every</Label>
+                    {select(
+                      'agent-job-minutes',
+                      value.minutes,
+                      looks.map(minutes => ({ value: String(minutes), label: minutes === 60 ? '1 hour' : `${minutes} minutes` })),
+                      minutes => setValue({ ...value, minutes }),
+                    )}
+                  </div>
+                  <p className="text-xs leading-5 text-muted-foreground">
+                    Pick a tool that reads, like “new messages”. Conker looks every few minutes and starts this job only when the answer changes. A tool that asks for your OK each time can’t be watched.
+                  </p>
+                </div>
+              )}
+              <p className="text-xs leading-5 text-muted-foreground">
+                {value.repeat === 'webhook'
+                  ? 'After you create it, make its webhook on the job’s page to get the address and secret.'
+                  : watching
+                    ? 'Watching pauses in your quiet hours; anything new then starts the job at the first look after.'
+                    : value.repeat === 'hours'
+                      ? 'Repeating jobs skip your quiet hours (set in Settings), so they never run at night.'
+                      : 'It runs at the time you set, in this device’s time zone.'}
+              </p>
+              {agents && agents.length > 1 && (
+                <div className="space-y-2">
+                  <Label htmlFor="agent-job-agent">Agent</Label>
+                  {select(
+                    'agent-job-agent',
+                    value.agent,
+                    agents.map(agent => ({ value: agent.id, label: agent.configuration.name })),
+                    agent => setValue({ ...value, agent }),
+                  )}
+                </div>
+              )}
+              {error && (
+                <p role="alert" className="text-sm text-destructive-foreground">
+                  {error}
+                </p>
+              )}
+            </OverlayBody>
+            <FormActions inset>
+              <Button type="button" variant="outline" disabled={pending} onClick={close}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={pending || !value.name.trim() || !value.instructions.trim() || (watching ? !chosen : value.repeat !== 'hours' && value.repeat !== 'webhook' && !/^([01]\d|2[0-3]):[0-5]\d$/.test(value.time))}>
+                <Sparkles />
+                {pending ? 'Creating…' : 'Create AI job'}
+              </Button>
+            </FormActions>
+          </form>
+        </TaskDialogContent>
+      </Dialog>
+      <ConfirmationDialog
+        open={discarding}
+        onOpenChange={setDiscarding}
+        title="Discard this AI job?"
+        description="The name and instructions you entered will be discarded."
+        actionLabel="Discard job"
+        pending={false}
+        onConfirm={() => {
+          setDiscarding(false)
+          leave()
+        }}
+      />
+    </>
+  )
 }

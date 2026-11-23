@@ -7,7 +7,12 @@ import { GatewayError, gatewayError } from './transport'
 /** A completed answer exports as a document, deck or spreadsheet; an artifact can also be CSV or JSON. */
 export type AnswerExportFormat = Extract<GatewayFileFormat, 'docx' | 'pdf' | 'pptx' | 'xlsx'>
 export const exportLabels: Record<GatewayFileFormat, string> = {
-  docx: 'Word (.docx)', pdf: 'PDF (.pdf)', pptx: 'PowerPoint (.pptx)', xlsx: 'Excel (.xlsx)', csv: 'CSV (.csv)', json: 'JSON (.json)',
+  docx: 'Word (.docx)',
+  pdf: 'PDF (.pdf)',
+  pptx: 'PowerPoint (.pptx)',
+  xlsx: 'Excel (.xlsx)',
+  csv: 'CSV (.csv)',
+  json: 'JSON (.json)',
 }
 /** Short names for "Making the PDF…" lines. */
 export const exportNames: Record<GatewayFileFormat, string> = { docx: 'Word file', pdf: 'PDF', pptx: 'slides', xlsx: 'spreadsheet', csv: 'CSV file', json: 'JSON file' }
@@ -51,19 +56,28 @@ const refusals: Partial<Record<GatewayRefusalCode, string>> = {
   invalid_version: 'That version no longer exists. Reload the artifact.',
 }
 export function exportRefusalMessage(error: unknown): string {
-  return error instanceof GatewayRefusal && refusals[error.refusal] || gatewayError(error).message
+  return (error instanceof GatewayRefusal && refusals[error.refusal]) || gatewayError(error).message
 }
 
 /** Hand the downloaded bytes to the browser as a file; nothing is opened or shown. */
 export function saveDownload(file: GatewayDownload) {
-  const url = URL.createObjectURL(file.blob), anchor = document.createElement('a')
-  anchor.href = url; anchor.download = file.filename; anchor.rel = 'noopener'
+  const url = URL.createObjectURL(file.blob),
+    anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = file.filename
+  anchor.rel = 'noopener'
   anchor.click()
   setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 
-const artifactId = z.string().regex(/^artifact_[0-9a-f]{32}$/), sessionId = z.string().regex(/^ses_[0-9a-f]{16}$/), messageId = z.string().regex(/^msg_[0-9a-f]{16}$/)
-function check<T>(schema: z.ZodType<T>, value: unknown): T { const result = schema.safeParse(value); if (!result.success) throw new GatewayError('validation'); return result.data }
+const artifactId = z.string().regex(/^artifact_[0-9a-f]{32}$/),
+  sessionId = z.string().regex(/^ses_[0-9a-f]{16}$/),
+  messageId = z.string().regex(/^msg_[0-9a-f]{16}$/)
+function check<T>(schema: z.ZodType<T>, value: unknown): T {
+  const result = schema.safeParse(value)
+  if (!result.success) throw new GatewayError('validation')
+  return result.data
+}
 
 export function createGatewayExportsClient(auth: Pick<GatewayAuthClient, 'download'>) {
   return {

@@ -3,10 +3,16 @@ import type { GatewayAuthClient } from './auth'
 import { GatewayError } from './transport'
 
 /** What Pi's POST /prompts/enhance sends: the rewrite, what changed and which model wrote it. Nothing is saved or sent. */
-const enhanced = z.object({
-  text: z.string().min(1).max(16000), notes: z.array(z.string().max(500)).max(5), modelId: z.string().max(200),
-  templateId: z.string().nullish(), fields: z.record(z.string(), z.union([z.string(), z.array(z.string()), z.boolean()])).optional(), missing: z.array(z.string()).optional(),
-}).strict()
+const enhanced = z
+  .object({
+    text: z.string().min(1).max(16000),
+    notes: z.array(z.string().max(500)).max(5),
+    modelId: z.string().max(200),
+    templateId: z.string().nullish(),
+    fields: z.record(z.string(), z.union([z.string(), z.array(z.string()), z.boolean()])).optional(),
+    missing: z.array(z.string()).optional(),
+  })
+  .strict()
 
 export type EnhancedPrompt = z.infer<typeof enhanced>
 export type EnhanceOptions = { sessionId?: string | null; templateId?: string | null; privacy?: { memoryDisabled?: boolean; harnessDisabled?: boolean }; signal?: AbortSignal }

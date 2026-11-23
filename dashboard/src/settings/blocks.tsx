@@ -25,7 +25,13 @@ export function settingBlocks({ client, authStore, onSignOut }: { client: Gatewa
     'tools-usable': () => <ToolsUsableBlock />,
     'always-ask': () => <AlwaysAskBlock />,
     'browser-sessions': () => <BrowserSessions client={client} />,
-    'sign-out': () => onSignOut ? <Button type="button" variant="outline" className="w-auto!" onClick={onSignOut}><LogOut />Sign out of this browser</Button> : null,
+    'sign-out': () =>
+      onSignOut ? (
+        <Button type="button" variant="outline" className="w-auto!" onClick={onSignOut}>
+          <LogOut />
+          Sign out of this browser
+        </Button>
+      ) : null,
     'character-link': () => <PlaceLink to="/settings/companion">Open the companion's character</PlaceLink>,
     'agents-link': () => <PlaceLink to="/agents">Open Agents</PlaceLink>,
   }
