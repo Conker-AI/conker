@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import type { GatewayAuthClient } from './auth'
-import { GatewayError } from './transport'
+import { createPiClient, piData } from './pi-client'
 
 const text = z.string().nullable()
 const belief = z
@@ -40,13 +40,10 @@ export type BeliefPage = z.infer<typeof beliefPage>
 export type BeliefFilter = { origin: 'all' | 'stated' | 'concluded'; state: 'all' | 'needs_review'; after?: string | null }
 
 export function createMemoryBeliefsClient(auth: Pick<GatewayAuthClient, 'request'>) {
+  const pi = createPiClient(auth)
   return {
-    async list(filter: BeliefFilter, signal?: AbortSignal): Promise<BeliefPage> {
-      const query = { origin: filter.origin, state: filter.state, limit: 50, ...(filter.after ? { after: filter.after } : {}) }
-      const result = beliefPage.safeParse(await auth.request('/api/control/pi/memory/beliefs', { query, signal }))
-      if (!result.success) throw new GatewayError('invalid-response')
-      return result.data
-    },
+    list: (filter: BeliefFilter, signal?: AbortSignal): Promise<BeliefPage> =>
+      piData(pi.GET('/memory/beliefs', { params: { query: { origin: filter.origin, state: filter.state, limit: 50, ...(filter.after ? { after: filter.after } : {}) } }, signal }), beliefPage),
   }
 }
 

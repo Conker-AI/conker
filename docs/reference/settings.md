@@ -30,7 +30,7 @@ Who you are, where you are and how your days run.
 | **Time zone**<br>`you.time_zone` | Your time zone for schedules, reminders, quiet hours and the daily ritual. (applies right away) | `Asia/Jerusalem` | pi `/owner/preferences` `quietHours.timeZone` |
 | **Follow this device's time zone**<br>`you.time_zone_auto` | Updates your time zone when you travel. (saved, not used yet) | on | owner settings |
 | **App language**<br>`you.app_language` | The language of Conker's screens. Choices: English, Hebrew, Russian. (saved, not used yet) | English | owner settings |
-| **Answer language**<br>`you.answer_language` | The language Conker answers in. Choices: Same as your message, English, Hebrew, Russian. (saved, not used yet) | Same as your message | owner settings |
+| **Answer language**<br>`you.answer_language` | The language Conker answers in. Choices: Same as your message, English, Hebrew, Russian. (applies from the next message) | Same as your message | owner settings |
 | **Time format**<br>`you.time_format` | How times are written. Choices: 24-hour, 12-hour. (saved, not used yet) | 24-hour | owner settings |
 | **Date format**<br>`you.date_format` | How dates are written. Choices: 28 Oct 2026, Oct 28, 2026, 2026-10-28. (saved, not used yet) | 28 Oct 2026 | owner settings |
 | **First day of the week**<br>`you.week_start` | Where weeks start in calendars and weekly plans. Choices: Sunday, Monday. (saved, not used yet) | Sunday | owner settings |
@@ -179,8 +179,8 @@ How requests, questions and the daily ritual work.
 |---|---|---|---|
 | **Buttons per tool**<br>`inbox.tool_buttons` | The buttons a tool's card shows when it asks you. (applies right away) | its own screen | Settings screen |
 | **Exact details open**<br>`inbox.details_open` | Shows a request's exact details without tapping Details. (saved, not used yet) | off | owner settings |
-| **Questions per chat**<br>`inbox.asks_per_chat` | How many of Conker's questions can wait from one chat. 1 to 10. (saved, not used yet) | `3` | owner settings |
-| **Questions in all**<br>`inbox.asks_total` | How many of Conker's questions can wait at once. 5 to 100. (saved, not used yet) | `20` | owner settings |
+| **Questions per chat**<br>`inbox.asks_per_chat` | How many of Conker's questions can wait from one chat. 1 to 10. (applies right away) | `3` | owner settings |
+| **Questions in all**<br>`inbox.asks_total` | How many of Conker's questions can wait at once. 5 to 100. (applies right away) | `20` | owner settings |
 | **Group cards by**<br>`inbox.group_by` | How the Inbox groups what waits for you. Choices: Kind, Chat, Agent, Urgency. (saved, not used yet) | Kind | owner settings |
 | **Order**<br>`inbox.sort` | Which cards come first. Choices: Urgent first, Oldest first, Newest first. (saved, not used yet) | Urgent first | owner settings |
 | **Later means**<br>`inbox.later` | When a card you moved to Later comes back. Choices: Next ritual, Tonight, Tomorrow morning. (saved, not used yet) | Next ritual | owner settings |
@@ -247,7 +247,7 @@ How new chats start and how chats look and behave.
 | Setting | What it does | Default | Home |
 |---|---|---|---|
 | **Suggest your next message**<br>`chats.suggestions` | Shows what you might ask next under Conker's answer. (saved, not used yet) | on | owner settings |
-| **Suggestions shown**<br>`chats.suggestions_count` | How many next-message suggestions appear. 1 to 3. (saved, not used yet) | `2` | owner settings |
+| **Suggestions shown**<br>`chats.suggestions_count` | How many next-message suggestions appear. 1 to 3. (applies right away) | `2` | owner settings |
 | **Suggestion style**<br>`chats.suggestions_style` | How suggestions appear. Choices: Buttons, Gray text in the box. (saved, not used yet) | Buttons | owner settings |
 | **Prompt check**<br>`chats.prompt_check` | Advises how to make a request clearer before you send it. Choices: Auto, On, Off. (saved, not used yet) | Auto | owner settings |
 | **Template suggestions**<br>`chats.template_suggest` | Offers a template when your message looks like one. Choices: Auto, Off. (saved, not used yet) | Auto | owner settings |
@@ -448,8 +448,8 @@ Uploads, answer shape and exports.
 
 | Setting | What it does | Default | Home |
 |---|---|---|---|
-| **Answer format**<br>`files.answer_format` | The shape of answers in new chats. Choices: Auto, Text, List, Table, Document, Code. (saved, not used yet) | Auto | owner settings |
-| **Answer length**<br>`files.answer_length` | How long answers are in new chats. Choices: Auto, Short, Medium, Long. (saved, not used yet) | Auto | owner settings |
+| **Answer format**<br>`files.answer_format` | The shape of answers in chats you leave on Auto. Choices: Auto, Text, List, Table, Document, Code. (applies from the next message) | Auto | owner settings |
+| **Answer length**<br>`files.answer_length` | How long answers are in chats you leave on Auto. Choices: Auto, Short, Medium, Long. (applies from the next message) | Auto | owner settings |
 | **Where answers go**<br>`files.destination` | Whether long answers stay in the chat or become a file. Choices: In the chat, A file, An artifact. (saved, not used yet) | In the chat | owner settings |
 | **Export as**<br>`files.export` | The file type for exported answers. Choices: Markdown, PDF, Word. (saved, not used yet) | Markdown | owner settings |
 
@@ -564,7 +564,7 @@ What Conker does on its own and on a schedule.
 | **Proactivity**<br>`companion.proactivity` | When Conker may start suggestions or research of its own. Choices: When it matters, Only when urgent, Never. (applies right away) | When it matters | pi `/owner/preferences` `urgency` |
 | **Ideas from Conker**<br>`proactivity.ideas` | Once a day Conker reads your recent chats and suggests what it could take off your plate. (applies right away) | its own screen | Settings screen |
 | **Ideas time**<br>`proactivity.ideas_time` | When the daily ideas pass runs. (saved, not used yet) | `09:00` | owner settings |
-| **Topics to skip**<br>`proactivity.skip_topics` | Topics Conker never suggests ideas about. (saved, not used yet) | none | owner settings |
+| **Topics to skip**<br>`proactivity.skip_topics` | Topics Conker never suggests ideas about. (applies right away) | none | owner settings |
 
 ### Daily limits
 
@@ -583,7 +583,7 @@ What Conker does on its own and on a schedule.
 | **Allowed triggers**<br>`proactivity.jobs.triggers` | What may start a job. Choices: A time, A tool's answer changing, A webhook, Something in Conker. (saved, not used yet) | A time, A tool's answer changing, A webhook, Something in Conker | owner settings |
 | **Shortest interval**<br>`proactivity.jobs.min_interval` | How often a job may run at most. 1 to 1440 minutes. (saved, not used yet) | `5` minutes | owner settings |
 | **Runs a day**<br>`proactivity.jobs.max_runs` | The most runs one job makes in a day. 1 to 1000. (saved, not used yet) | `100` | owner settings |
-| **Results in the Inbox**<br>`proactivity.jobs.results` | When a job's result shows in the Inbox. Choices: Only when something needs you, Always, Never. (saved, not used yet) | Only when something needs you | owner settings |
+| **Results in the Inbox**<br>`proactivity.jobs.results` | When a job's result shows in the Inbox. Choices: Only when something needs you, Always, Never. (applies right away) | Only when something needs you | owner settings |
 | **When a job fails**<br>`proactivity.jobs.on_failure` | What happens after a failed run. Choices: Tell me, Try again, Pause the job. (saved, not used yet) | Tell me | owner settings |
 | **Tries after a failure**<br>`proactivity.jobs.retries` | How many times a failed run is tried again. 0 to 5. (saved, not used yet) | `1` | owner settings |
 

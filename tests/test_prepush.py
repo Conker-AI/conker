@@ -43,7 +43,12 @@ def test_a_dashboard_change_plans_only_the_dashboard_checks():
         "dashboard lint",
         "dashboard build",
         "dashboard check",
+        "dashboard api types",
     ]
+
+
+def test_a_new_pi_pin_plans_the_api_types_check():
+    assert "dashboard api types" in names(["scripts/workspace-sources.json"])
 
 
 def test_everything_plans_both_and_runs_the_whole_suite():

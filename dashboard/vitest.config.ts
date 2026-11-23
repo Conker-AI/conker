@@ -37,11 +37,19 @@ export default defineConfig({
         'src/components/inbox/{inbox-card,recall-notice-card}.tsx',
         'src/components/resilience/{inline-error,skeletons}.tsx',
         'src/components/gateway/{imported-chats-line,memory-uses-line,open-loops-workspace,thinking-status}.tsx',
+        'src/components/{status-badge,message-action-button,reference-section}.tsx',
+        'src/components/chat/{chat-feature-error,tool-record}.tsx',
+        'src/components/gateway/{mode-chips,system-status,pending-submissions}.tsx',
+        'src/components/inbox/{agent-note-card,ask-card,reply-box}.tsx',
+        'src/components/design-system/list-card.tsx',
+        'src/components/table/data-table-pagination.tsx',
+        'src/components/ui/{progress,meter}.tsx',
+        'src/settings/setting-row.tsx',
       ],
       reporter: ['text', 'json-summary'],
-      // The rendered components have their own floor, measured over the .tsx files above (98.87 / 99.10 /
+      // The rendered components have their own floor, measured over the .tsx files above (99.40 / 99.54 /
       // 100 / 100); the floor for everything else is unchanged.
-      thresholds: { statements: 99, branches: 98, functions: 100, lines: 100, 'src/components/**/*.tsx': { statements: 98, branches: 99, functions: 100, lines: 100 } },
+      thresholds: { statements: 99, branches: 98, functions: 100, lines: 100, 'src/components/**/*.tsx': { statements: 99, branches: 99, functions: 100, lines: 100 } },
     },
   },
 })

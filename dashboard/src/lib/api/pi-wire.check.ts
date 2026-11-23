@@ -1,24 +1,20 @@
 // Compile-time check: each dashboard wire schema must accept what Pi's OpenAPI says Pi sends, and the
 // reverse. tsc -b fails on drift; nothing imports this file.
+// Routes called through gateway/pi-client.ts are bound at the call by piData instead.
 import type { paths } from './generated/pi'
-import type { GatewayArtifactWire } from '../gateway/artifacts'
+import type { Same } from '../gateway/pi-client'
 import type { GatewayHostInventory } from '../gateway/host-inventory'
 import type { GatewayJob } from '../gateway/jobs'
-import type { GatewayProject, GatewayProjectPage } from '../gateway/projects'
 import type { GatewayTeam } from '../gateway/teams'
 import type { GatewayDirectory } from '../gateway/filesystem'
 import type { GatewayCall, GatewayCallAudioTurn, GatewayCallAvailability } from '../gateway/calls'
 import type { AgentProfile, SetupChoice, SetupModelOptions, SetupProtectionPolicy, SetupReceipt, SetupRehearsal, SetupStatus } from '../gateway/control'
 import type { GatewayConfiguredTargets } from '../gateway/host-inventory'
 import type { GatewayAgentNote } from '../gateway/jobs'
-import type { MemoryUpkeepPage } from '../gateway/memory-care'
 import type { ChatOutput } from '../gateway/chat-names'
-import type { BeliefPage } from '../gateway/memory-beliefs'
-import type { MemoryUsePage } from '../gateway/memory-uses'
 import type { OpenLoopPage } from '../gateway/open-loops'
-import type { RecallNoticePage } from '../gateway/recall-notices'
 import type { EnhancedPrompt } from '../gateway/prompt-enhance'
-import type { TemplateDeleted, TemplatePage, TemplateReceipt } from '../gateway/prompt-templates'
+import type { TemplateDeleted, TemplateReceipt } from '../gateway/prompt-templates'
 import type { TeamRunFinishBody, TeamRunStepBody } from '../gateway/team-runs'
 
 type Ok<R> = R[Extract<keyof R, 200 | 201 | 202>]
@@ -29,33 +25,18 @@ type PiResponse<P extends keyof paths, M extends keyof paths[P]> = paths[P][M] e
 /** The JSON body Pi accepts on a route. */
 type PiRequest<P extends keyof paths, M extends keyof paths[P]> = paths[P][M] extends { requestBody: { content: { 'application/json': infer J } } } ? J : never
 
-/** Pydantic always sends fields with defaults, though the generator marks them optional; strict wire schemas may also leave fields optional. */
-type Sent<T> = T extends readonly (infer U)[] ? Sent<U>[] : T extends object ? { [K in keyof T]-?: Sent<Exclude<T[K], undefined>> } : T
-
-/** Each side accepts the other: Pi's reply fits the dashboard schema and nothing the schema needs is missing from Pi. */
-type Same<A, B> = [Sent<A>] extends [Sent<B>] ? ([Sent<B>] extends [Sent<A>] ? true : false) : false
-
 export const piWire = {
   // Pi's team-run replies are `unknown` in its OpenAPI, so only what the browser sends is bound here.
   teamRunStep: true satisfies Same<TeamRunStepBody, PiRequest<'/team-runs/{identity}/steps', 'post'>>,
   teamRunFinish: true satisfies Same<TeamRunFinishBody, PiRequest<'/team-runs/{identity}/finish', 'post'>>,
-  memoryUpkeep: true satisfies Same<MemoryUpkeepPage, PiResponse<'/memory/upkeep', 'get'>>,
-  memoryBeliefs: true satisfies Same<BeliefPage, PiResponse<'/memory/beliefs', 'get'>>,
-  memoryUses: true satisfies Same<MemoryUsePage, PiResponse<'/memory/{memory_id}/uses', 'get'>>,
-  recallNotices: true satisfies Same<RecallNoticePage, PiResponse<'/memory/recall-notices', 'get'>>,
   openLoops: true satisfies Same<OpenLoopPage, PiResponse<'/open-loops', 'get'>>,
   chatOutput: true satisfies Same<ChatOutput, PiResponse<'/sessions/{session_id}/output', 'get'>>,
   promptEnhance: true satisfies Same<EnhancedPrompt, PiResponse<'/prompts/enhance', 'post'>>,
-  promptTemplates: true satisfies Same<TemplatePage, PiResponse<'/prompts/templates', 'get'>>,
-  promptTemplate: true satisfies Same<TemplateReceipt, PiResponse<'/prompts/templates/{template_id}', 'get'>>,
   promptTemplateSaved: true satisfies Same<TemplateReceipt, PiResponse<'/prompts/templates/{template_id}', 'post'>>,
   promptTemplateDeleted: true satisfies Same<TemplateDeleted, PiResponse<'/prompts/templates/{template_id}/delete', 'post'>>,
-  projects: true satisfies Same<GatewayProjectPage, PiResponse<'/projects', 'get'>>,
-  project: true satisfies Same<GatewayProject, PiResponse<'/projects/{identity}', 'get'>>,
   team: true satisfies Same<GatewayTeam, PiResponse<'/collaboration/teams/{identity}', 'get'>>,
   job: true satisfies Same<GatewayJob, PiResponse<'/jobs/{identity}', 'get'>>,
   inv: true satisfies Same<GatewayHostInventory, PiResponse<'/system/inventory', 'post'>>,
-  art: true satisfies Same<GatewayArtifactWire, PiResponse<'/artifacts/{identity}', 'get'>>,
   listing: true satisfies Same<GatewayDirectory, PiResponse<'/system/files/listings', 'post'>>,
   call: true satisfies Same<GatewayCall, PiResponse<'/calls/browser', 'post'>>,
   callAudio: true satisfies Same<GatewayCallAudioTurn, PiResponse<'/calls/browser/{identity}/audio', 'post'>>,
