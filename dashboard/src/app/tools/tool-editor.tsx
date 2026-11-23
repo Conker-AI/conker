@@ -1,23 +1,16 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
-import type { ToolNode } from '@/lib/tool-workspace';
-import { type Connection } from "@xyflow/react";
-import { Button } from "@/components/ui/button";
-import { ConfirmationDialog } from "@/components/design-system";
-import {
-  createToolNode,
-  editorValidation,
-  type NodeKind,
-  type SavedCheck,
-  type ToolDefinition,
-  type WorkspaceRecord,
-} from "@/lib/tool-workspace";
-import { ToolConfiguration } from "./tool-fields";
-import { ToolEditorToolbar, type EditorMode } from "./tool-editor-toolbar";
-import { ToolStepCanvas } from "./tool-editor-canvas";
-import { ToolStepInspector } from "./tool-editor-inspector";
-import { ToolSource } from "./tool-editor-source";
+import { useEffect, useRef, useState, type ReactNode } from 'react'
+import type { ToolNode } from '@/lib/tool-workspace'
+import { type Connection } from '@xyflow/react'
+import { Button } from '@/components/ui/button'
+import { ConfirmationDialog } from '@/components/design-system'
+import { createToolNode, editorValidation, type NodeKind, type SavedCheck, type ToolDefinition, type WorkspaceRecord } from '@/lib/tool-workspace'
+import { ToolConfiguration } from './tool-fields'
+import { ToolEditorToolbar, type EditorMode } from './tool-editor-toolbar'
+import { ToolStepCanvas } from './tool-editor-canvas'
+import { ToolStepInspector } from './tool-editor-inspector'
+import { ToolSource } from './tool-editor-source'
 
-const serial = (value: unknown) => JSON.stringify(value, null, 2);
+const serial = (value: unknown) => JSON.stringify(value, null, 2)
 export function ToolEditor({
   record,
   records,
@@ -29,237 +22,192 @@ export function ToolEditor({
   capabilityPicker,
   savedCheck,
 }: {
-  record: WorkspaceRecord;
-  records: WorkspaceRecord[];
-  onBack: () => void;
-  liveSave: (definition: ToolDefinition) => Promise<void>;
-  livePublish: () => void;
-  liveHistory: () => void;
-  liveRun: () => void;
-  capabilityPicker?: (node: ToolNode, onChange: (node: ToolNode) => void) => ReactNode;
+  record: WorkspaceRecord
+  records: WorkspaceRecord[]
+  onBack: () => void
+  liveSave: (definition: ToolDefinition) => Promise<void>
+  livePublish: () => void
+  liveHistory: () => void
+  liveRun: () => void
+  capabilityPicker?: (node: ToolNode, onChange: (node: ToolNode) => void) => ReactNode
   /** ToolGate's check of the saved draft; it wins over the quick local check. */
-  savedCheck?: SavedCheck;
+  savedCheck?: SavedCheck
 }) {
-  const [definition, setDefinition] = useState(record.draft);
-  const [source, setSource] = useState<string | null>(null);
-  const [argumentSources, setArgumentSources] = useState<Record<string, string>>({});
-  const [mode, setMode] = useState<EditorMode>("build"),
-    [selected, setSelected] = useState<string | null>(null);
+  const [definition, setDefinition] = useState(record.draft)
+  const [source, setSource] = useState<string | null>(null)
+  const [argumentSources, setArgumentSources] = useState<Record<string, string>>({})
+  const [mode, setMode] = useState<EditorMode>('build'),
+    [selected, setSelected] = useState<string | null>(null)
   const [history, setHistory] = useState<ToolDefinition[]>([]),
-    [future, setFuture] = useState<ToolDefinition[]>([]);
-  const [query, setQuery] = useState(""),
+    [future, setFuture] = useState<ToolDefinition[]>([])
+  const [query, setQuery] = useState(''),
     [palette, setPalette] = useState(false),
     [outline, setOutline] = useState(false),
-    [expanded, setExpanded] = useState(false);
-  const [error, setError] = useState(""),
-    [notice, setNotice] = useState(""),
-    [busy, setBusy] = useState(false);
-  const [leave, setLeave] = useState(false);
+    [expanded, setExpanded] = useState(false)
+  const [error, setError] = useState(''),
+    [notice, setNotice] = useState(''),
+    [busy, setBusy] = useState(false)
+  const [leave, setLeave] = useState(false)
   const [connectFrom, setConnectFrom] = useState<string | null>(null),
     [connectTo, setConnectTo] = useState<string | null>(null),
-    [branch, setBranch] = useState("true");
-  const workspace = useRef<HTMLDivElement>(null);
+    [branch, setBranch] = useState('true')
+  const workspace = useRef<HTMLDivElement>(null)
   const dirty = serial(definition) !== serial(record.draft),
-    sourceDirty = source !== null && source !== serial(definition);
-  const hasUnappliedFields = Object.keys(argumentSources).length > 0;
-  const pendingEdits = sourceDirty || hasUnappliedFields;
+    sourceDirty = source !== null && source !== serial(definition)
+  const hasUnappliedFields = Object.keys(argumentSources).length > 0
+  const pendingEdits = sourceDirty || hasUnappliedFields
   const { issues, label: checkLabel } = editorValidation(definition, true, dirty, savedCheck),
-    node = definition.nodes.find((n) => n.id === selected);
+    node = definition.nodes.find(n => n.id === selected)
   useEffect(() => {
     const unload = (event: BeforeUnloadEvent) => {
-      if (dirty || pendingEdits) event.preventDefault();
-    };
-    window.addEventListener("beforeunload", unload);
-    return () => window.removeEventListener("beforeunload", unload);
-  }, [dirty, pendingEdits]);
-  useEffect(() => {
-    if (!expanded) return;
-    const escape = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setExpanded(false);
-    };
-    window.addEventListener("keydown", escape);
-    return () => window.removeEventListener("keydown", escape);
-  }, [expanded]);
-  const explainPendingEdits = () => {
-    setError(
-      sourceDirty
-        ? "Apply or discard the source changes before continuing."
-        : "Apply or discard the pending step arguments before continuing.",
-    );
-    if (hasUnappliedFields && !sourceDirty) {
-      setMode("build");
-      setSelected(Object.keys(argumentSources)[0]);
+      if (dirty || pendingEdits) event.preventDefault()
     }
-  };
+    window.addEventListener('beforeunload', unload)
+    return () => window.removeEventListener('beforeunload', unload)
+  }, [dirty, pendingEdits])
+  useEffect(() => {
+    if (!expanded) return
+    const escape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setExpanded(false)
+    }
+    window.addEventListener('keydown', escape)
+    return () => window.removeEventListener('keydown', escape)
+  }, [expanded])
+  const explainPendingEdits = () => {
+    setError(sourceDirty ? 'Apply or discard the source changes before continuing.' : 'Apply or discard the pending step arguments before continuing.')
+    if (hasUnappliedFields && !sourceDirty) {
+      setMode('build')
+      setSelected(Object.keys(argumentSources)[0])
+    }
+  }
   const switchMode = (next: EditorMode) => {
     if (pendingEdits && next !== mode) {
-      explainPendingEdits();
-      return false;
+      explainPendingEdits()
+      return false
     }
-    setMode(next);
-    setError("");
-    return true;
-  };
+    setMode(next)
+    setError('')
+    return true
+  }
   const changeArgumentSource = (id: string, text: string | null) => {
-    setError("");
-    setArgumentSources((previous) => {
-      const next = { ...previous };
-      const canonical = definition.nodes.find((n) => n.id === id)?.config.args;
-      if (text === null || text === serial(canonical)) delete next[id];
-      else next[id] = text;
-      return next;
-    });
-  };
-  const change = (
-    next: ToolDefinition,
-    track = true,
-    applyingSource = false,
-  ) => {
+    setError('')
+    setArgumentSources(previous => {
+      const next = { ...previous }
+      const canonical = definition.nodes.find(n => n.id === id)?.config.args
+      if (text === null || text === serial(canonical)) delete next[id]
+      else next[id] = text
+      return next
+    })
+  }
+  const change = (next: ToolDefinition, track = true, applyingSource = false) => {
     if (sourceDirty && !applyingSource) {
-      explainPendingEdits();
-      return;
+      explainPendingEdits()
+      return
     }
     if (track) {
-      setHistory((h) => [...h.slice(-39), definition]);
-      setFuture([]);
+      setHistory(h => [...h.slice(-39), definition])
+      setFuture([])
     }
-    setDefinition(next);
-    setSource(null);
-    setNotice("");
-  };
+    setDefinition(next)
+    setSource(null)
+    setNotice('')
+  }
   const undo = () => {
     if (pendingEdits) {
-      explainPendingEdits();
-      return;
+      explainPendingEdits()
+      return
     }
-    const previous = history.at(-1);
+    const previous = history.at(-1)
     if (previous) {
-      setFuture((f) => [...f, definition]);
-      setHistory((h) => h.slice(0, -1));
-      setDefinition(previous);
-      setSource(null);
+      setFuture(f => [...f, definition])
+      setHistory(h => h.slice(0, -1))
+      setDefinition(previous)
+      setSource(null)
     }
-  };
+  }
   const redo = () => {
     if (pendingEdits) {
-      explainPendingEdits();
-      return;
+      explainPendingEdits()
+      return
     }
-    const next = future.at(-1);
+    const next = future.at(-1)
     if (next) {
-      setHistory((h) => [...h, definition]);
-      setFuture((f) => f.slice(0, -1));
-      setDefinition(next);
-      setSource(null);
+      setHistory(h => [...h, definition])
+      setFuture(f => f.slice(0, -1))
+      setDefinition(next)
+      setSource(null)
     }
-  };
+  }
   const task = async (action: () => Promise<void>) => {
-    if (busy) return;
-    setBusy(true);
-    setError("");
-    setNotice("");
+    if (busy) return
+    setBusy(true)
+    setError('')
+    setNotice('')
     try {
-      await action();
+      await action()
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not complete action.");
+      setError(e instanceof Error ? e.message : 'Could not complete action.')
     } finally {
-      setBusy(false);
+      setBusy(false)
     }
-  };
+  }
   const save = () =>
     task(async () => {
-      if (pendingEdits)
-        throw new Error(
-          "Apply or discard pending source and argument changes before saving.",
-        );
-      await liveSave(definition);
-      setNotice("Draft saved.");
-    });
+      if (pendingEdits) throw new Error('Apply or discard pending source and argument changes before saving.')
+      await liveSave(definition)
+      setNotice('Draft saved.')
+    })
   const connect = (connection: Connection) => {
-    const from = definition.nodes.find((n) => n.id === connection.source);
-    if (
-      !from ||
-      !connection.target ||
-      from.type === "return" ||
-      connection.target === connection.source ||
-      definition.nodes.find((n) => n.id === connection.target)?.type === "input"
-    ) {
-      setError(
-        "Connect an output to a different step. Input starts the workflow; Return ends it.",
-      );
-      return;
+    const from = definition.nodes.find(n => n.id === connection.source)
+    if (!from || !connection.target || from.type === 'return' || connection.target === connection.source || definition.nodes.find(n => n.id === connection.target)?.type === 'input') {
+      setError('Connect an output to a different step. Input starts the workflow; Return ends it.')
+      return
     }
-    const branchValue =
-      from.type === "condition"
-        ? connection.sourceHandle === "false"
-          ? ("false" as const)
-          : ("true" as const)
-        : undefined;
+    const branchValue = from.type === 'condition' ? (connection.sourceHandle === 'false' ? ('false' as const) : ('true' as const)) : undefined
     const edge = {
       id: `edge-${crypto.randomUUID().slice(0, 8)}`,
       source: from.id,
       target: connection.target,
       ...(branchValue ? { branch: branchValue } : {}),
-    };
-    change({
-      ...definition,
-      edges: [
-        ...definition.edges.filter(
-          (e) => !(e.source === from.id && e.branch === branchValue),
-        ),
-        edge,
-      ],
-    });
-    setError("");
-  };
-  const add = (type: NodeKind) => {
-    const base = node ?? definition.nodes.find((n) => n.type === "input");
-    const next = createToolNode(type, undefined, {
-      x: (base?.position.x ?? 0) + 260,
-      y: (base?.position.y ?? 160) + 150,
-    });
-    if (type === 'tool_call') next.config.tool = '';
-    let edges = definition.edges;
-    if (
-      base &&
-      base.type !== "return" &&
-      base.type !== "condition" &&
-      type !== "condition"
-    ) {
-      const outgoing = edges.find((e) => e.source === base.id);
-      edges = edges.filter((e) => e !== outgoing);
-      edges = [
-        ...edges,
-        { id: `in-${next.id}`, source: base.id, target: next.id },
-        ...(outgoing && type !== "return"
-          ? [{ ...outgoing, source: next.id }]
-          : []),
-      ];
     }
     change({
       ...definition,
-      kind: "workflow",
+      edges: [...definition.edges.filter(e => !(e.source === from.id && e.branch === branchValue)), edge],
+    })
+    setError('')
+  }
+  const add = (type: NodeKind) => {
+    const base = node ?? definition.nodes.find(n => n.type === 'input')
+    const next = createToolNode(type, undefined, {
+      x: (base?.position.x ?? 0) + 260,
+      y: (base?.position.y ?? 160) + 150,
+    })
+    if (type === 'tool_call') next.config.tool = ''
+    let edges = definition.edges
+    if (base && base.type !== 'return' && base.type !== 'condition' && type !== 'condition') {
+      const outgoing = edges.find(e => e.source === base.id)
+      edges = edges.filter(e => e !== outgoing)
+      edges = [...edges, { id: `in-${next.id}`, source: base.id, target: next.id }, ...(outgoing && type !== 'return' ? [{ ...outgoing, source: next.id }] : [])]
+    }
+    change({
+      ...definition,
+      kind: 'workflow',
       nodes: [...definition.nodes, next],
       edges,
-    });
-    setSelected(next.id);
-    setPalette(false);
-  };
+    })
+    setSelected(next.id)
+    setPalette(false)
+  }
   const exportDefinition = () => {
-    const url = URL.createObjectURL(
-      new Blob([serial(definition)], { type: "application/json" }),
-    );
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${definition.id}.draft.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
+    const url = URL.createObjectURL(new Blob([serial(definition)], { type: 'application/json' }))
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${definition.id}.draft.json`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
   return (
-    <div
-      ref={workspace}
-      className={`tools-workspace${expanded ? " tools-workspace-expanded" : ""}`}
-    >
+    <div ref={workspace} className={`tools-workspace${expanded ? ' tools-workspace-expanded' : ''}`}>
       <ToolEditorToolbar
         definition={definition}
         busy={busy}
@@ -282,22 +230,21 @@ export function ToolEditor({
       {error && (
         <div role="alert" className="tools-feedback text-destructive-foreground">
           {error}
-          <Button variant="ghost" size="sm" onClick={() => setError("")}>
+          <Button variant="ghost" size="sm" onClick={() => setError('')}>
             Dismiss
           </Button>
         </div>
       )}
       {hasUnappliedFields && (
         <div role="status" className="tools-feedback">
-          Step arguments have unapplied changes. Apply or discard them to save,
-          test or publish.
+          Step arguments have unapplied changes. Apply or discard them to save, test or publish.
           <Button variant="ghost" size="sm" onClick={explainPendingEdits}>
             Review arguments
           </Button>
         </div>
       )}
       <div className="tools-body">
-        {mode === "build" && (
+        {mode === 'build' && (
           <>
             <ToolStepCanvas
               definition={definition}
@@ -345,7 +292,7 @@ export function ToolEditor({
             )}
           </>
         )}
-        {mode === "source" && (
+        {mode === 'source' && (
           <ToolSource
             record={record}
             definition={definition}
@@ -360,7 +307,7 @@ export function ToolEditor({
             serial={serial}
           />
         )}
-        {mode === "configure" && (
+        {mode === 'configure' && (
           <div className="tool-config-scroll">
             <ToolConfiguration definition={definition} onChange={change} />
           </div>
@@ -369,8 +316,7 @@ export function ToolEditor({
       {issues.length > 0 && (
         <details className="tool-validation">
           <summary>
-            {issues.length} {issues.length === 1 ? "issue" : "issues"} to
-            resolve before testing or publishing
+            {issues.length} {issues.length === 1 ? 'issue' : 'issues'} to resolve before testing or publishing
           </summary>
           <ul>
             {issues.map((issue, i) => (
@@ -379,8 +325,8 @@ export function ToolEditor({
                   className="text-left hover:underline"
                   onClick={() => {
                     if (issue.nodeId) {
-                      if (!switchMode("build")) return;
-                      setSelected(issue.nodeId);
+                      if (!switchMode('build')) return
+                      setSelected(issue.nodeId)
                     }
                   }}
                 >
@@ -393,14 +339,11 @@ export function ToolEditor({
       )}
       <footer className="tools-status">
         <span role="status">
-          {notice ||
-            `${definition.nodes.length} steps · ${definition.edges.length} connections · ${sourceDirty ? "Source changes not applied" : hasUnappliedFields ? "Apply or discard pending step arguments" : "Save to preserve changes"}`}
+          {notice || `${definition.nodes.length} steps · ${definition.edges.length} connections · ${sourceDirty ? 'Source changes not applied' : hasUnappliedFields ? 'Apply or discard pending step arguments' : 'Save to preserve changes'}`}
         </span>
-        <span className="hidden sm:inline">
-          {checkLabel}
-        </span>
+        <span className="hidden sm:inline">{checkLabel}</span>
       </footer>
       <ConfirmationDialog pending={busy} open={leave} onOpenChange={setLeave} title="Discard unsaved changes?" description="Your saved draft is unchanged. Unsaved edits will be discarded." actionLabel="Discard changes" onConfirm={onBack} />
     </div>
-  );
+  )
 }

@@ -7,22 +7,40 @@ import { refreshState } from '@/lib/refresh-state'
 import { createSessionDiscovery } from './session-discovery'
 import { SessionDiscoveryContext } from './session-discovery-context'
 
-export function SessionDiscoveryProvider({ runtime, authStore, workspace, privacy, children }: {
-  runtime: GatewayRuntimeClient; authStore: GatewayAuthStore; workspace: GatewayRuntimeWorkspaceState
-  privacy: GatewaySourcePrivacyState; children: ReactNode
+export function SessionDiscoveryProvider({
+  runtime,
+  authStore,
+  workspace,
+  privacy,
+  children,
+}: {
+  runtime: GatewayRuntimeClient
+  authStore: GatewayAuthStore
+  workspace: GatewayRuntimeWorkspaceState
+  privacy: GatewaySourcePrivacyState
+  children: ReactNode
 }) {
-  const discovery = useMemo(() => createSessionDiscovery({ read: signal => runtime.listSessions({ signal }), auth: authStore, workspace, privacy,
-    available: () => document.visibilityState === 'visible' && navigator.onLine !== false }), [runtime, authStore, workspace, privacy])
+  const discovery = useMemo(
+    () => createSessionDiscovery({ read: signal => runtime.listSessions({ signal }), auth: authStore, workspace, privacy, available: () => document.visibilityState === 'visible' && navigator.onLine !== false }),
+    [runtime, authStore, workspace, privacy],
+  )
   useEffect(() => {
     discovery.start()
     const activity = () => discovery.wake()
-    window.addEventListener('focus', activity); window.addEventListener('online', activity); window.addEventListener('offline', activity)
+    window.addEventListener('focus', activity)
+    window.addEventListener('online', activity)
+    window.addEventListener('offline', activity)
     document.addEventListener('visibilitychange', activity)
-    const refreshed = refreshState.subscribe((state, before) => { if (state.reads !== before.reads) activity() })
+    const refreshed = refreshState.subscribe((state, before) => {
+      if (state.reads !== before.reads) activity()
+    })
     return () => {
       refreshed()
-      window.removeEventListener('focus', activity); window.removeEventListener('online', activity); window.removeEventListener('offline', activity)
-      document.removeEventListener('visibilitychange', activity); discovery.stop()
+      window.removeEventListener('focus', activity)
+      window.removeEventListener('online', activity)
+      window.removeEventListener('offline', activity)
+      document.removeEventListener('visibilitychange', activity)
+      discovery.stop()
     }
   }, [discovery])
   return <SessionDiscoveryContext.Provider value={discovery}>{children}</SessionDiscoveryContext.Provider>

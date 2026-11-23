@@ -1,15 +1,12 @@
-import * as React from "react"
-import { useLocation } from "react-router-dom"
-import { PageHeader } from "@/components/design-system"
-import { PageContainer } from "./page-container"
-import { cn } from "@/lib/utils"
-import { useSidebarConfig } from "@/hooks/use-sidebar-config"
-import { useMediaQuery } from "@/hooks/use-media-query"
-import { useServerSetting } from "@/settings/server-setting"
-import {
-  SidebarInset,
-  SidebarProvider,
-} from "@/components/ui/sidebar"
+import * as React from 'react'
+import { useLocation } from 'react-router-dom'
+import { PageHeader } from '@/components/design-system'
+import { PageContainer } from './page-container'
+import { cn } from '@/lib/utils'
+import { useSidebarConfig } from '@/hooks/use-sidebar-config'
+import { useMediaQuery } from '@/hooks/use-media-query'
+import { useServerSetting } from '@/settings/server-setting'
+import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 
 export interface LayoutFrameProps {
   children: React.ReactNode
@@ -26,7 +23,7 @@ export interface LayoutFrameProps {
   footer?: React.ReactNode
   reference?: React.ReactNode
   className?: string
-  variant?: "page" | "collection" | "conversation" | "workspace" | "canvas"
+  variant?: 'page' | 'collection' | 'conversation' | 'workspace' | 'canvas'
 }
 
 /**
@@ -35,23 +32,26 @@ export interface LayoutFrameProps {
  * collapse button and Ctrl+B still toggle it until the next start. Phones always use the drawer.
  */
 function useSidebarStart() {
-  const start = useServerSetting<"open" | "collapsed" | "auto">("appearance.sidebar", "open")
-  const wide = useMediaQuery("lg")
-  const startOpen = start === "open" || start === "auto" && wide
+  const start = useServerSetting<'open' | 'collapsed' | 'auto'>('appearance.sidebar', 'open')
+  const wide = useMediaQuery('lg')
+  const startOpen = start === 'open' || (start === 'auto' && wide)
   const [open, setOpen] = React.useState(startOpen)
   const [applied, setApplied] = React.useState(startOpen)
-  if (applied !== startOpen) { setApplied(startOpen); setOpen(startOpen) }
+  if (applied !== startOpen) {
+    setApplied(startOpen)
+    setOpen(startOpen)
+  }
   return [open, setOpen] as const
 }
 
 /** The page frame both modes share; the connected gateway passes its own sidebar and header. */
-export function LayoutFrame({ children, title, description, actions, status, header, sidebar, rail, beforeHeader, footer, reference, className, variant = "page", error }: LayoutFrameProps) {
+export function LayoutFrame({ children, title, description, actions, status, header, sidebar, rail, beforeHeader, footer, reference, className, variant = 'page', error }: LayoutFrameProps) {
   const { config } = useSidebarConfig()
   const [sidebarOpen, setSidebarOpen] = useSidebarStart()
-  const shortcuts = useServerSetting("keyboard.shortcuts", true)
-  const conversation = variant === "conversation" || variant === "canvas"
-  const workspace = variant === "workspace"
-  const collection = variant === "collection"
+  const shortcuts = useServerSetting('keyboard.shortcuts', true)
+  const conversation = variant === 'conversation' || variant === 'canvas'
+  const workspace = variant === 'workspace'
+  const collection = variant === 'collection'
   const { pathname, search } = useLocation()
   const pageScroll = React.useRef<HTMLDivElement>(null)
 
@@ -60,22 +60,40 @@ export function LayoutFrame({ children, title, description, actions, status, hea
   }, [pathname, search])
 
   const content = (
-    <SidebarInset key="content" className={cn("min-h-0 overflow-clip", conversation && "border border-border")}>
+    <SidebarInset key="content" className={cn('min-h-0 overflow-clip', conversation && 'border border-border')}>
       {beforeHeader}
       {header}
-      {conversation ? <div className="flex min-h-0 flex-1 flex-col">
-        {error && <p role="alert" className="shrink-0 border-b border-destructive/40 px-4 py-3 text-sm text-destructive-foreground">{error}</p>}
-        {children}
-      </div> : <div ref={pageScroll} data-slot="page-scroll" role="region" aria-label={`${title ?? "Page"} content`} tabIndex={0}
-        className={cn("flex min-h-0 flex-1 flex-col focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring", workspace ? "overflow-hidden" : "overflow-y-auto")}>
-        <div className={cn("@container/main flex flex-1 flex-col gap-2", workspace && "min-h-0")}>
-          <PageContainer className={cn("flex flex-col gap-(--page-section-gap) py-6 pb-8", collection && "gap-(--collection-section-gap)", workspace && "min-h-0 flex-1")}>
-            {title && <PageHeader title={title} description={description} actions={actions} status={status} density={collection ? "compact" : "standard"} />}
-            {error && <p role="alert" className="rounded-lg border border-destructive/40 p-3 text-sm text-destructive-foreground">{error}</p>}
-            {children}
-          </PageContainer>
+      {conversation ? (
+        <div className="flex min-h-0 flex-1 flex-col">
+          {error && (
+            <p role="alert" className="shrink-0 border-b border-destructive/40 px-4 py-3 text-sm text-destructive-foreground">
+              {error}
+            </p>
+          )}
+          {children}
         </div>
-      </div>}
+      ) : (
+        <div
+          ref={pageScroll}
+          data-slot="page-scroll"
+          role="region"
+          aria-label={`${title ?? 'Page'} content`}
+          tabIndex={0}
+          className={cn('flex min-h-0 flex-1 flex-col focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring', workspace ? 'overflow-hidden' : 'overflow-y-auto')}
+        >
+          <div className={cn('@container/main flex flex-1 flex-col gap-2', workspace && 'min-h-0')}>
+            <PageContainer className={cn('flex flex-col gap-(--page-section-gap) py-6 pb-8', collection && 'gap-(--collection-section-gap)', workspace && 'min-h-0 flex-1')}>
+              {title && <PageHeader title={title} description={description} actions={actions} status={status} density={collection ? 'compact' : 'standard'} />}
+              {error && (
+                <p role="alert" className="rounded-lg border border-destructive/40 p-3 text-sm text-destructive-foreground">
+                  {error}
+                </p>
+              )}
+              {children}
+            </PageContainer>
+          </div>
+        </div>
+      )}
       {footer}
     </SidebarInset>
   )
@@ -87,15 +105,20 @@ export function LayoutFrame({ children, title, description, actions, status, hea
       keyboardShortcut={shortcuts}
       style={
         {
-          "--sidebar-width": "16rem",
-          "--sidebar-width-icon": "3rem",
-          "--header-height": "calc(var(--spacing) * 14)",
+          '--sidebar-width': '16rem',
+          '--sidebar-width-icon': '3rem',
+          '--header-height': 'calc(var(--spacing) * 14)',
         } as React.CSSProperties
       }
-      className={cn("h-dvh min-h-0 overflow-clip", config.side === "right" && "flex-row-reverse", className)}
+      className={cn('h-dvh min-h-0 overflow-clip', config.side === 'right' && 'flex-row-reverse', className)}
     >
       {/* Keyboard users skip the sidebar's places in one step (WCAG 2.4.1); it shows only when focused. */}
-      <a href="#conker-workspace-document" className="sr-only focus-visible:not-sr-only focus-visible:fixed focus-visible:left-3 focus-visible:top-3 focus-visible:z-50 focus-visible:rounded-lg focus-visible:bg-background focus-visible:px-3 focus-visible:py-2 focus-visible:text-sm focus-visible:font-medium focus-visible:shadow-lg focus-visible:ring-2 focus-visible:ring-ring">Skip to content</a>
+      <a
+        href="#conker-workspace-document"
+        className="sr-only focus-visible:not-sr-only focus-visible:fixed focus-visible:left-3 focus-visible:top-3 focus-visible:z-50 focus-visible:rounded-lg focus-visible:bg-background focus-visible:px-3 focus-visible:py-2 focus-visible:text-sm focus-visible:font-medium focus-visible:shadow-lg focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        Skip to content
+      </a>
       {rail}
       {sidebar}
       {content}

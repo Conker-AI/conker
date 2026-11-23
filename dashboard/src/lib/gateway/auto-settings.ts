@@ -15,7 +15,9 @@ const okReason = (reason: unknown) => typeof reason === 'string' && reason.trim(
 const record = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value)
 
 export function parseAutoSettings(value: unknown): AutoSettings {
-  const bad = (): never => { throw new GatewayError('validation') }
+  const bad = (): never => {
+    throw new GatewayError('validation')
+  }
   if (!record(value) || !record(value.reasons)) return bad()
   const { complexity, think, research, reasons, modelId, effort, answerModelId } = value as Record<string, unknown> & { reasons: Record<string, unknown> }
   if (complexity !== 'easy' && complexity !== 'hard') return bad()
@@ -36,7 +38,11 @@ export function parseAutoSettings(value: unknown): AutoSettings {
 export function createAutoSettingsClient(auth: Pick<GatewayAuthClient, 'request'>) {
   return {
     async propose(text: string, options: { sessionId?: string | null; harnessDisabled?: boolean; mode?: AutoMode; signal?: AbortSignal } = {}): Promise<AutoSettings> {
-      const response = await auth.request('/api/pi/models/auto-settings', { method: 'POST', body: { text, ...(options.sessionId ? { session_id: options.sessionId } : {}), ...(options.harnessDisabled ? { harness_disabled: true } : {}), ...(options.mode && options.mode !== 'auto' ? { mode: options.mode } : {}) }, ...(options.signal ? { signal: options.signal } : {}) })
+      const response = await auth.request('/api/pi/models/auto-settings', {
+        method: 'POST',
+        body: { text, ...(options.sessionId ? { session_id: options.sessionId } : {}), ...(options.harnessDisabled ? { harness_disabled: true } : {}), ...(options.mode && options.mode !== 'auto' ? { mode: options.mode } : {}) },
+        ...(options.signal ? { signal: options.signal } : {}),
+      })
       return parseAutoSettings(response)
     },
   }

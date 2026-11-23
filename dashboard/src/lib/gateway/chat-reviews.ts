@@ -12,63 +12,84 @@ const voteChoice = z.enum(['up', 'down', 'winner', 'clear'])
 const rubric = z.string().refine(value => [...value].length <= 2000)
 
 // Pi's judge and fact-check replies mix snake_case (ids, times) with camelCase (judgeModelId, modelId, sourcesTruncated); both are mapped to the camelCase types below.
-const judgement = z.object({
-  request_id: requestId,
-  judgeModelId: z.string().min(1),
-  rubric: z.string(),
-  scores: z.array(z.object({
-    message_id: messageId,
-    score: z.number().int().min(1).max(10),
-    reason: z.string().min(1).max(300),
-  }).strict()),
-  winner: messageId,
-  excluded: z.array(messageId),
-  created_at: z.number(),
-  replayed: z.boolean().optional(),
-}).strict().transform(value => ({
-  requestId: value.request_id,
-  judgeModelId: value.judgeModelId,
-  rubric: value.rubric,
-  scores: value.scores.map(item => ({ messageId: item.message_id, score: item.score, reason: item.reason })),
-  winner: value.winner,
-  excluded: value.excluded,
-  createdAt: value.created_at,
-}))
+const judgement = z
+  .object({
+    request_id: requestId,
+    judgeModelId: z.string().min(1),
+    rubric: z.string(),
+    scores: z.array(
+      z
+        .object({
+          message_id: messageId,
+          score: z.number().int().min(1).max(10),
+          reason: z.string().min(1).max(300),
+        })
+        .strict(),
+    ),
+    winner: messageId,
+    excluded: z.array(messageId),
+    created_at: z.number(),
+    replayed: z.boolean().optional(),
+  })
+  .strict()
+  .transform(value => ({
+    requestId: value.request_id,
+    judgeModelId: value.judgeModelId,
+    rubric: value.rubric,
+    scores: value.scores.map(item => ({ messageId: item.message_id, score: item.score, reason: item.reason })),
+    winner: value.winner,
+    excluded: value.excluded,
+    createdAt: value.created_at,
+  }))
 const judgements = z.object({ results: z.array(judgement) }).strict()
 
 const votes = z.record(messageId, voteValue)
-const votesReply = z.object({ root_message_id: messageId, votes }).strict().transform(value => value.votes)
+const votesReply = z
+  .object({ root_message_id: messageId, votes })
+  .strict()
+  .transform(value => value.votes)
 
 const mark = z.enum(['supported', 'contradicted', 'no-source'])
-const factCheck = z.object({
-  request_id: requestId,
-  message_id: messageId,
-  modelId: z.string().min(1),
-  claims: z.array(z.object({
-    claim: z.string().min(1).max(300),
-    mark,
-    sources: z.array(z.string()).max(5),
-    note: z.string().max(300),
-  }).strict()).max(12),
-  counts: z.object({
-    supported: z.number().int().nonnegative(),
-    contradicted: z.number().int().nonnegative(),
-    'no-source': z.number().int().nonnegative(),
-  }).strict(),
-  sources: z.array(z.object({ id: z.string(), title: z.string(), url: z.string() }).strict()),
-  sourcesTruncated: z.boolean(),
-  created_at: z.number(),
-  replayed: z.boolean().optional(),
-}).strict().transform(value => ({
-  requestId: value.request_id,
-  messageId: value.message_id,
-  modelId: value.modelId,
-  claims: value.claims,
-  counts: { supported: value.counts.supported, contradicted: value.counts.contradicted, noSource: value.counts['no-source'] },
-  sources: value.sources,
-  sourcesTruncated: value.sourcesTruncated,
-  createdAt: value.created_at,
-}))
+const factCheck = z
+  .object({
+    request_id: requestId,
+    message_id: messageId,
+    modelId: z.string().min(1),
+    claims: z
+      .array(
+        z
+          .object({
+            claim: z.string().min(1).max(300),
+            mark,
+            sources: z.array(z.string()).max(5),
+            note: z.string().max(300),
+          })
+          .strict(),
+      )
+      .max(12),
+    counts: z
+      .object({
+        supported: z.number().int().nonnegative(),
+        contradicted: z.number().int().nonnegative(),
+        'no-source': z.number().int().nonnegative(),
+      })
+      .strict(),
+    sources: z.array(z.object({ id: z.string(), title: z.string(), url: z.string() }).strict()),
+    sourcesTruncated: z.boolean(),
+    created_at: z.number(),
+    replayed: z.boolean().optional(),
+  })
+  .strict()
+  .transform(value => ({
+    requestId: value.request_id,
+    messageId: value.message_id,
+    modelId: value.modelId,
+    claims: value.claims,
+    counts: { supported: value.counts.supported, contradicted: value.counts.contradicted, noSource: value.counts['no-source'] },
+    sources: value.sources,
+    sourcesTruncated: value.sourcesTruncated,
+    createdAt: value.created_at,
+  }))
 const factChecks = z.object({ results: z.array(factCheck) }).strict()
 
 export type Judgement = z.output<typeof judgement>
