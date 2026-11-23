@@ -3,6 +3,7 @@ import { LogOut, RefreshCw } from 'lucide-react'
 import type { GatewayControlClient } from '@/lib/gateway/control'
 import { Button } from '@/components/ui/button'
 import { WorkspaceSection } from '@/components/design-system'
+import { formatDateTime } from '@/lib/date-format'
 
 type Sessions = Awaited<ReturnType<GatewayControlClient['browserSessions']['list']>>
 export function BrowserSessions({ client }: { client: GatewayControlClient }) {
@@ -72,7 +73,7 @@ export function BrowserSessions({ client }: { client: GatewayControlClient }) {
               <div className="min-w-0 space-y-1">
                 <p className="text-sm font-medium">{session.current ? 'This browser' : `Browser session ${index + 1}`}</p>
                 <p className="text-xs text-muted-foreground">
-                  Signed in {new Date(session.created * 1000).toLocaleString()} · Expires {new Date(session.expires * 1000).toLocaleString()}
+                  Signed in {formatDateTime(session.created * 1000)} · Expires {formatDateTime(session.expires * 1000)}
                 </p>
               </div>
               <Button size="sm" variant="outline" disabled={pending} onClick={() => void revoke(session.id)}>

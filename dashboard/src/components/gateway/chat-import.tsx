@@ -10,6 +10,7 @@ import { importRefusalMessage, importSourceNames, type GatewayImportsClient, typ
 import { gatewayError } from '@/lib/gateway/transport'
 import { cn } from '@/lib/utils'
 import { GatewayPageFrame } from './page-frame'
+import { formatDateTime } from '@/lib/date-format'
 
 const howTo: Record<ImportSource, string> = {
   chatgpt: 'In ChatGPT, open Settings, then Data controls, then Export data. ChatGPT emails you a link to a .zip file.',
@@ -27,7 +28,7 @@ const skippedLabels: Record<string, string> = {
 }
 const plural = (count: number, one: string, many = `${one}s`) => `${count.toLocaleString()} ${count === 1 ? one : many}`
 const size = (bytes: number) => (bytes >= 1024 * 1024 ? `${(bytes / (1024 * 1024)).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`)
-const month = (seconds: number) => new Intl.DateTimeFormat(undefined, { month: 'short', year: 'numeric' }).format(new Date(seconds * 1000))
+const month = (seconds: number) => formatDateTime(seconds * 1000, { month: 'short', year: 'numeric' })
 
 /** What memory gets, in his words; Pi's own reasons are matched, never shown as raw text. */
 function memoryLine(memory: ImportPreview['memory'], offered: number, done = false) {

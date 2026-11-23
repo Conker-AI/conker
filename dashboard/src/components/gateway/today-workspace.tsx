@@ -25,6 +25,7 @@ import { useGatewaySetupStatus } from './setup-status-hook'
 import { GatewayPageFrame } from './page-frame'
 import { useInboxAttention } from '@/lib/workspace-chrome'
 import './home-bento.css'
+import { formatDateTime } from '@/lib/date-format'
 
 type Props = { runtime: GatewayRuntimeClient; activity: GatewayActivityClient; owner: GatewayOwnerClient; proposals: GatewayProposalClient; control: GatewayControlClient }
 type Source = 'requests' | 'proposals' | 'tasks' | 'runs' | 'jobs'
@@ -32,8 +33,8 @@ type Data = { requests: OwnerRequest[]; proposals: Proposal[]; tasks: GatewayTas
 const empty: Data = { requests: [], proposals: [], tasks: [], runs: [], jobs: [], runsComplete: true }
 const sources: Source[] = ['requests', 'proposals', 'tasks', 'runs', 'jobs']
 
-const time = (value: number) => new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' }).format(value)
-const day = (value: number) => new Intl.DateTimeFormat(undefined, { weekday: 'short', day: 'numeric', month: 'short' }).format(value)
+const time = (value: number) => formatDateTime(value, { hour: 'numeric', minute: '2-digit' })
+const day = (value: number) => formatDateTime(value, { weekday: 'short', day: 'numeric', month: 'short' })
 const when = (value: number) => new Date(value).toDateString() === new Date().toDateString() ? time(value) : day(value)
 function greeting(now = new Date()) {
   const hour = now.getHours()
@@ -161,7 +162,7 @@ export function GatewayTodayWorkspace({ runtime, activity, owner, proposals, con
       <PageHeader actionsOnly title="Home" actions={<WorkspaceAction iconOnly aria-label="Refresh Home" title="Refresh Home" disabled={loading} onClick={retry}><RefreshCw className={loading ? 'animate-spin motion-reduce:animate-none' : ''} /></WorkspaceAction>} />
       <div className="min-w-0 space-y-1">
         {greetingStyle !== 'none' && <p className="text-xl font-semibold leading-7">{greeting()}{name}</p>}
-        <p className="text-sm text-muted-foreground">{new Intl.DateTimeFormat(undefined, { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date())}</p>
+        <p className="text-sm text-muted-foreground">{formatDateTime(new Date(), { weekday: 'long', day: 'numeric', month: 'long' })}</p>
         {earned && <p className="text-sm">{earned}</p>}
       </div>
       {(setupSummary || setupError) && <Link to="/setup" className="flex min-w-0 items-center gap-3 rounded-xl border px-4 py-3 text-sm outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring">

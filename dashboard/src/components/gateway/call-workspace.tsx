@@ -13,11 +13,12 @@ import { useGatewayCallAudio } from '@/hooks/use-gateway-call-audio'
 import { cn } from '@/lib/utils'
 import { OwnerAvatar } from './owner-avatar'
 import { useOwnerProfile } from '@/lib/owner-profile'
+import { formatTime } from '@/lib/date-format'
 
 type UncertainTurn = { requestId: string; kind: 'text' | 'audio'; text?: string; checked: boolean }
 
 function clock(value: number) {
-  return new Date(value * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  return formatTime(value * 1000, { hour: '2-digit', minute: '2-digit' })
 }
 
 export function GatewayCallLauncher({ client, conversationId, disabled = false, compact = false }: { client: GatewayCallsClient; conversationId: string; disabled?: boolean; compact?: boolean }) {

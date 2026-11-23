@@ -1,4 +1,5 @@
 import type { HostBackupList, HostReceipt, HostService, HostServicesStatus } from './gateway/host-ops'
+import { formatDateTime } from './date-format'
 
 /**
  * Plain words for the server's services, backups and the receipts of server actions: one source
@@ -73,7 +74,7 @@ export function servicesSummary(status: HostServicesStatus, restarting: string[]
 }
 const list = (items: string[]) => items.length < 3 ? items.join(' and ') : `${items.slice(0, -1).join(', ')} and ${items.at(-1)}`
 
-export const when = (value: string | number) => new Date(value).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+export const when = (value: string | number) => formatDateTime(value, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
 export const snapshotTime = (createdAt: string) => when(createdAt)
 export function bytes(value: number) {
   const units = ['bytes', 'KB', 'MB', 'GB', 'TB']
