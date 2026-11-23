@@ -27,16 +27,20 @@ function parse<T>(schema: z.ZodType<T>, value: unknown): T {
 }
 
 export function createPushClient(auth: Pick<GatewayAuthClient, 'request'>) {
+  async function send(value: PushSubscriptionKeys, renew: boolean, signal?: AbortSignal) {
+    if (!value.endpoint.startsWith('https://') || value.endpoint.length > 1024 || !base64url.test(value.keys.p256dh) || !base64url.test(value.keys.auth)) throw new GatewayError('validation')
+    const body = { endpoint: value.endpoint, keys: { p256dh: value.keys.p256dh, auth: value.keys.auth }, ...(renew ? { renew } : {}) }
+    return parse(added, await auth.request('/api/push/subscriptions', { method: 'POST', body, signal }))
+  }
   return {
     async state(signal?: AbortSignal): Promise<PushState> {
       return parse(state, await auth.request('/api/push', { signal }))
     },
     /** Turns notifications on for this browser's subscription; answers with its device id. */
-    async subscribe(value: PushSubscriptionKeys, signal?: AbortSignal) {
-      if (!value.endpoint.startsWith('https://') || value.endpoint.length > 1024 || !base64url.test(value.keys.p256dh) || !base64url.test(value.keys.auth)) throw new GatewayError('validation')
-      const body = { endpoint: value.endpoint, keys: { p256dh: value.keys.p256dh, auth: value.keys.auth } }
-      return parse(added, await auth.request('/api/push/subscriptions', { method: 'POST', body, signal }))
-    },
+    subscribe: (value: PushSubscriptionKeys, signal?: AbortSignal) => send(value, false, signal),
+    /** Moves a device that is on to this sign-in, so signing out here turns it off; never turns a
+     * device on (the server answers 404 for one that is off). */
+    renew: (value: PushSubscriptionKeys, signal?: AbortSignal) => send(value, true, signal),
     /** Turns notifications off for one device; one that is already off answers `removed: false`. */
     async unsubscribe(id: string, signal?: AbortSignal) {
       if (!device.safeParse(id).success) throw new GatewayError('validation')

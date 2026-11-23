@@ -29,6 +29,9 @@ export type PushDevice = {
   current(): Promise<{ id: string; endpoint: string } | null>
   /** Asks for permission, then subscribes with the server's public key. */
   subscribe(publicKey: string): Promise<PushKeys>
+  /** This browser's subscription made with this server key, when notifications are already
+   * allowed; null otherwise. Never asks and never subscribes. */
+  existing(publicKey: string): Promise<PushKeys | null>
   unsubscribe(): Promise<void>
 }
 
@@ -63,15 +66,21 @@ export async function pushDeviceId(endpoint: string, view: Window = window) {
 /** The window parts web push needs; the real window by default. */
 export type PushWindow = Window & Pick<typeof globalThis, 'Notification'>
 
+function keysOf(value: PushSubscription): PushKeys {
+  const json = value.toJSON()
+  return { endpoint: value.endpoint, keys: { p256dh: json.keys?.p256dh ?? '', auth: json.keys?.auth ?? '' } }
+}
+
 export function browserPush(base: string, view: PushWindow = window): PushDevice {
   const registration = async () => (await view.navigator.serviceWorker?.getRegistration(base)) ?? null
   const subscription = async () => (await registration())?.pushManager.getSubscription() ?? null
+  const support = (): PushSupport => {
+    if (!view.isSecureContext) return 'insecure'
+    if (!view.navigator.serviceWorker || !('PushManager' in view) || !('Notification' in view)) return 'unsupported'
+    return view.Notification.permission === 'denied' ? 'blocked' : 'ok'
+  }
   return {
-    support() {
-      if (!view.isSecureContext) return 'insecure'
-      if (!view.navigator.serviceWorker || !('PushManager' in view) || !('Notification' in view)) return 'unsupported'
-      return view.Notification.permission === 'denied' ? 'blocked' : 'ok'
-    },
+    support,
     async current() {
       const value = await subscription()
       return value ? { id: await pushDeviceId(value.endpoint, view), endpoint: value.endpoint } : null
@@ -88,11 +97,52 @@ export function browserPush(base: string, view: PushWindow = window): PushDevice
         value = null
       }
       value ??= await worker.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key(publicKey) })
-      const json = value.toJSON()
-      return { endpoint: value.endpoint, keys: { p256dh: json.keys?.p256dh ?? '', auth: json.keys?.auth ?? '' } }
+      return keysOf(value)
+    },
+    async existing(publicKey) {
+      if (support() !== 'ok' || view.Notification.permission !== 'granted') return null
+      const value = await subscription()
+      return value && sameKey(value.options.applicationServerKey, publicKey) ? keysOf(value) : null
     },
     async unsubscribe() {
       await (await subscription())?.unsubscribe()
     },
   }
+}
+
+let shared: PushDevice | undefined
+/** This browser's push, made once per page. */
+export const thisBrowserPush = (): PushDevice => (shared ??= browserPush(import.meta.env.BASE_URL))
+
+/** The gateway calls `renewPush` makes (lib/gateway/push.ts). */
+export type PushRenewClient = {
+  state(): Promise<{ publicKey: string; devices: readonly { id: string }[] }>
+  renew(keys: PushKeys): Promise<unknown>
+}
+
+/**
+ * The gateway ties a device to the sign-in that last sent it, and every sign-in has a new id. So
+ * after each sign-in, and when Settings opens, this browser sends its subscription again and the
+ * device moves to the current sign-in: signing out here then turns it off. Only for a device the
+ * server still lists, with notifications already allowed and a subscription made with the server's
+ * key; it never asks and never subscribes, and the server never turns a device on for a renewal.
+ */
+export async function renewPush(client: PushRenewClient, push: PushDevice, known?: Awaited<ReturnType<PushRenewClient['state']>>): Promise<boolean> {
+  if (push.support() !== 'ok') return false
+  const current = await push.current()
+  if (!current) return false
+  const state = known ?? (await client.state())
+  if (!state.devices.some(row => row.id === current.id)) return false
+  const keys = await push.existing(state.publicKey)
+  if (!keys) return false
+  await client.renew(keys)
+  return true
+}
+
+type Phase = { phase: string }
+/** Calls `renew` each time the owner becomes signed in: a sign-in, or a page opened signed in. */
+export function renewAfterSignIn(store: { subscribe(listener: (state: Phase, previous: Phase) => void): () => void }, renew: () => Promise<unknown>) {
+  return store.subscribe((state, previous) => {
+    if (state.phase === 'authenticated' && previous.phase !== 'authenticated') void renew().catch(() => undefined)
+  })
 }

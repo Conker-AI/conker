@@ -5,11 +5,8 @@ import { Switch } from '@/components/ui/switch'
 import type { GatewayControlClient } from '@/lib/gateway/control'
 import type { PushDeviceRow } from '@/lib/gateway/push'
 import { GatewayError } from '@/lib/gateway/transport'
-import { browserPush, PushRefused, type PushDevice } from '@/pwa/register'
+import { PushRefused, renewPush, thisBrowserPush, type PushDevice } from '@/pwa/register'
 import { BROWSER_FAILED, LIMIT, NOT_ALLOWED, OFF_UNCONFIRMED, PUSH_WORDS, REMOVE_FAILED, SERVER_OFF } from './push-words'
-
-let shared: PushDevice | undefined
-const browserDevice = () => (shared ??= browserPush(import.meta.env.BASE_URL))
 
 function problem(error: unknown): string {
   if (error instanceof PushRefused) return error.reason === 'no-worker' ? PUSH_WORDS.insecure : error.reason === 'dismissed' ? NOT_ALLOWED : ''
@@ -27,7 +24,7 @@ const added = (seconds: number) => new Date(seconds * 1000).toLocaleString()
  * owner's can be seen and taken off.
  */
 export function PushDeviceBlock({ client, device }: { client: Pick<GatewayControlClient, 'push'>; device?: PushDevice }) {
-  const push = device ?? browserDevice()
+  const push = device ?? thisBrowserPush()
   // What the browser allows is read on every render; only the server's answer is kept.
   const support = push.support()
   const [checked, setChecked] = useState<'checking' | 'on' | 'off' | 'unknown'>('checking')
@@ -43,7 +40,10 @@ export function PushDeviceBlock({ client, device }: { client: Pick<GatewayContro
         if (!live) return
         setRows([...server.devices].sort((a, b) => b.created - a.created))
         setMine(current?.id ?? null)
-        setChecked(current && server.devices.some(row => row.id === current.id) ? 'on' : 'off')
+        const on = current !== null && server.devices.some(row => row.id === current.id)
+        setChecked(on ? 'on' : 'off')
+        // Settings opened: this device moves to the current sign-in (see renewPush).
+        if (on && check === 0) void renewPush(client.push, push, server).catch(() => undefined)
       })
       .catch(() => live && setChecked('unknown'))
     return () => {

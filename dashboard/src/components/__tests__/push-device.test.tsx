@@ -4,7 +4,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { GatewayControlClient } from '@/lib/gateway/control'
 import type { PushDeviceRow, PushState } from '@/lib/gateway/push'
 import { GatewayError } from '@/lib/gateway/transport'
-import { browserPush, pushDeviceId, PushRefused, type PushDevice, type PushSupport, type PushWindow } from '@/pwa/register'
+import { createStore } from 'zustand/vanilla'
+import { browserPush, pushDeviceId, PushRefused, renewAfterSignIn, renewPush, type PushDevice, type PushSupport, type PushWindow } from '@/pwa/register'
 import { PushDeviceBlock } from '@/settings/push-device'
 import { PUSH_WORDS, REMOVE_FAILED } from '@/settings/push-words'
 
@@ -28,6 +29,7 @@ function fakeDevice(support: PushSupport = 'ok', mine: { id: string; endpoint: s
     unsubscribe: vi.fn(async () => {
       current = null
     }),
+    existing: vi.fn(async () => (current ? KEYS : null)),
   } satisfies PushDevice
 }
 
@@ -42,7 +44,11 @@ function fakeServer(devices: PushDeviceRow[] = []) {
     if (index >= 0) devices.splice(index, 1)
     return { removed: index >= 0, devices: [...devices], limit: 10 }
   })
-  return { push: { state, subscribe, unsubscribe } }
+  const renew = vi.fn(async () => {
+    if (!devices.some(item => item.id === ID)) throw new GatewayError('http', 404)
+    return { device: ID, devices: [...devices], limit: 10 }
+  })
+  return { push: { state, subscribe, unsubscribe, renew } }
 }
 
 const asClient = (value: ReturnType<typeof fakeServer>) => value as unknown as Pick<GatewayControlClient, 'push'>
@@ -286,6 +292,55 @@ describe('PushDeviceBlock: the devices with notifications on', () => {
   })
 })
 
+describe('renewing this device for the current sign-in', () => {
+  it('Settings opening sends this device again once, when the server lists it', async () => {
+    const server = fakeServer([row(ID)]),
+      device = fakeDevice('ok', { id: ID, endpoint: KEYS.endpoint })
+    render(<PushDeviceBlock client={asClient(server)} device={device} />)
+    await waitFor(() => expect(server.push.renew).toHaveBeenCalledWith(KEYS))
+    fireEvent.click(toggle())
+    await waitFor(() => expect(status().textContent).toBe(PUSH_WORDS.off))
+    expect(server.push.renew).toHaveBeenCalledTimes(1)
+    expect(server.push.subscribe).not.toHaveBeenCalled()
+  })
+
+  it('a device the server does not list is never sent again (it stays off)', async () => {
+    const server = fakeServer([row(OTHER)]),
+      device = fakeDevice('ok', { id: ID, endpoint: KEYS.endpoint })
+    render(<PushDeviceBlock client={asClient(server)} device={device} />)
+    await waitFor(() => expect(status().textContent).toBe(PUSH_WORDS.off))
+    expect(await renewPush(server.push, device)).toBe(false)
+    expect(server.push.renew).not.toHaveBeenCalled()
+  })
+
+  it('needs this browser to support push, hold a subscription and still have it allowed', async () => {
+    const server = fakeServer([row(ID)])
+    expect(await renewPush(server.push, fakeDevice('blocked', { id: ID, endpoint: KEYS.endpoint }))).toBe(false)
+    expect(await renewPush(server.push, fakeDevice('ok', null))).toBe(false)
+    expect(server.push.state).not.toHaveBeenCalled()
+    const other = fakeDevice('ok', { id: ID, endpoint: KEYS.endpoint })
+    other.existing.mockResolvedValueOnce(null) // another server key, or permission taken back
+    expect(await renewPush(server.push, other)).toBe(false)
+    expect(server.push.renew).not.toHaveBeenCalled()
+    expect(await renewPush(server.push, fakeDevice('ok', { id: ID, endpoint: KEYS.endpoint }))).toBe(true)
+    expect(server.push.renew).toHaveBeenCalledWith(KEYS)
+  })
+
+  it('renews each time the owner becomes signed in, and a failure stays quiet', async () => {
+    const store = createStore(() => ({ phase: 'checking', session: 1 }))
+    const renew = vi.fn(async () => {
+      throw new GatewayError('network')
+    })
+    renewAfterSignIn(store, renew)
+    store.setState({ phase: 'authenticated' })
+    store.setState({ session: 2 })
+    store.setState({ phase: 'anonymous' })
+    store.setState({ phase: 'authenticated' })
+    await act(async () => undefined)
+    expect(renew).toHaveBeenCalledTimes(2)
+  })
+})
+
 type Subscription = { endpoint: string; options: { applicationServerKey: ArrayBuffer | null }; unsubscribe: ReturnType<typeof vi.fn>; toJSON: () => PushSubscriptionJSON }
 
 function browser({ secure = true, permission = 'default' as NotificationPermission, answer = 'granted' as NotificationPermission, worker = true, existing = null as Subscription | null, keys = true } = {}) {
@@ -365,6 +420,20 @@ describe('browserPush (register.ts)', () => {
     const short = { ...same, options: { applicationServerKey: new Uint8Array(3).buffer }, unsubscribe: vi.fn(async () => true) }
     await browserPush('/', browser({ existing: short }).view).subscribe(PUBLIC_KEY)
     expect(short.unsubscribe).toHaveBeenCalled()
+  })
+
+  it('names its existing subscription only when allowed and made with this server key, never asking', async () => {
+    const same: Subscription = { endpoint: KEYS.endpoint, options: { applicationServerKey: keyBytes(PUBLIC_KEY) }, unsubscribe: vi.fn(), toJSON: () => ({ endpoint: KEYS.endpoint, keys: KEYS.keys }) }
+    const granted = browser({ permission: 'granted', existing: same })
+    expect(await browserPush('/', granted.view).existing(PUBLIC_KEY)).toEqual(KEYS)
+    expect(await browserPush('/', granted.view).existing('B' + 'A'.repeat(86))).toBeNull()
+    const asking = browser({ permission: 'default', existing: same })
+    expect(await browserPush('/', asking.view).existing(PUBLIC_KEY)).toBeNull()
+    expect(await browserPush('/', browser({ permission: 'granted' }).view).existing(PUBLIC_KEY)).toBeNull()
+    for (const { pushManager, requestPermission } of [granted, asking]) {
+      expect(requestPermission).not.toHaveBeenCalled()
+      expect(pushManager.subscribe).not.toHaveBeenCalled()
+    }
   })
 
   it('a subscription without keys gives empty keys, which the client refuses to send', async () => {

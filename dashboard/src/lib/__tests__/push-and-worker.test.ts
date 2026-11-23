@@ -47,6 +47,14 @@ describe('push client', () => {
     expect(calls[0]).toEqual({ path: '/api/push/subscriptions', init: { method: 'POST', body: KEYS, signal: undefined } })
   })
 
+  it('a renewal sends the same subscription with renew: true, and is checked the same way', async () => {
+    const { calls, client } = fakeAuth({ device: ID, devices: [ROW], limit: 10 })
+    expect(await client.renew({ ...KEYS, renew: false } as never)).toEqual({ device: ID, devices: [ROW], limit: 10 })
+    expect(calls[0]).toEqual({ path: '/api/push/subscriptions', init: { method: 'POST', body: { ...KEYS, renew: true }, signal: undefined } })
+    await kind(client.renew({ ...KEYS, endpoint: 'http://fcm.googleapis.com/x' }), 'validation')
+    expect(calls).toHaveLength(1)
+  })
+
   it.each([
     { ...KEYS, endpoint: 'http://fcm.googleapis.com/x' },
     { ...KEYS, endpoint: 'https://fcm.googleapis.com/' + 'x'.repeat(1000) },

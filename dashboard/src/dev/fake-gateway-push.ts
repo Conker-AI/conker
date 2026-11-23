@@ -31,7 +31,10 @@ export async function fakePush(path: string, options: Request): Promise<Json | u
     const endpoint = String(options.body?.endpoint ?? '')
     if (!endpoint.startsWith('https://')) throw new GatewayError('validation', 422)
     const id = await deviceId(endpoint)
-    if (!devices.some(row => row.id === id)) devices.push({ id, created: Math.floor(Date.now() / 1000), label: 'A browser' })
+    const known = devices.some(row => row.id === id)
+    // A renewal only moves a device that is on to this sign-in; it never turns one on.
+    if (options.body?.renew === true && !known) throw new GatewayError('http', 404)
+    if (!known) devices.push({ id, created: Math.floor(Date.now() / 1000), label: 'A browser' })
     return { device: id, devices: list(), limit: 10 }
   }
   const match = path.match(/^\/api\/push\/subscriptions\/([0-9a-f]{32})\/delete$/)
