@@ -115,7 +115,7 @@
           "default": 3,
           "tier": "basic",
           "scope": "global",
-          "effect": "stored",
+          "effect": "live",
           "min": 1,
           "max": 10,
           "step": 1
@@ -128,7 +128,7 @@
           "default": 20,
           "tier": "basic",
           "scope": "global",
-          "effect": "stored",
+          "effect": "live",
           "min": 5,
           "max": 100,
           "step": 5
