@@ -10,6 +10,7 @@ import type { EditorRun, GatewayEditorDrafts } from '@/lib/gateway/editor-drafts
 import { GatewayError } from '@/lib/gateway/transport'
 import { plainStatus } from './plain-status'
 import { WORKFLOW_ACCESS_SCOPE } from '@/lib/gateway/workflow-access'
+import { formatDateTime } from '@/lib/date-format'
 
 export function GatewayWorkflowRuns({ id, name, client, open, onClose }: { id: string; name: string; client: GatewayEditorDrafts; open: boolean; onClose: () => void }) {
   const [versions, setVersions] = useState<Awaited<ReturnType<GatewayEditorDrafts['publications']>>>([])
@@ -223,7 +224,7 @@ export function GatewayWorkflowRuns({ id, name, client, open, onClose }: { id: s
               <details key={run.action_id} className="rounded-lg border p-3">
                 <summary className="cursor-pointer text-sm">
                   Version {run.version} · {plainStatus(run.response.code)}
-                  <span className="ml-2 text-xs text-muted-foreground">{new Date(run.created_at).toLocaleString()}</span>
+                  <span className="ml-2 text-xs text-muted-foreground">{formatDateTime(run.created_at)}</span>
                 </summary>
                 <div className="mt-3 space-y-3">
                   {run.response.message && <p className="text-sm">{run.response.message}</p>}

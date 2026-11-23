@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { InboxCard } from '@/components/inbox/inbox-card'
 import type { Proposal, ProposalDecision } from '@/lib/gateway/proposals'
 import { gatewayConversationLink } from './navigation'
+import { formatDateTime } from '@/lib/date-format'
 
 const age = (seconds: number) => {
   const minutes = Math.max(0, Math.floor((Date.now() - seconds * 1000) / 60000))
@@ -23,7 +24,7 @@ export function IdeaCard({ item, pending, failure, onDecide, onLater }: {
       <Button type="button" size="sm" variant="ghost" disabled={pending} onClick={() => onDecide('never')}>Never suggest this</Button>
     </div>}
     onLater={onLater}
-    facts={[['From', 'Conker’s nightly pass'], ['Came', `${age(item.createdAt)} · ${new Date(item.createdAt * 1000).toLocaleString()}`], ['Not now', 'Hides this idea for 30 days']]}
+    facts={[['From', 'Conker’s nightly pass'], ['Came', `${age(item.createdAt)} · ${formatDateTime(item.createdAt * 1000)}`], ['Not now', 'Hides this idea for 30 days']]}
     advanced={<div className="flex flex-col gap-2">
       <p>Why</p>
       {item.evidence.length ? <ul className="flex flex-col gap-2">{item.evidence.map(source => <li key={source.messageId} className="min-w-0 break-words">{source.available

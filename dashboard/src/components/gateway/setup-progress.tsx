@@ -17,6 +17,7 @@ import { gatewayError } from '@/lib/gateway/transport'
 import { cn } from '@/lib/utils'
 import { useGatewaySetupStatus } from './setup-status-hook'
 import { setupLabels, setupStateLabels, summarizeSetup } from './setup-presentation'
+import { formatDateTime } from '@/lib/date-format'
 const setupPhases: { title: string; description: string; steps: SetupStep['id'][] }[] = [
   {
     title: 'First conversation',
@@ -375,7 +376,7 @@ export function GatewaySetupProgress({ client }: { client: GatewayControlClient 
           </section>)}</div>
         </aside>
       </div>
-      <p className="text-xs leading-5 text-muted-foreground">Checked {new Date(status.generatedAt).toLocaleString()}. Secret values are never included in this status.</p>
+      <p className="text-xs leading-5 text-muted-foreground">Checked {formatDateTime(status.generatedAt)}. Secret values are never included in this status.</p>
     </div>
   </GatewayPageFrame>
 }

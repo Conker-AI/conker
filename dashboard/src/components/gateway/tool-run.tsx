@@ -9,6 +9,7 @@ import type { JsonValue } from '@/lib/tool-workspace'
 import { findRunTarget, initialValues, inputsLine, readRunInputs, runFields, runOutcome, workflowTool, RUN_STATE, type RunAnswer, type RunState, type RunTarget, type ToolInput } from '@/lib/tool-run'
 import { RunDetails, RunResult, RunStateMark } from './tool-result'
 import { RunInputsForm } from './tool-run-form'
+import { formatDateTime } from '@/lib/date-format'
 
 /** One run: started here now, or read back from the tool's recent runs. */
 type Run = {
@@ -33,7 +34,7 @@ const REFUSED: Record<number, string> = {
   409: 'This tool changed since you opened it, so it didn’t run. Close it, open it again and run it.',
   422: 'Your server didn’t accept these inputs, so it didn’t run. Check them and try again.',
 }
-const when = (at: number) => new Date(at).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+const when = (at: number) => formatDateTime(at, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
 const fromHistory = (row: EditorRun): Run => ({
   actionId: row.action_id,
   args: row.args as Record<string, JsonValue>,

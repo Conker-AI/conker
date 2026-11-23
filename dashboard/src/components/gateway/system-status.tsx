@@ -8,6 +8,7 @@ import { CollectionSection, PageHeader, WorkspaceAction, WorkspaceSection } from
 import { GatewayPageFrame } from './page-frame'
 import { RecentServerActions } from './server-action-parts'
 import type { GatewayControlClient, GatewayDiagnostics } from '@/lib/gateway/control'
+import { formatDateTime } from '@/lib/date-format'
 
 const areaLabels: Record<GatewayDiagnostics['findings'][number]['area'], string> = {
   access: 'Owner access', services: 'Services', models: 'Answer models',
@@ -49,7 +50,7 @@ export function GatewaySystemStatus({ client }: { client: GatewayControlClient }
           </div>
           <Badge variant={item.status === 'attention' ? 'destructive' : 'outline'} className="shrink-0"><StatusIcon status={item.status} />{statusLabels[item.status]}</Badge>
         </li>)}</ul></CollectionSection>)}
-        <p className="text-xs leading-5 text-muted-foreground">Checked {new Date(report.generatedAt).toLocaleString()}. These checks cover core connections, not every tool, schedule or host capability. Findings contain status only; credentials and service responses are never included.</p>
+        <p className="text-xs leading-5 text-muted-foreground">Checked {formatDateTime(report.generatedAt)}. These checks cover core connections, not every tool, schedule or host capability. Findings contain status only; credentials and service responses are never included.</p>
       </>}
       <RecentServerActions client={client.hostOps} />
     </div>
