@@ -92,6 +92,7 @@ export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'reques
       async setEnabled(...args: Parameters<GatewayMcpClient['setEnabled']>) { return (await import('./mcp')).createGatewayMcpClient(auth).setEnabled(...args) },
       async access(...args: Parameters<GatewayMcpClient['access']>) { return (await import('./mcp')).createGatewayMcpClient(auth).access(...args) },
       async setAccess(...args: Parameters<GatewayMcpClient['setAccess']>) { return (await import('./mcp')).createGatewayMcpClient(auth).setAccess(...args) },
+      async setClass(...args: Parameters<GatewayMcpClient['setClass']>) { return (await import('./mcp')).createGatewayMcpClient(auth).setClass(...args) },
     },
     claude: createNativeClaudeClient(auth),
     browserSessions: createBrowserSessionsClient(auth, onCurrentSessionRevoked),

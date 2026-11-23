@@ -3,12 +3,18 @@
  * select and bulk on/off) can be seen and screenshotted. Writes check the expected revision or
  * digest like Pi and the gateway do.
  */
+import { GatewayError } from '@/lib/gateway/transport'
+
 type Json = Record<string, unknown>
 type Request = { method?: 'GET' | 'POST' | 'PUT'; body?: Json; query?: Record<string, string | number | boolean | readonly string[]> }
 
 const hex = (seed: number) => seed.toString(16).padStart(2, '0').repeat(32)
 
 export function createFakeLibrary(now: () => number, fail: (status: number) => never) {
+  // The gateway's coded class refusals, as the transport keeps them.
+  const refuse = (status: number, code: 'definition_conflict' | 'act_outward_name'): never => {
+    throw new GatewayError('http', status, undefined, code)
+  }
   const day = 86_400_000
   const skills: Json[] = [
     ['meeting-notes', 'Turn a meeting transcript into decisions, owners and dates.', true, 2],
@@ -26,18 +32,20 @@ export function createFakeLibrary(now: () => number, fail: (status: number) => n
     updatedAt: now() - Number(age) * day,
     markdown: `---\nname: ${id}\ndescription: ${description}\n---\n\n# ${id}\n\nSteps go here.`,
   }))
+  // read_class as ToolGate states it. Observe is refused (as ToolGate does) for a name without a read verb.
   const mcpTools: Json[] = [
-    ['telegram.messages', 'Telegram messages', 'Read new messages in chosen Telegram chats.', 'active'],
-    ['calendar.events', 'Calendar events', 'Read upcoming events from the owner’s calendar.', 'active'],
-    ['notion.pages', 'Notion pages', 'Search and read Notion pages shared with Conker.', 'disabled'],
-  ].map(([id, name, description, status], index) => ({
+    ['telegram.messages', 'Telegram messages', 'Read new messages in chosen Telegram chats.', 'active', 'messages', 'act_outward'],
+    ['calendar.events', 'Calendar events', 'Read upcoming events from the owner’s calendar.', 'active', 'list_events', 'observe'],
+    ['notion.pages', 'Notion pages', 'Search and read Notion pages shared with Conker.', 'disabled', 'search_pages', 'act_outward'],
+  ].map(([id, name, description, status, toolName, readClass], index) => ({
     id: `mcp.${id}`,
     name,
     description,
     status,
     authorization: 'owner_confirmation',
     url: `https://mcp.example.com/${String(id).split('.')[0]}`,
-    tool_name: String(id).split('.')[1],
+    tool_name: toolName,
+    read_class: readClass,
     schema_hash: hex(index + 20),
     secret_ref: null,
     version: 1,
@@ -64,6 +72,19 @@ export function createFakeLibrary(now: () => number, fail: (status: number) => n
       const tool = mcpTools.find(row => row.id === match![1]) ?? fail(404)
       if (options.body?.expected_digest !== tool.digest) fail(409)
       tool.status = options.body?.enabled === true ? 'active' : 'disabled'
+      tool.version = Number(tool.version) + 1
+      tool.digest = hex(Number(tool.version) * 7 + mcpTools.indexOf(tool))
+      return { schemaVersion: 1, tool }
+    }
+    if ((match = path.match(/^\/api\/owner\/mcp\/tools\/(mcp\.[a-z0-9.-]+)\/access$/)) && method === 'GET') {
+      const tool = mcpTools.find(row => row.id === match![1]) ?? fail(404)
+      return { schemaVersion: 1, toolId: tool.id, actorId: 'conker', actorName: 'Conker', enabled: tool.status === 'active', requiredScope: `tool:${tool.id}`, digest: tool.digest }
+    }
+    if ((match = path.match(/^\/api\/owner\/mcp\/tools\/(mcp\.[a-z0-9.-]+)\/class$/)) && method === 'POST') {
+      const tool = mcpTools.find(row => row.id === match![1]) ?? fail(404)
+      if (options.body?.expected_version !== tool.version) refuse(409, 'definition_conflict')
+      if (options.body?.read_class === 'observe' && !/^(get|list|read|search)_/.test(String(tool.tool_name))) refuse(422, 'act_outward_name')
+      tool.read_class = options.body?.read_class === 'observe' ? 'observe' : 'act_outward'
       tool.version = Number(tool.version) + 1
       tool.digest = hex(Number(tool.version) * 7 + mcpTools.indexOf(tool))
       return { schemaVersion: 1, tool }

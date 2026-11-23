@@ -52,6 +52,15 @@ async function main() {
   for (const route of ['/api/owner/mcp/tools/mcp.search/run', '/api/owner/mcp/tools/../access', '/api/owner/mcp/tools/mcp.search/access?key=x']) await assert.rejects(transport.request(route), { kind: 'validation' })
   assert.equal(onWire.length, 2)
   assert.equal(onWire[1].options.headers['X-Conker-Verification'], 'v'.repeat(43))
+  // The read class: a fixed route, its refusal kept only as a known code, and a review that names the change.
+  const classPath = '/api/owner/mcp/tools/mcp.search/class'
+  const refusing = detail => createGatewayTransport({ origin: 'https://conker.example', fetch: async () => new Response(JSON.stringify({ detail }), { status: 422, headers: { 'Content-Type': 'application/json' } }) })
+  const post = transport => transport.request(classPath, { method: 'POST', body: { read_class: 'observe', expected_version: 1 }, csrfToken: 'x'.repeat(43) })
+  await assert.rejects(post(refusing({ code: 'act_outward_name', message: 'server words' })), error => error.code === 'act_outward_name' && error.detail === undefined && !error.message.includes('server words'))
+  await assert.rejects(post(refusing({ code: 'made_up', message: 'server words' })), error => error.status === 422 && error.code === undefined)
+  await assert.rejects(transport.request('/api/owner/mcp/tools/mcp.search/class/x', { method: 'POST', body: {}, csrfToken: 'x'.repeat(43) }), { kind: 'validation' })
+  assert.equal(describeGatewayOperation(snapshotGatewayOperation(classPath, { read_class: 'observe', expected_version: 1 })).title, 'Let this MCP tool run without asking')
+  assert.equal(describeGatewayOperation(snapshotGatewayOperation(classPath, { read_class: 'act_outward', expected_version: 1 })).title, 'Make this MCP tool ask every time')
   console.log('MCP client: reviewed schema, separate scoped grant, digest binding, response identity and browser boundary passed.')
 }
 main().catch(error => { console.error(error); process.exitCode = 1 })
