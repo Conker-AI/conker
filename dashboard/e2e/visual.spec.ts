@@ -16,6 +16,8 @@ type Place = {
   widths?: readonly Viewport[]
   /** Photograph one element instead of the screen. */
   target?: (page: Page) => ReturnType<Page['locator']>
+  /** Saved in the browser before the page opens (view choices such as "Planned"). */
+  storage?: Record<string, string>
 }
 
 const PHONE = { width: 320, height: 720 }
@@ -30,6 +32,8 @@ const PLACES: Place[] = [
   { path: '/agents', name: 'agents' },
   { path: '/tools', name: 'tools' },
   { path: '/settings?tab=models', name: 'settings-tab-models' },
+  { path: '/settings?group=appearance', name: 'settings-appearance' },
+  { path: '/settings?group=appearance', name: 'settings-appearance-planned', storage: { 'conker.settings-view.planned': 'true' } },
   { path: '/system', name: 'system' },
   { path: '/setup', name: 'setup' },
   { path: '/chat?session=ses_1111111111111111', name: 'chat', frozen: true },
@@ -65,6 +69,14 @@ for (const theme of THEMES)
             /* Storage may be blocked. */
           }
         }, theme)
+        if (place.storage)
+          await page.addInitScript(items => {
+            try {
+              for (const [key, value] of Object.entries(items)) localStorage.setItem(key, value)
+            } catch {
+              /* Storage may be blocked. */
+            }
+          }, place.storage)
         const errors = await open(page, place.path)
         await page.waitForFunction(() => !document.querySelector('[aria-busy="true"]'), null, { timeout: 15_000 }).catch(() => {})
         const target = place.target?.(page)

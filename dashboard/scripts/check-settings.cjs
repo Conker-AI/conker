@@ -37,7 +37,7 @@ async function main() {
 
   // One row template with the same marks everywhere.
   const row = read('src/settings/setting-row.tsx')
-  for (const mark of ['Not used yet', 'This device', 'Reset', 'Saving…', 'Saved', 'Turn on']) assert.ok(row.includes(mark), `the row shows: ${mark}`)
+  for (const mark of ['Planned', 'This device', 'Reset', 'Saving…', 'Saved', 'Turn on']) assert.ok(row.includes(mark), `the row shows: ${mark}`)
   assert.ok(!/<Button(?![^>]*(?:type="button"|render=))[^>]*onClick/.test(row + read('src/settings/controls.tsx') + read('src/settings/blocks-parts.tsx') + read('src/settings/settings-screen.tsx')), 'every clickable settings button is type="button"')
 
   // The owner's settings document saves with the session; his preferences ask for the password.

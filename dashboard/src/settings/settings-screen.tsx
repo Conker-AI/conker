@@ -13,8 +13,9 @@ import { useAppearance } from './appearance'
 import { settingBlocks } from './blocks'
 import { groupIcon } from './icons'
 import { ModelsProvider } from './models-context'
-import { isPlanned, usePlannedShown } from './planned'
-import { CATEGORIES, matches, onScreen, SETTINGS_BY_ID, SETTINGS_GROUPS, type Setting, type SettingsGroup, type SettingsSection } from './registry'
+import { isPlanned, PLANNED_COUNT, usePlannedShown } from './planned'
+import { PlannedNote, PlannedTopic } from './planned-note'
+import { ALL_SETTINGS, CATEGORIES, matches, onScreen, SETTINGS_BY_ID, SETTINGS_GROUPS, type Setting, type SettingsGroup, type SettingsSection } from './registry'
 import { SettingRow } from './setting-row'
 import { useSettings, type SettingsState } from './use-settings'
 
@@ -95,7 +96,7 @@ function GroupNav({
           {changedOnly && <Check aria-hidden="true" />}Changed{changedCount > 0 && <span className="tabular-nums text-muted-foreground">{changedCount}</span>}
         </Button>
         <Button type="button" size="sm" variant={planned ? 'secondary' : 'outline'} aria-pressed={planned} title="Settings saved for features still being built" className="rounded-full" onClick={() => onPlanned(!planned)}>
-          {planned && <Check aria-hidden="true" />}Planned
+          {planned && <Check aria-hidden="true" />}Planned<span className="tabular-nums text-muted-foreground">{PLANNED_COUNT}</span>
         </Button>
       </div>
       {CATEGORIES.map(category => {
@@ -131,7 +132,8 @@ function GroupNav({
  * Settings: every setting in the registry, by topic, in one row template. Search and the "Advanced",
  * "Changed" and "Planned" chips work across all topics; planned settings (saved, not read by
  * anything yet) stay out of every view until "Planned" is on, and a topic with nothing else leaves
- * the side list. On a phone the topic list comes first and a topic
+ * the side list. Each topic page and search ends with its own "Show planned (N)" switch, so it is
+ * in reach on a phone. On a phone the topic list comes first and a topic
  * opens on its own page; on wider screens they sit side by side.
  */
 export function SettingsScreen({ client, authStore, onSignOut }: { client: GatewayControlClient; authStore: GatewayAuthStore; onSignOut?: () => void }) {
@@ -166,7 +168,8 @@ function Screen({ client, authStore, onSignOut }: { client: GatewayControlClient
     const timer = window.setTimeout(() => document.getElementById(`setting-${focus}`)?.scrollIntoView({ block: 'start' }), 150)
     return () => window.clearTimeout(timer)
   }, [focus, groupId])
-  const visible = (setting: Setting) => shows(setting) && (advanced || setting.tier === 'basic' || setting.id === focus)
+  const tierShows = (setting: Setting) => advanced || setting.tier === 'basic' || setting.id === focus
+  const visible = (setting: Setting) => shows(setting) && tierShows(setting)
   const pick = (id: string) => {
     setQuery('')
     setChangedOnly(false)
@@ -180,18 +183,20 @@ function Screen({ client, authStore, onSignOut }: { client: GatewayControlClient
     const found = SETTINGS_GROUPS.flatMap(item =>
       item.sections.map(section => ({ group: item, section, rows: section.settings.filter(setting => shows(setting) && (changedOnly ? onScreen(setting) && state.changed(setting) : true) && (!query.trim() || matches(setting, query))) })),
     ).filter(item => item.rows.length)
+    const plannedMatches = query.trim() && !changedOnly ? ALL_SETTINGS.filter(setting => isPlanned(setting) && setting.id !== focus && matches(setting, query)).length : 0
     content = (
       <div className="flex flex-col gap-6">
         <h2 className="text-lg font-semibold">{changedOnly && !query.trim() ? 'Changed from the default' : `Results for “${query.trim()}”`}</h2>
         {found.length ? (
           found.map(item => <SectionCard key={`${item.group.id}.${item.section.id}`} section={item.section} label={item.group.title} rows={item.rows} state={state} custom={custom} />)
         ) : (
-          <p className="text-sm text-muted-foreground">{changedOnly ? 'Everything is at its default.' : 'No setting matches. Try another word.'}</p>
+          <p className="text-sm text-muted-foreground">{changedOnly ? 'Everything is at its default.' : planned || !plannedMatches ? 'No setting matches. Try another word.' : 'No setting that works yet matches.'}</p>
         )}
+        <PlannedNote count={plannedMatches} shown={planned} onShown={setPlanned} where="match" />
       </div>
     )
   } else if (group) {
-    content = <GroupPage group={group} state={state} custom={custom} visible={visible} shows={shows} showAdvanced={() => state.set(advancedSetting, true)} showPlanned={() => setPlanned(true)} />
+    content = <GroupPage group={group} state={state} custom={custom} visible={visible} shows={shows} tierShows={tierShows} planned={planned} onPlanned={setPlanned} showAdvanced={() => state.set(advancedSetting, true)} />
   }
 
   return (
@@ -245,7 +250,7 @@ function Screen({ client, authStore, onSignOut }: { client: GatewayControlClient
               </AlertDescription>
             </Alert>
           )}
-          {content ?? <GroupPage group={topics[0]} state={state} custom={custom} visible={visible} shows={shows} showAdvanced={() => state.set(advancedSetting, true)} showPlanned={() => setPlanned(true)} />}
+          {content ?? <GroupPage group={topics[0]} state={state} custom={custom} visible={visible} shows={shows} tierShows={tierShows} planned={planned} onPlanned={setPlanned} showAdvanced={() => state.set(advancedSetting, true)} />}
         </div>
       </div>
     </GatewayPageFrame>
@@ -258,20 +263,27 @@ function GroupPage({
   custom,
   visible,
   shows,
+  tierShows,
+  planned,
+  onPlanned,
   showAdvanced,
-  showPlanned,
 }: {
   group: SettingsGroup
   state: SettingsState
   custom: (setting: Setting) => ReactNode
   visible: (setting: Setting) => boolean
   shows: (setting: Setting) => boolean
+  tierShows: (setting: Setting) => boolean
+  planned: boolean
+  onPlanned: (value: boolean) => void
   showAdvanced: () => void
-  showPlanned: () => void
 }) {
   const sections = group.sections.map(section => ({ section, rows: section.settings.filter(visible) })).filter(item => item.rows.length)
   const hidden = group.sections.reduce((count, section) => count + section.settings.filter(setting => shows(setting) && !visible(setting)).length, 0)
   const onlyPlanned = !group.sections.some(section => section.settings.some(shows))
+  const all = group.sections.flatMap(section => section.settings)
+  // While hidden, count only the ones actually hidden (a ?focus= setting always shows).
+  const plannedHere = all.filter(setting => isPlanned(setting) && tierShows(setting) && (planned || !shows(setting))).length
   return (
     <div className="flex flex-col gap-7">
       <header>
@@ -286,14 +298,7 @@ function GroupPage({
       {sections.map(item => (
         <SectionCard key={item.section.id} section={item.section} rows={item.rows} state={state} custom={custom} />
       ))}
-      {onlyPlanned && (
-        <p className="text-sm text-muted-foreground">
-          Every setting here is planned: Conker keeps your choice until the feature that uses it is built.{' '}
-          <button type="button" className="font-medium text-foreground underline underline-offset-4" onClick={showPlanned}>
-            Show planned
-          </button>
-        </p>
-      )}
+      {onlyPlanned ? <PlannedTopic count={all.filter(isPlanned).length} onShow={() => onPlanned(true)} /> : <PlannedNote count={plannedHere} shown={planned} onShown={onPlanned} />}
       {hidden > 0 && (
         <p className="text-sm text-muted-foreground">
           {hidden} advanced {hidden === 1 ? 'setting is' : 'settings are'} hidden here.{' '}

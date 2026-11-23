@@ -36,7 +36,8 @@ search, save and reset.
 - **scope:** `global` (saved on the server), `device` (this browser; needs `"home": {"service":
   "browser"}`), `chat` or `agent` (set in each chat or agent; listed here for search).
 - **effect:** `live`, `next-turn`, `restart`, or `stored`: saved now, read by a feature still being
-  built. Stored settings show "Not used yet". Change it to `live` in the same change that makes a
+  built. Settings hides stored settings until "Planned" is on, then shows them labelled "Planned"
+  with the control greyed out. Change it to `live` in the same change that makes a
   feature read the value (`pi.owner.settings.value`).
 - **home:** leave it out and the setting lives in Pi's owner settings document under its id. Give
   one only when the value already lives elsewhere (`/owner/preferences`, `/search/settings`, a chat);

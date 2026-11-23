@@ -47,6 +47,29 @@ test('settings: a model change saves at once, and Undo puts it back', async ({ p
   expect(errors).toEqual([])
 })
 
+test('settings: planned settings stay hidden until Show planned, then show greyed out and stay on', async ({ page }) => {
+  const errors = await open(page, '/settings?group=appearance')
+  const content = page.locator('[data-settings-content]')
+  await expect(content.getByText('Accent color', { exact: true })).toBeVisible()
+  await expect(content.getByText('High contrast', { exact: true })).toBeHidden()
+  await content.getByRole('button', { name: /^Show planned \(\d+\)$/ }).click()
+  const row = page.locator('[id="setting-appearance.contrast"]')
+  await expect(row.getByText('Planned', { exact: true })).toBeVisible()
+  await expect(row.getByText(/Nothing uses this yet/)).toBeVisible()
+  await expect(row.getByRole('switch')).toBeDisabled()
+  // Remembered in this browser.
+  await page.reload()
+  await expect(page.locator('[id="setting-appearance.contrast"]')).toBeVisible()
+  await content.getByRole('button', { name: 'Hide planned' }).click()
+  await expect(row).toBeHidden()
+  // Search leaves them out while hidden.
+  await page.goto('/settings')
+  await page.getByRole('searchbox', { name: 'Search settings' }).fill('High contrast')
+  await expect(page.getByText(/planned setting(s)? also match/)).toBeVisible()
+  await expect(page.locator('[id="setting-appearance.contrast"]')).toBeHidden()
+  expect(errors).toEqual([])
+})
+
 test('update: offer, Update, updating, then running the new version', async ({ page }) => {
   test.setTimeout(120_000)
   const errors = await open(page, '/inbox')
