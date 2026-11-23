@@ -228,7 +228,7 @@ How new chats start and how chats look and behave.
 
 | Setting | What it does | Default | Home |
 |---|---|---|---|
-| **Mode**<br>`chats.default_mode` | How hard Conker works in a new chat. Choices: Auto, Fast, Balanced, Deep. (saved, not used yet) | Auto | owner settings |
+| **Mode**<br>`chats.default_mode` | How hard Conker works in a new chat. Choices: Auto, Fast, Balanced, Deep. (applies right away) | Auto | owner settings |
 | **Access**<br>`chats.default_access` | What Conker may do without asking in a new chat. Choices: Agent's setting, Ask me, AI decides, Full access. (applies right away) | Agent's setting | pi `/owner/preferences` `newChatAccess` |
 | **Private by default**<br>`chats.default_incognito` | New chats remember nothing and stay out of search. (applies right away) | off | owner settings |
 | **A new chat starts with**<br>`chats.start` | What you see in an empty chat. Choices: Nothing, A greeting, Today's summary, A suggested request. (saved, not used yet) | Nothing | owner settings |
@@ -245,7 +245,7 @@ How new chats start and how chats look and behave.
 
 | Setting | What it does | Default | Home |
 |---|---|---|---|
-| **Suggest your next message**<br>`chats.suggestions` | Shows what you might ask next under Conker's answer. (saved, not used yet) | on | owner settings |
+| **Suggest your next message**<br>`chats.suggestions` | Shows what you might ask next under Conker's answer. (applies right away) | on | owner settings |
 | **Suggestions shown**<br>`chats.suggestions_count` | How many next-message suggestions appear. 1 to 3. (applies right away) | `2` | owner settings |
 | **Suggestion style**<br>`chats.suggestions_style` | How suggestions appear. Choices: Buttons, Gray text in the box. (saved, not used yet) | Buttons | owner settings |
 | **Prompt check**<br>`chats.prompt_check` | Advises how to make a request clearer before you send it. Choices: Auto, On, Off. (saved, not used yet) | Auto | owner settings |
@@ -255,8 +255,8 @@ How new chats start and how chats look and behave.
 
 | Setting | What it does | Default | Home |
 |---|---|---|---|
-| **Send with**<br>`chats.send_with` | The key that sends a message. Choices: Enter, Ctrl+Enter. (saved, not used yet) | Enter | owner settings |
-| **Spell check**<br>`chats.spellcheck` | Marks spelling mistakes while you type. (saved, not used yet) | on | owner settings |
+| **Send with**<br>`chats.send_with` | The key that sends a message. Choices: Enter, Ctrl+Enter. (applies right away) | Enter | owner settings |
+| **Spell check**<br>`chats.spellcheck` | Marks spelling mistakes while you type. (applies right away) | on | owner settings |
 | **Paste images as attachments**<br>`chats.paste_images` | Turns a pasted picture into an attachment. (saved, not used yet) | on | owner settings |
 | **Queue messages**<br>`chats.queue` | Lets you send more messages while Conker is still working. (applies right away) | on | owner settings |
 | **Queued messages**<br>`chats.queue_max` | How many messages can wait in one chat. 1 to 5. (applies right away) | `5` | owner settings |
@@ -267,11 +267,11 @@ How new chats start and how chats look and behave.
 |---|---|---|---|
 | **Interactive answers**<br>`chats.interactive_answers` | Answers can hold tables, charts, choices to tap and short forms; Auto uses them only with hosted models. Choices: Auto, On, Off. (applies from the next message) | Auto | owner settings |
 | **Language level**<br>`chats.language_level` | How short and simple answers are, from Strict short sentences to Deep full detail; each chat can change it. Choices: Strict, Plain, Normal, Deep. (applies from the next message) | Normal | owner settings |
-| **Tool calls**<br>`chats.tool_calls` | How tool calls show in a chat. Choices: Folded, Open, Hidden. (saved, not used yet) | Folded | owner settings |
+| **Tool calls**<br>`chats.tool_calls` | How tool calls show in a chat. Choices: Folded, Open, Hidden. (applies right away) | Folded | owner settings |
 | **Thinking**<br>`chats.thinking` | How Conker's thinking shows in a chat. Choices: Folded, Open, Hidden. (saved, not used yet) | Folded | owner settings |
 | **Sources**<br>`chats.citations` | How sources show in answers. Choices: Numbers in the text, At the end, Hidden. (saved, not used yet) | Numbers in the text | owner settings |
 | **Follow new text**<br>`chats.autoscroll` | Scrolls down as an answer is written. (saved, not used yet) | on | owner settings |
-| **Wrap long code lines**<br>`chats.code_wrap` | Breaks long code lines instead of scrolling sideways. (saved, not used yet) | off | owner settings |
+| **Wrap long code lines**<br>`chats.code_wrap` | Breaks long code lines instead of scrolling sideways. (applies right away) | off | owner settings |
 | **Line numbers in code**<br>`chats.code_numbers` | Numbers the lines of code blocks. (saved, not used yet) | off | owner settings |
 | **Fold long answers after**<br>`chats.fold_after` | Folds answers longer than this; 0 never folds. 0 to 500 lines. (saved, not used yet) | `0` lines | owner settings |
 | **Read aloud**<br>`chats.read_aloud` | Whether answers are read aloud. Choices: When you ask, Always. (saved, not used yet) | When you ask | owner settings |
@@ -364,7 +364,7 @@ How Conker searches the web and checks its answers.
 | **Searches in deep research**<br>`research.deep_searches` | The most searches one deep research makes. 1 to 4. (applies from the next message) | `4` | owner settings |
 | **Sources per answer**<br>`research.sources` | The most sources one answer cites. 1 to 20. (applies from the next message) | `5` | owner settings |
 | **Prefer recent**<br>`research.recent` | How new sources should be. Choices: Any age, Last year, Last month. (applies from the next message) | Any age | owner settings |
-| **Trusted sites**<br>`research.trusted_sites` | Sites Conker prefers when it searches. (saved, not used yet) | none | owner settings |
+| **Trusted sites**<br>`research.trusted_sites` | Sites Conker prefers when it searches. (applies from the next message) | none | owner settings |
 | **Sites to skip**<br>`research.skip_sites` | Sites Conker never uses as sources or reads, such as example.com. (applies right away) | none | toolgate `/v2/owner/settings` `web_skip_sites` |
 
 ### Review
@@ -373,7 +373,7 @@ How Conker searches the web and checks its answers.
 |---|---|---|---|
 | **Fact check**<br>`research.fact_check` | Checks claims in answers against sources. Choices: Auto, On, Off. (saved, not used yet) | Auto | owner settings |
 | **Judge**<br>`research.judge` | A second model scores answers when several models compete. (saved, not used yet) | off | owner settings |
-| **Your votes teach model profiles**<br>`research.votes` | Your thumbs up and down shape which models Conker picks. (saved, not used yet) | on | owner settings |
+| **Your votes teach model profiles**<br>`research.votes` | Your thumbs up and down count in each model's profile. (applies right away) | on | owner settings |
 
 ## Search
 
