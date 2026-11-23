@@ -95,8 +95,7 @@ describe('WorkspaceSearch inside the workspace chrome', () => {
     expect(screen.queryByRole('searchbox')).toBeNull()
   })
 
-  // Real bug, app code left as is: primitives.tsx puts a DropdownMenuLabel outside a menu group, so opening the scope menu throws "MenuGroupContext is missing".
-  it.fails('offers "Search all Conker" from its scope menu, with what is typed so far', async () => {
+  it('offers "Search all Conker" from its scope menu, with what is typed so far', async () => {
     const openAll = vi.fn()
     render(
       <SidebarProvider>

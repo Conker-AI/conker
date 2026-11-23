@@ -187,9 +187,7 @@ describe('ListCard select mode', () => {
     expect(screen.getByRole('status').textContent).toBe('Select items')
   })
 
-  // Real bug, app code left as is: toggle() moves the range anchor right after queueing the state update, and the update
-  // reads the anchor later, so Shift picks only the two rows tapped (list-selection.ts).
-  it.fails('picks a range with Shift', () => {
+  it('picks a range with Shift', () => {
     render(<Harness rows={items(5)} />)
     fireEvent.click(screen.getByRole('button', { name: 'Select items' }))
     fireEvent.click(select('Chat 2'))
