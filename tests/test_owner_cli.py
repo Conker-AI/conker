@@ -321,6 +321,19 @@ def test_a_gateway_that_does_not_answer_may_have_saved(monkeypatch, capsys):
     assert "may already be changed" in capsys.readouterr().err
 
 
+def test_a_gateway_command_that_cannot_start_changed_nothing(monkeypatch, capsys):
+    gateway(monkeypatch)
+
+    def missing(argv, **options):
+        raise FileNotFoundError(2, "No such file or directory", "docker")
+
+    monkeypatch.setattr(config_cli.subprocess, "run", missing)
+    assert main("spending", "cap", "--on") == 1
+    err = capsys.readouterr().err
+    assert "Could not start the gateway command. Nothing was changed." in err
+    assert "may already" not in err and SECRET not in err
+
+
 def test_a_refusal_says_pis_words_and_exits_1(monkeypatch, capsys):
     refused = {"detail": "Team names are unique"}
     Relay(monkeypatch, {("GET", "/inference/spending"): (409, refused)})

@@ -60,7 +60,12 @@ def run_gateway(argv: list[str], password: str, changes: dict, **options) -> dic
             check=False,
             **options,
         )
-    except (OSError, subprocess.TimeoutExpired):
+    except OSError:
+        # docker, or Python in development, is missing: the command never started.
+        raise CapNotSaved(
+            "Could not start the gateway command. Nothing was changed. Check it with: conker status"
+        ) from None
+    except subprocess.TimeoutExpired:
         raise CapNotSaved(
             "The gateway did not answer. The cap may already be changed; check it with "
             "conker spending before trying again."
