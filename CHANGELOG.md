@@ -6,6 +6,12 @@ which module versions a release pins.
 
 ## Unreleased
 
+## 0.6.30
+
+Beta build from main. Changes since the last tag:
+
+- feat(cli): conker mcp class ID act_outward for an imported MCP tool (#432)
+
 ## 0.6.0
 
 - **The folded update card says "Updating to X.Y.Z...".** While an update runs, the card in the Inbox no longer loses its button in silence. (#391)
