@@ -1,5 +1,5 @@
-"""ToolGate owner operations from the CLI: remote MCP tools, which tools Conker may use, and the
-buttons his Inbox shows when a tool asks him."""
+"""ToolGate owner operations from the CLI: remote MCP tools (and whether each runs without asking),
+which tools Conker may use, and the buttons his Inbox shows when a tool asks him."""
 
 from __future__ import annotations
 
@@ -19,6 +19,10 @@ CARD_TEMPLATES = ("do", "send", "publish", "ship", "run", "delete", "pay", "save
 
 def check(args) -> None:
     """Refuse malformed ids and half-specified changes before anything is read or sent."""
+    if args.command == "mcp" and args.operation == "class":
+        identity(args.id, MCP_ID, "MCP capability ID")
+        if args.expected_version < 1:
+            raise ValueError("Use the tool version `mcp list` showed (1 or more).")
     if args.command == "mcp" and args.operation in {"state", "access"}:
         identity(args.id, MCP_ID, "MCP capability ID")
         if args.expected_digest is not None:
@@ -65,6 +69,11 @@ def operation(args, config, request):
     elif args.operation == "import":
         path = "/v2/owner/mcp/import"
         body = imported_mcp(args)
+    elif args.operation == "class":
+        # Observe lets Conker run this one tool without asking; ToolGate refuses it for a tool
+        # whose name says it acts and for a version other than the one he saw.
+        path += "/" + args.id + "/class"
+        body = {"read_class": args.read_class, "expected_version": args.expected_version}
     elif args.operation in {"state", "access"}:
         path += "/" + args.id + "/" + args.operation
         if args.enabled is not None:
