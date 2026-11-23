@@ -5,13 +5,15 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
 import { NARROW, SettingControl } from './controls'
+import { isPlanned, PLANNED_REASON } from './planned'
 import { SETTINGS_BY_ID, type Setting } from './registry'
 import type { SettingsState } from './use-settings'
 
 /**
  * The one row every setting uses: title, one plain sentence, its control, and the same marks
- * everywhere: "Not used yet" (saved for a feature still being built), "This device", a lock when
- * saving asks for the password, Changed with Reset, and Saving / Saved / what went wrong.
+ * everywhere: "Planned" (kept for a feature still being built, greyed out with the reason), "This
+ * device", a lock when saving asks for the password, Changed with Reset, and Saving / Saved / what
+ * went wrong.
  */
 export function SettingRow({ setting, state, custom }: { setting: Setting; state: SettingsState; custom: (setting: Setting) => ReactNode }) {
   const id = `setting-${setting.id}`
@@ -21,9 +23,10 @@ export function SettingRow({ setting, state, custom }: { setting: Setting; state
   const blocked = Boolean(dependency && state.value(dependency) !== setting.dependsOn?.value)
   const status = state.statuses[setting.id]
   const changed = state.changed(setting)
-  const disabled = !state.available(setting) || blocked || status?.state === 'saving'
+  const planned = isPlanned(setting)
+  const disabled = planned || !state.available(setting) || blocked || status?.state === 'saving'
   const control = isCustom ? custom(setting) : <SettingControl setting={setting} id={`${id}-control`} value={state.value(setting)} disabled={disabled} onChange={value => state.set(setting, value)} />
-  const reset = changed && !isCustom && (
+  const reset = changed && !isCustom && !planned && (
     <Button type="button" size="xs" variant="ghost" className="text-muted-foreground" disabled={disabled} onClick={() => state.reset(setting)}>
       <RotateCcw />
       Reset
@@ -38,9 +41,9 @@ export function SettingRow({ setting, state, custom }: { setting: Setting; state
               {setting.title}
             </Label>
             {changed && <span aria-label="Changed from the default" title="Changed from the default" className="size-1.5 rounded-full bg-primary" />}
-            {setting.effect === 'stored' && (
-              <Badge variant="outline" size="sm" title="Your choice is saved; the feature that uses it is still being built.">
-                Not used yet
+            {planned && (
+              <Badge variant="outline" size="sm">
+                Planned
               </Badge>
             )}
             {setting.scope === 'device' && (
@@ -51,7 +54,8 @@ export function SettingRow({ setting, state, custom }: { setting: Setting; state
             {setting.home?.service !== 'browser' && setting.home?.verify && <Lock aria-label="Saving asks for your password" className="size-3.5 text-muted-foreground" />}
           </div>
           <p className="mt-0.5 text-sm leading-5 text-muted-foreground">{setting.description}</p>
-          {blocked && dependency && <p className="mt-1 text-xs text-muted-foreground">Turn on {dependency.title} first.</p>}
+          {planned && <p className="mt-1 text-xs text-muted-foreground">{PLANNED_REASON}</p>}
+          {!planned && blocked && dependency && <p className="mt-1 text-xs text-muted-foreground">Turn on {dependency.title} first.</p>}
           {status && (
             <p role={status.state === 'failed' ? 'alert' : 'status'} className={cn('mt-1 flex items-center gap-1 text-xs', status.state === 'failed' ? 'text-destructive-foreground' : 'text-muted-foreground')}>
               {status.state === 'saving' ? (

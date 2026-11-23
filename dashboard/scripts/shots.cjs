@@ -3,6 +3,7 @@
 // place in the sidebar. Fails when a page throws or is wider than the window, after shooting the
 // rest. Run against `npm run dev` (CONKER_URL, default http://localhost:5173). Requires Playwright;
 // PLAYWRIGHT_MODULE may point to an existing installation and CHROMIUM_PATH to a browser binary.
+// STORAGE (JSON) is saved in the browser first, for view choices such as {"conker.settings-view.planned":"true"}.
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright')
 const { mkdir } = require('node:fs/promises')
 const path = require('node:path')
@@ -17,6 +18,7 @@ async function shoot(browser, width, theme) {
   const context = await browser.newContext({ viewport: { width, height: width < 768 ? 844 : 900 }, colorScheme: theme, reducedMotion: 'reduce' })
   try {
     await context.addInitScript(value => { try { localStorage.setItem('vite-ui-theme', value) } catch { /* Storage may be blocked. */ } }, theme)
+    if (process.env.STORAGE) await context.addInitScript(items => { try { for (const [key, value] of Object.entries(items)) localStorage.setItem(key, value) } catch { /* Storage may be blocked. */ } }, JSON.parse(process.env.STORAGE))
     for (const address of routes) {
       const page = await context.newPage()
       const errors = []
