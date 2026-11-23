@@ -138,8 +138,7 @@ def repository_launcher(ubuntu_cli, versions: str | None, env: str = "CONKER_POR
             / "Git/usr/bin/bash.exe"
         )
         shell = str(git) if git.exists() else shell
-    if not shell:
-        pytest.skip("a POSIX shell is required")
+    assert shell, "a POSIX shell is required: bash or sh, or Git for Windows' bash.exe on Windows"
 
     def run(*arguments: str):
         return subprocess.run(

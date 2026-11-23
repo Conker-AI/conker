@@ -25,8 +25,9 @@ def ubuntu_cli(tmp_path: Path):
             / "Git/usr/bin/sh.exe"
         )
         shell = str(git_sh) if git_sh.exists() else None
-    if not shell:
-        pytest.skip("a POSIX shell is required")
+    assert shell, (
+        "a POSIX shell is required: sh on Linux and macOS, Git for Windows' sh.exe on Windows"
+    )
     deployment = tmp_path / "deployment"
     companion = deployment / "sources/companion"
     state = deployment / "state"
