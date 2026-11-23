@@ -80,6 +80,14 @@ def test_enhance_sends_the_chat_and_template_and_can_print_json(monkeypatch, cap
     }
 
 
+def test_enhance_sends_the_draft_it_measured(monkeypatch, capsys):
+    # The length check is on the trimmed draft, so the trimmed draft is what Pi gets.
+    draft = "  " + "a" * 8000 + "\n"
+    code, sent, _ = calls(monkeypatch, capsys, ["enhance", draft])
+    assert code == 0
+    assert json.loads(sent[0].data) == {"text": "a" * 8000}
+
+
 def test_enhance_without_notes_prints_no_changes_block(monkeypatch, capsys):
     reply = {**REPLY, "notes": []}
     _, _, out = calls(monkeypatch, capsys, ["enhance", "plan a trip"], [reply])
