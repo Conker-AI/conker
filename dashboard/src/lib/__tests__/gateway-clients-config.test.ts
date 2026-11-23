@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { chatFeatureFix, chatFeatureMessage, chatFeatureTextFix } from '../gateway/chat-feature-errors'
-import { createGatewayMcpClient, type McpDiscovery, type McpTool } from '../gateway/mcp'
+import { createGatewayMcpClient, readClassMessage, type McpDiscovery, type McpTool } from '../gateway/mcp'
 import { SKILL_BROWSER_MAX_BYTES, SKILL_MAX_CHARACTERS, createGatewaySkillsClient, parseSkill, parseSkills, skillImportBytes, validateSkillIds } from '../gateway/skills'
 import { createGatewayProposalClient, parseProposal } from '../gateway/proposals'
 import { createRecallNoticesClient } from '../gateway/recall-notices'
@@ -136,6 +136,39 @@ describe('MCP client', () => {
     await kind(createGatewayMcpClient(fakeAuth({ ...access, digest: hex('c', 64) }).auth).setAccess(tool, true), 'invalid-response')
     await kind(createGatewayMcpClient(fakeAuth({ ...access, toolId: 'mcp.zzz' }).auth).setAccess(tool, true), 'invalid-response')
     await kind(createGatewayMcpClient(fakeAuth({ ...access, requiredScope: 'x' }).auth).setAccess(tool, true), 'invalid-response')
+  })
+
+  it('sends a read class for the version he saw and returns the class ToolGate stored', async () => {
+    const { auth, calls } = fakeAuth({ schemaVersion: 1, tool: { ...tool, read_class: 'observe', version: 2 } })
+    const client = createGatewayMcpClient(auth)
+    expect((await client.setClass({ ...tool, read_class: 'act_outward' }, 'observe')).read_class).toBe('observe')
+    expect(calls[0]).toEqual({ path: '/api/owner/mcp/tools/mcp.notes/class', init: { method: 'POST', body: { read_class: 'observe', expected_version: 1 } } })
+    // What ToolGate stored is shown as it is, even when it is not what was asked.
+    const kept = createGatewayMcpClient(fakeAuth({ schemaVersion: 1, tool: { ...tool, read_class: 'act_outward', version: 2 } }).auth)
+    expect((await kept.setClass(tool, 'observe')).read_class).toBe('act_outward')
+    await kind(client.setClass(tool, 'auto' as never), 'validation')
+    await kind(client.setClass({ ...tool, version: 0 }, 'observe'), 'validation')
+    expect(calls).toHaveLength(1)
+    await kind(createGatewayMcpClient(fakeAuth({ schemaVersion: 1, tool: { ...tool, id: 'mcp.other', read_class: 'observe' } }).auth).setClass(tool, 'observe'), 'invalid-response')
+    await kind(createGatewayMcpClient(fakeAuth({ schemaVersion: 1, tool }).auth).setClass(tool, 'observe'), 'invalid-response')
+    await kind(createGatewayMcpClient(fakeAuth({ schemaVersion: 1, tool: { ...tool, read_class: 'auto' } }).auth).setClass(tool, 'observe'), 'invalid-response')
+  })
+})
+
+describe('MCP read class refusal words', () => {
+  const coded = (status: number, code?: string) => readClassMessage(new GatewayError('http', status, undefined, code as never))
+  it('words each refusal code and never shows server text', () => {
+    expect(coded(422, 'act_outward_hint')).toBe('It still asks every time: its server doesn’t say this tool is read-only.')
+    expect(coded(409, 'schema_changed')).toBe('It still asks every time: its server now describes this tool differently. Import the new version to review it.')
+    expect(coded(422, 'unsupported_schema')).toBe(coded(409, 'schema_changed'))
+    expect(coded(409, 'definition_conflict')).toBe('This tool changed since you opened it. Reload it, then choose again.')
+    expect(coded(422, 'refused')).toBe('ToolGate didn’t change it. Reload the tool, then choose again.')
+    expect(coded(409)).toBe(coded(422, 'refused'))
+    expect(coded(404)).toBe('This tool is no longer saved. Reload the list.')
+  })
+  it('falls back to the transport words for anything else', () => {
+    expect(readClassMessage(new GatewayError('verification-cancelled'))).toBe(new GatewayError('verification-cancelled').message)
+    expect(readClassMessage(new Error('boom'))).toBe(new GatewayError('network').message)
   })
 })
 

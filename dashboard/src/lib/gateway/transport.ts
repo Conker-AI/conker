@@ -25,7 +25,10 @@ export type PromptErrorCode = typeof promptErrorCodes[number]
 /** Pi's coded refusals on the team-run routes (/team-runs); the screen words each one. */
 export const teamRunErrorCodes = ['spending_cap_off', 'spending_cap_unavailable', 'revision_conflict', 'request_conflict', 'not_found', 'run_blocked', 'unknown_role', 'handoff_required', 'handoff_limit', 'turn_limit', 'usage_unknown', 'token_stop', 'cost_stop', 'input_limit', 'source_unavailable', 'result_unavailable', 'unresolved_run', 'blocked_run', 'team_busy', 'initial_role'] as const
 export type TeamRunErrorCode = typeof teamRunErrorCodes[number]
-type GatewayErrorCode = TeamRunErrorCode | PromptErrorCode | 'draft_changed' | 'invalid_history_cursor' | 'invalid_history_request' | MemoryForgetErrorCode | MemoryCorrectionErrorCode | HostOpsErrorCode | ChatFeatureErrorCode | ChatForgetErrorCode
+/** The gateway's codes for ToolGate refusing an MCP tool's read class (it words them itself); the screen words each one. */
+export const mcpClassErrorCodes = ['act_outward_name', 'act_outward_hint', 'schema_changed', 'unsupported_schema', 'definition_conflict', 'refused'] as const
+export type McpClassErrorCode = typeof mcpClassErrorCodes[number]
+type GatewayErrorCode = McpClassErrorCode | TeamRunErrorCode | PromptErrorCode | 'draft_changed' | 'invalid_history_cursor' | 'invalid_history_request' | MemoryForgetErrorCode | MemoryCorrectionErrorCode | HostOpsErrorCode | ChatFeatureErrorCode | ChatForgetErrorCode
 export type GatewayErrorKind = 'configuration' | 'validation' | 'network' | 'aborted' | 'invalid-response' | 'too-large' | 'response-too-large' | 'http' | 'login-rejected' | 'rate-limited' | 'dependency' | 'browser-expired' | 'upstream-denied' | 'verification-failed' | 'session-changed' | 'verification-cancelled' | 'verification-required' | 'verification-password'
 const messages: Record<GatewayErrorKind, string> = {
   configuration: 'Open Conker at its own HTTPS address; this page is on a different one.',
@@ -109,7 +112,8 @@ routes.GET.unshift(draftRoute, /^\/api\/control\/pi\/drafts\/new\/start\/[A-Za-z
 routes.GET.unshift(/^\/api\/control\/pi\/memory\/forget-pending$/)
 routes.POST.unshift(draftRoute, draftStartRoute)
 routes.GET.unshift(/^\/api\/pi\/skills$/, /^\/api\/control\/pi\/skills(?:\/[a-z0-9]+(?:-[a-z0-9]+)*)?$/, /^\/api\/owner\/mcp\/tools(?:\/mcp\.[a-z0-9][a-z0-9.-]{0,75}\/access)?$/)
-routes.POST.unshift(/^\/api\/control\/pi\/skills\/import$/, /^\/api\/control\/pi\/skills\/[a-z0-9]+(?:-[a-z0-9]+)*\/state$/, /^\/api\/owner\/mcp\/(?:discover|import)$/, /^\/api\/owner\/mcp\/tools\/mcp\.[a-z0-9][a-z0-9.-]{0,75}\/(?:state|access)$/)
+routes.POST.unshift(/^\/api\/control\/pi\/skills\/import$/, /^\/api\/control\/pi\/skills\/[a-z0-9]+(?:-[a-z0-9]+)*\/state$/, /^\/api\/owner\/mcp\/(?:discover|import)$/, /^\/api\/owner\/mcp\/tools\/mcp\.[a-z0-9][a-z0-9.-]{0,75}\/(?:state|access|class)$/)
+const mcpClassRoute = /^\/api\/owner\/mcp\/tools\/mcp\.[a-z0-9][a-z0-9.-]{0,75}\/class$/
 routes.GET.unshift(/^\/api\/host\/providers$/)
 // Access: whether Conker decides by his settings, the tools that always ask him, and what ran without asking.
 routes.GET.unshift(/^\/api\/owner\/access$/, /^\/api\/control\/pi\/access\/handled$/, /^\/api\/owner\/tools\/[A-Za-z0-9][A-Za-z0-9._:-]{0,127}\/access$/)
@@ -448,6 +452,11 @@ export function createGatewayTransport(options: { origin?: string; fetch?: typeo
               const value = await responseObject(response, GATEWAY_JSON_LIMIT)
               if (object(value.detail) && chatFeatureErrorCodes.includes(value.detail.code as ChatFeatureErrorCode)) code = value.detail.code as ChatFeatureErrorCode
             } catch { /* Known chat codes only; Pi's text is never displayed. */ }
+          } else if (method === 'POST' && mcpClassRoute.test(path) && [409, 422].includes(response.status)) {
+            try {
+              const value = await responseObject(response, GATEWAY_JSON_LIMIT)
+              if (object(value.detail) && mcpClassErrorCodes.includes(value.detail.code as McpClassErrorCode)) code = value.detail.code as McpClassErrorCode
+            } catch { /* Known class codes only; the gateway's text is never displayed. */ }
           } else await response.body?.cancel().catch(() => undefined)
           throw new GatewayError(response.status === 428 ? 'verification-required' : response.status === 429 ? 'rate-limited' : response.status >= 500 ? 'dependency' : 'http', response.status, turnId, code, detail)
         }

@@ -15,6 +15,7 @@ import type { GatewayMcpClient, McpAccess, McpDiscovery, McpTool } from '@/lib/g
 import { useListSelection } from '@/components/design-system/list-selection'
 import { byName, useListView } from '@/components/design-system/list-view'
 import { runBulk } from '@/components/design-system/list-bulk'
+import { McpReadClassControl } from './mcp-read-class'
 import { GatewayPageFrame } from './page-frame'
 
 // Getters keep the compare helpers out of module load, so a harness that stubs imports can still
@@ -180,7 +181,7 @@ function McpConnect({ client, onSaved, onBusy, onCancel }: { client: GatewayMcpC
   )
 }
 
-function McpDetail({ client, tool, onSaved, onClose, onReload }: { client: GatewayMcpClient; tool: McpTool; onSaved: (value: McpTool) => void; onClose: () => void; onReload: () => void }) {
+function McpDetail({ client, tool, onSaved, onStored, onClose, onReload }: { client: GatewayMcpClient; tool: McpTool; onSaved: (value: McpTool) => void; onStored: (value: McpTool) => void; onClose: () => void; onReload: () => void }) {
   const [access, setAccess] = useState<McpAccess | null>(null),
     [error, setError] = useState(''),
     [pending, setPending] = useState(false)
@@ -236,8 +237,11 @@ function McpDetail({ client, tool, onSaved, onClose, onReload }: { client: Gatew
       <OverlayBody>
         <ReferenceSection title="Chat access">
           <p>{access ? (access.enabled ? 'Available in your Conker chats.' : 'Not available in chats yet.') : 'Checking access…'}</p>
-          <p className="text-xs text-muted-foreground">Each call requires approval in the Inbox. {tool.status === 'disabled' && 'This tool is disabled for all new calls.'}</p>
+          <p className="text-xs text-muted-foreground">
+            {tool.read_class === 'observe' ? 'Its calls run without asking you.' : 'Each call requires approval in the Inbox.'} {tool.status === 'disabled' && 'This tool is disabled for all new calls.'}
+          </p>
         </ReferenceSection>
+        <McpReadClassControl client={client} tool={tool} onStored={onStored} onReload={onReload} />
         <ReferenceSection title="Server">
           <p className="break-all">{tool.url}</p>
           <p>Remote tool: {tool.tool_name}</p>
@@ -308,6 +312,11 @@ export function GatewayMcpWorkspace({ client }: { client: GatewayMcpClient }) {
     setParams({ view: 'mcp', tool: value.id })
     setNotice(`Saved ${value.name}.`)
   }
+  // ToolGate's stored state replaces the row in place, even if its details closed while it saved.
+  function stored(value: McpTool) {
+    listGeneration.current++
+    setTools(current => (current ?? []).map(tool => (tool.id === value.id ? value : tool)))
+  }
   const rows = tools ?? []
   const activeCount = rows.filter(tool => tool.status === 'active').length,
     offCount = rows.length - activeCount
@@ -333,7 +342,9 @@ export function GatewayMcpWorkspace({ client }: { client: GatewayMcpClient }) {
     }
   }
   // Details open in place under the chosen tool; choosing it again closes them.
-  const details = selected && <McpDetail key={`${selected.id}:${selected.digest}`} client={client} tool={selected} onSaved={saved} onReload={() => setReload(value => value + 1)} onClose={() => setParams({ view: 'mcp' })} />
+  const details = selected && (
+    <McpDetail key={`${selected.id}:${selected.digest}`} client={client} tool={selected} onSaved={saved} onStored={stored} onReload={() => setReload(value => value + 1)} onClose={() => setParams({ view: 'mcp' })} />
+  )
   const shown = !!selected && view.rows.some(tool => tool.id === selected.id)
   const chip = (value: typeof filter, text: string, count: number) => (
     <FilterChip

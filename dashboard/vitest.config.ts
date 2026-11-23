@@ -39,7 +39,7 @@ export default defineConfig({
         'src/components/gateway/{imported-chats-line,memory-uses-line,open-loops-workspace,thinking-status}.tsx',
         'src/components/{status-badge,message-action-button,reference-section}.tsx',
         'src/components/chat/{chat-feature-error,tool-record}.tsx',
-        'src/components/gateway/{mode-chips,system-status,pending-submissions}.tsx',
+        'src/components/gateway/{mode-chips,system-status,pending-submissions,mcp-read-class}.tsx',
         'src/components/inbox/{agent-note-card,ask-card,reply-box}.tsx',
         'src/components/design-system/list-card.tsx',
         'src/components/table/data-table-pagination.tsx',

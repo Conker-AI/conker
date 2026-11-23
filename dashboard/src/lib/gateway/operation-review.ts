@@ -57,6 +57,14 @@ export function describeGatewayOperation(operation: GatewayVerifiedOperation): G
     const found = named[tail]
     if (found) return { title: found[0], path, target: `Chat ${chat[2]}`, details: [found[1]] }
   }
+  if (path.startsWith('/api/owner/mcp/tools/') && parts.at(-1) === 'class') {
+    const observe = body.read_class === 'observe'
+    title = observe ? 'Let this MCP tool run without asking' : 'Make this MCP tool ask every time'
+    target = parts[5]
+    details.push(observe ? 'Its calls run without an Inbox card. Its limits, spending and the action log still apply. ToolGate refuses if its name or its server says it could act.' : 'Each call asks you in the Inbox again, for its exact inputs.')
+    if (typeof body.expected_version === 'number' && Number.isSafeInteger(body.expected_version)) details.push(`Only if version ${body.expected_version} is still the saved one.`)
+    return { title, path, target, details }
+  }
   if (path.startsWith('/api/owner/mcp/') && ['discover', 'import', 'access', 'state'].includes(String(parts.at(-1)))) {
     let endpoint = 'Saved MCP server'
     try { if (typeof body.url === 'string') endpoint = new URL(body.url).hostname } catch { /* Only display a parsed hostname. */ }
@@ -64,7 +72,7 @@ export function describeGatewayOperation(operation: GatewayVerifiedOperation): G
     const operation = parts.at(-1)
     title = operation === 'discover' ? 'Discover MCP tools' : operation === 'import' ? 'Import MCP tool' : operation === 'access' ? (body.enabled ? 'Make MCP tool available in chats' : 'Remove MCP tool from chats') : (body.enabled ? 'Enable MCP tool' : 'Disable MCP tool')
     details.push(operation === 'discover' ? 'Contacts this server to read its tool catalogue.' : operation === 'import' ? 'Saves the reviewed tool and input schema. Chat access is granted separately.' : operation === 'access' ? 'Changes access for this Conker chat runtime. Other callers keep their existing permissions.' : 'Changes availability for new tool calls.')
-    if (operation !== 'discover') details.push('Each execution still requires approval in the Inbox.')
+    if (operation !== 'discover') details.push('Each call still asks you in the Inbox, unless the tool is set to run without asking (read only).')
   }
   else if (path === '/api/control/pi/skills/import' || /^\/api\/control\/pi\/skills\/.+\/state$/.test(path)) {
     title = path.endsWith('/import') ? 'Import skill instructions' : body.enabled ? 'Enable skill' : 'Disable skill'
