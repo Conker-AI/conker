@@ -75,6 +75,49 @@ export function createFakeJobs(now: () => number, fail: (status: number) => neve
     })
     jobRuns.set(`job_${'a'.repeat(32)}`, [failed(2, null), failed(26, 'HELD_BACK')])
   }
+  // `?preview-jobs=skipped`: the built-in Morning check-in, its newest runs skipped by quiet hours and the daily limit.
+  if (new URLSearchParams(globalThis.location?.search).get('preview-jobs') === 'skipped') {
+    const checkIn = 'job_beca06ba345a8b3170a4d8e2473fe00f'
+    jobs.push({
+      ...jobs[0],
+      id: checkIn,
+      revision: 1,
+      nextAt: now() + 7200,
+      definition: {
+        name: 'Morning check-in',
+        instructionsConfigured: true,
+        agentId: 'companion',
+        createdBy: 'conker',
+        adoptedAt: null,
+        turnedOff: null,
+        timing: { kind: 'daily', time: '08:00', day: 0, hours: 24 },
+        timeZone: 'Asia/Jerusalem',
+        enabled: true,
+        state: 'enabled',
+        target: { kind: 'agent', sessionId: `ses_${'2'.repeat(16)}` },
+        overlap: 'skip',
+        requireBudget: false,
+        budgetAllowanceConfigured: false,
+      },
+    })
+    const run = (hoursAgo: number, status: string, outcomeCode: string | null): Json => ({
+      schemaVersion: 1,
+      id: `scheduled_${(hoursAgo + 7000).toString(16).padStart(32, '0')}`,
+      jobId: checkIn,
+      jobRevision: 1,
+      scheduledAt: now() - hoursAgo * 3600,
+      startedAt: now() - hoursAgo * 3600,
+      status,
+      manual: hoursAgo === 2,
+      budgetBound: false,
+      receiptRecorded: true,
+      outcomeCode,
+      authority: 'none',
+      contentIncluded: false,
+      execution: 'resolved',
+    })
+    jobRuns.set(checkIn, [run(2, 'skipped', 'QUIET_HOURS'), run(26, 'skipped', 'OVER_BUDGET'), run(50, 'completed', null)])
+  }
   const manualJobRequests = new Map<string, Json>()
   return {
     jobs,
