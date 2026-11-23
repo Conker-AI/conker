@@ -63,7 +63,7 @@ describe('push client', () => {
     await kind(fakeAuth({ removed: 'yes', devices: [], limit: 10 }).client.unsubscribe(ID), 'invalid-response')
   })
 
-  it('keeps its errors as gateway errors', () => {
+  it('keeps its errors as server-call errors', () => {
     expect(new GatewayError('validation').message).not.toContain(KEYS.endpoint)
   })
 })
@@ -100,7 +100,7 @@ function worker(scope = 'https://conker.test/') {
 }
 
 describe('service worker notifications', () => {
-  it('shows the fixed title, its tag and the Inbox link the gateway sent', async () => {
+  it('shows the fixed title, its tag and the Inbox link the server sent', async () => {
     const shown = await worker().push({ title: 'Conker needs your approval', url: '/inbox', tag: 'conker-0123456789abcdef' })
     expect(shown.title).toBe('Conker needs your approval')
     expect(shown.options.tag).toBe('conker-0123456789abcdef')

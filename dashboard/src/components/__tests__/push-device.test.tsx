@@ -264,7 +264,7 @@ describe('browserPush (register.ts)', () => {
     expect(requestPermission).not.toHaveBeenCalled()
   })
 
-  it('names a device the way the gateway does', async () => {
+  it('names a device the way the server does', async () => {
     expect(await pushDeviceId(KEYS.endpoint)).toBe(digest(KEYS.endpoint))
   })
 
