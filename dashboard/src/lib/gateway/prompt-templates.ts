@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import type { GatewayAuthClient } from './auth'
+import { createPiClient, piData } from './pi-client'
 import { GatewayError } from './transport'
 import type { PromptTemplate, TemplateField as FormField } from '@/lib/chat/prompt-templates'
 
@@ -52,13 +53,15 @@ const route = (id: string) => {
 
 /** Pi's prompt templates: the owner's forms for a request. Saving one grants nothing, so the signed-in session is enough. */
 export function createPromptTemplatesClient(auth: Pick<GatewayAuthClient, 'request'>) {
+  const pi = createPiClient(auth)
   return {
     /** The starters first, then his own, newest first. */
     async list(signal?: AbortSignal): Promise<TemplatePage> {
-      return parse(page, await auth.request('/api/control/pi/prompts/templates', { signal }))
+      return piData(pi.GET('/prompts/templates', { signal }), page)
     },
     async get(id: string, signal?: AbortSignal): Promise<PiTemplate> {
-      return parse(receipt, await auth.request(route(id), { signal })).template
+      if (!TEMPLATE_ID.test(id)) throw new GatewayError('validation')
+      return (await piData(pi.GET('/prompts/templates/{template_id}', { params: { path: { template_id: id } }, signal }), receipt)).template
     },
     async create(draft: TemplateDraft): Promise<PiTemplate> {
       return parse(receipt, await auth.request('/api/control/pi/prompts/templates', { method: 'POST', body: draft })).template

@@ -84,8 +84,9 @@ function build(createClient: typeof import('openapi-fetch').default, auth: Pick<
 /**
  * The data of a Pi call, checked by the dashboard's strict schema. The schema must accept exactly what
  * Pi's OpenAPI says the route sends (compile error otherwise); routes Pi types as `unknown` take any.
+ * The binding is on the schema's input, what Pi sends, so a schema that fills defaults still binds.
  */
-export async function piData<D, S extends z.ZodType>(call: Promise<{ data?: D; error?: unknown }>, schema: S & (unknown extends D ? unknown : Same<z.output<S>, D> extends true ? unknown : never)): Promise<z.output<S>> {
+export async function piData<D, S extends z.ZodType>(call: Promise<{ data?: D; error?: unknown }>, schema: S & (unknown extends D ? unknown : Same<z.input<S>, D> extends true ? unknown : never)): Promise<z.output<S>> {
   const { data, error } = await call
   if (error !== undefined) throw new GatewayError('invalid-response')
   const result = schema.safeParse(data)
