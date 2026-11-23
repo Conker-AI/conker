@@ -197,6 +197,7 @@ When and how Conker gets your attention.
 
 | Setting | What it does | Default | Home |
 |---|---|---|---|
+| **Notifications on this device** (this device)<br>`notifications.this_device` | Lets Conker reach this device when something needs you, even with Conker closed. (applies right away) | its own screen | Settings screen |
 | **Where notifications go**<br>`notifications.channels` | The places Conker can reach you. Choices: Browser, Phone, Email, Telegram, Desktop. (saved, not used yet) | Browser | owner settings |
 | **Delivery**<br>`notifications.delivery` | Whether notifications arrive at once or together. Choices: Right away, Once an hour, Only at ritual times. (saved, not used yet) | Right away | owner settings |
 

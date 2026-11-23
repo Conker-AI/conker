@@ -8,6 +8,7 @@ import { createGatewayJobsClient } from './jobs'
 import { createChangeRequestsClient } from './change-requests'
 import { createAsksClient } from './asks'
 import { createRecallNoticesClient } from './recall-notices'
+import { createPushClient } from './push'
 import { createMemoryBeliefsClient } from './memory-beliefs'
 import { createMemoryUsesClient } from './memory-uses'
 import { createOpenLoopsClient } from './open-loops'
@@ -93,6 +94,8 @@ export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'reques
     },
     claude: createNativeClaudeClient(auth),
     browserSessions: createBrowserSessionsClient(auth, onCurrentSessionRevoked),
+    /** Notifications on this device: the server's public push key and the devices that have them on. */
+    push: createPushClient(auth),
     projects: createGatewayProjectsClient(auth),
     artifacts: createGatewayArtifactsClient(auth),
     /** Answers and artifacts as Word, PDF, PowerPoint, Excel, CSV or JSON files. */

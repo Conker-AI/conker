@@ -12,6 +12,26 @@
       "title": "Channels",
       "settings": [
         {
+          "id": "notifications.this_device",
+          "title": "Notifications on this device",
+          "description": "Lets Conker reach this device when something needs you, even with Conker closed.",
+          "type": "custom",
+          "default": null,
+          "tier": "basic",
+          "scope": "device",
+          "effect": "live",
+          "component": "push-device",
+          "keywords": [
+            "push",
+            "phone",
+            "alert",
+            "lock screen"
+          ],
+          "related": [
+            "notifications.quiet_hours.enabled"
+          ]
+        },
+        {
           "id": "notifications.channels",
           "title": "Where notifications go",
           "description": "The places Conker can reach you.",

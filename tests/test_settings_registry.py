@@ -49,6 +49,7 @@ COMPONENTS = {
     "tools-usable",
     "always-ask",
     "browser-sessions",
+    "push-device",
     "sign-out",
     "character-link",
     "agents-link",

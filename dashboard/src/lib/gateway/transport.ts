@@ -146,6 +146,9 @@ const templateIdPattern = '(?:tpl_[0-9a-f]{32}|starter-[a-z0-9]+(?:-[a-z0-9]+)*)
 routes.GET.unshift(new RegExp(`^/api/control/pi/prompts/templates(?:/${templateIdPattern})?$`))
 routes.POST.unshift(new RegExp(`^/api/control/pi/prompts/templates(?:/${templateIdPattern}(?:/delete)?)?$`))
 routes.GET.unshift(/^\/api\/diagnostics$/)
+// Notifications on this device (web push): the public key, turning one device on or off. Session only.
+routes.GET.unshift(/^\/api\/push$/)
+routes.POST.unshift(/^\/api\/push\/subscriptions(?:\/[0-9a-f]{32}\/delete)?$/)
 // Authored agents are owner-controlled records; every mutation receives operation-bound verification.
 routes.GET.unshift(/^\/api\/control\/pi\/agents(?:\/(?:companion|agent_[0-9a-f]{32})(?:\/versions(?:\/[1-9][0-9]{0,9})?)?)?$/)
 routes.POST.unshift(/^\/api\/control\/pi\/agents$/, /^\/api\/control\/pi\/(?:agents\/(?:companion|agent_[0-9a-f]{32})\/update|agents\/agent_[0-9a-f]{32}\/archive)$/)

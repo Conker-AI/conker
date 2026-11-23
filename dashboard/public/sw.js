@@ -5,6 +5,10 @@
  * icons, the manifest). It never touches API, sign-in, event-stream or upload traffic, and it never
  * keeps a page or an answer, so nothing old or private is shown later. The production build fills
  * in BUILD and SHELL (see vite.config.ts); this unfilled copy works too, with nothing precached.
+ *
+ * It also shows web push notifications, which arrive only after the owner turned on "Notifications
+ * on this device" in Settings. A notification says a fixed short title and opens the Inbox; it
+ * never carries a message, a name or an amount (the lock screen is public).
  */
 const BUILD = 'development'
 const SHELL = []
@@ -126,4 +130,60 @@ self.addEventListener('fetch', event => {
   if (url.search) return
   const hashed = HASHED.test(path)
   if (hashed || PUBLIC.test(path)) event.respondWith(buildFile(event, hashed))
+})
+
+// Web push. The gateway sends {title, url, tag}: a fixed title for the item's kind, the Inbox link
+// and a tag that keeps one notification per item. Anything else is ignored; a payload that can't be
+// read still says that something needs the owner, and every notification opens a page of this app.
+const PUSH_TITLE = 'Conker needs you'
+const PUSH_TAG = /^conker-[0-9a-f]{16}$/
+
+/** A page of this app (not a server route) for a notification to open; the Inbox otherwise. */
+function pushTarget(value) {
+  const inbox = new URL('inbox', self.registration.scope).href
+  if (typeof value !== 'string' || value.length > 200) return inbox
+  try {
+    const url = new URL(value, self.location.origin)
+    const path = local(url)
+    return path === null || SERVER.test(path) ? inbox : url.href
+  } catch {
+    return inbox
+  }
+}
+
+function pushMessage(data) {
+  let value = null
+  try {
+    value = data ? data.json() : null
+  } catch {
+    value = null
+  }
+  const title = value && typeof value.title === 'string' && value.title.trim() && value.title.length <= 80 ? value.title : PUSH_TITLE
+  const tag = value && typeof value.tag === 'string' && PUSH_TAG.test(value.tag) ? value.tag : 'conker'
+  return { title, tag, url: pushTarget(value && value.url) }
+}
+
+self.addEventListener('push', event => {
+  const message = pushMessage(event.data)
+  event.waitUntil(self.registration.showNotification(message.title, {
+    tag: message.tag,
+    icon: new URL('icons/icon-192.png', self.registration.scope).href,
+    data: { url: message.url },
+  }))
+})
+
+self.addEventListener('notificationclick', event => {
+  event.notification.close()
+  const url = pushTarget(event.notification.data && event.notification.data.url)
+  event.waitUntil((async () => {
+    const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+    // An open Conker window comes forward and goes to the Inbox; otherwise a new one opens there.
+    const open = windows.find(client => local(new URL(client.url)) !== null)
+    if (open) {
+      const focused = await open.focus()
+      await (focused || open).navigate(url).catch(() => undefined)
+      return
+    }
+    await self.clients.openWindow(url)
+  })())
 })
