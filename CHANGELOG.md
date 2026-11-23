@@ -6,6 +6,12 @@ which module versions a release pins.
 
 ## Unreleased
 
+## 0.6.17
+
+Beta build from main. Changes since the last tag:
+
+- chore: format dashboard files out of .prettierignore (163 -> 113) (#425)
+
 ## 0.6.0
 
 - **The folded update card says "Updating to X.Y.Z...".** While an update runs, the card in the Inbox no longer loses its button in silence. (#391)
