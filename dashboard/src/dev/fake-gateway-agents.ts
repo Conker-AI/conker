@@ -4,8 +4,18 @@ type Request = { method?: 'GET' | 'POST' | 'PUT'; body?: Json; query?: Record<st
 
 export function createFakeAgents(now: () => number, fail: (status: number) => never, next: () => number) {
   const agentProfile = (id: string, kind: 'companion' | 'agent', name: string, role: string, instructions: string): Json => ({
-    schemaVersion: 1, id, kind, revision: 1, configuration: { name, role, instructions, modelId: null, toolIds: [], memory: { scope: 'conversation', memoryIds: [] } },
-    created_at: now() - 7200, updated_at: now() - 7200, archived_at: null, change_kind: 'created', authority: 'none', execution: 'not-integrated', reference_validation: 'not-performed',
+    schemaVersion: 1,
+    id,
+    kind,
+    revision: 1,
+    configuration: { name, role, instructions, modelId: null, toolIds: [], memory: { scope: 'conversation', memoryIds: [] } },
+    created_at: now() - 7200,
+    updated_at: now() - 7200,
+    archived_at: null,
+    change_kind: 'created',
+    authority: 'none',
+    execution: 'not-integrated',
+    reference_validation: 'not-performed',
   })
   const agents: Json[] = [
     agentProfile('companion', 'companion', 'Conker', 'Your daily companion', 'Help the owner think clearly, plan realistically, and stay in control.'),
@@ -16,8 +26,10 @@ export function createFakeAgents(now: () => number, fail: (status: number) => ne
     let match: RegExpMatchArray | null
     if (path === '/api/control/pi/agents' && method === 'GET') return { schemaVersion: 1, results: agents }
     if (path === '/api/control/pi/agents' && method === 'POST') {
-      const created = agentProfile(`agent_${(next()).toString(16).padStart(32, '0')}`, 'agent', String(options.body?.name), String(options.body?.role), String(options.body?.instructions))
-      created.configuration = options.body ?? {}; agents.push(created); return created
+      const created = agentProfile(`agent_${next().toString(16).padStart(32, '0')}`, 'agent', String(options.body?.name), String(options.body?.role), String(options.body?.instructions))
+      created.configuration = options.body ?? {}
+      agents.push(created)
+      return created
     }
     if ((match = path.match(/^\/api\/control\/pi\/agents\/(companion|agent_[0-9a-f]{32})$/)) && method === 'GET') return agents.find(item => item.id === match![1]) ?? fail(404)
     if ((match = path.match(/^\/api\/control\/pi\/agents\/(companion|agent_[0-9a-f]{32})\/update$/)) && method === 'POST') {

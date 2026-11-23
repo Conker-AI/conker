@@ -72,7 +72,7 @@ async function main() {
 
   const control = ['control.ts', 'control-schemas.ts'].map(file => fs.readFileSync(path.join(root, 'src/lib/gateway', file), 'utf8')).join('\n')
   assert.match(control, /access: z\.enum\(\['default', 'ask', 'ai', 'full'\]\)\.optional\(\)/, 'Chat settings carry the access switch')
-  assert.match(control, /toolAccess: z\.record\(agentReference, z\.enum\(\['allow', 'ai', 'ask'\]\)\)/, 'Agents carry per-tool access')
+  assert.match(control, /toolAccess: z\s*\.record\(agentReference, z\.enum\(\['allow', 'ai', 'ask'\]\)\)/, 'Agents carry per-tool access')
   const chat = fs.readFileSync(path.join(root, 'src/components/gateway/session-access-control.tsx'), 'utf8')
   assert.match(chat, /Sensitive tools always ask you/, 'The chat switch states the floor')
   console.log('Gateway access passed: exact views, password-bound switches, tool grants, five deciders, chat and agent layers.')
