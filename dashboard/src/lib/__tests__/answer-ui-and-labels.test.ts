@@ -10,7 +10,7 @@ import { inboxSummary } from '@/components/inbox/inbox-summary'
 import { memoryRetrievalSummary, plainStatus } from '@/components/gateway/plain-status'
 import { chatGPTConnectionRules, nativeClaudeConnectionRules } from '@/components/gateway/subscription-rules'
 import { saveNewChatEffort } from '@/components/gateway/new-chat-effort'
-import { failedRunReason } from '@/lib/gateway/job-run-words'
+import { failedRunReason, skippedRunLabel } from '@/lib/gateway/job-run-words'
 import { claudeModels, CLAUDE_PROVIDER_ID, NUMBERED, addClaudeModels, hasClaudePlan, missingClaudeModels, modelMenuLayout } from '@/lib/gateway/claude-models'
 import type { AutoSettings } from '@/lib/gateway/auto-settings'
 import type { SetupStatus, SetupStep } from '@/lib/gateway/control'
@@ -339,6 +339,15 @@ describe('failedRunReason', () => {
   it('falls back to the general line, never a raw code', () => {
     expect(failedRunReason(null)).toBe('The job started but did not finish.')
     expect(failedRunReason('SOMETHING_NEW')).toBe('The job started but did not finish.')
+  })
+})
+
+describe('skippedRunLabel', () => {
+  it('names the job limits Pi holds a run back for', () => {
+    expect(skippedRunLabel('TRIGGER_OFF')).toBe('Skipped: trigger not allowed')
+    expect(skippedRunLabel('TOO_SOON')).toBe('Skipped: shortest interval')
+    expect(skippedRunLabel('RUN_LIMIT')).toBe('Skipped: runs a day reached')
+    expect(skippedRunLabel('SOMETHING_NEW')).toBe('Skipped: your limits')
   })
 })
 
