@@ -23,6 +23,7 @@ import { draftOrigin, forgetDraftOrigin } from '@/lib/tool-draft-origin'
 import { GatewayCapabilityPicker } from './capability-picker'
 import { GatewayWorkflowRuns } from './workflow-runs'
 import { NewToolDialog } from './new-tool-dialog'
+import { formatDateTime } from '@/lib/date-format'
 
 type DraftSummary = Awaited<ReturnType<GatewayEditorDrafts['list']>>['items'][number]
 // Getters keep the compare helpers out of module load, so a harness that stubs imports can still
@@ -32,7 +33,7 @@ const DRAFT_SORTS = {
   updated: { label: 'Recently changed', compare: byNewest((item: DraftSummary) => item.updated_at) },
 }
 const DRAFT_TEXT = (item: DraftSummary) => [item.name, item.kind]
-const when = (value: string) => new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(new Date(value))
+const when = (value: string) => formatDateTime(value, { month: 'short', day: 'numeric' })
 
 export function GatewayToolDrafts({ client, changes }: { client: GatewayEditorDrafts; changes?: ChangeRequestsClient }) {
   const [params, setParams] = useSearchParams(), id = params.get('draft')
@@ -160,7 +161,7 @@ function LiveDraftEditor({ draft, client, changes, request, save, onBack }: { dr
           {versions && <>
             {!published && <div className="space-y-2"><Label htmlFor="workflow-authorization">Approval</Label><Select value={authorization} onValueChange={value => { if (value !== null) setAuthorization(value as typeof authorization) }} disabled={busy} items={[{ value: "owner_confirmation", label: "Ask me before each use" }, { value: "auto", label: "Allow callers with an explicit grant" }]}><SelectTrigger id="workflow-authorization"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="owner_confirmation">Ask me before each use</SelectItem><SelectItem value="auto">Allow callers with an explicit grant</SelectItem></SelectContent></Select></div>}
             {!published && <div className="flex items-start justify-between gap-4 rounded-lg border p-3"><Label htmlFor="conker-may-use" className="min-w-0 flex-col items-start gap-0"><span className="block text-sm">Let Conker use this tool</span><span className="mt-0.5 block text-xs font-normal leading-5 text-muted-foreground">{conkerMayUse ? 'Conker sees it in its tools and can run it. Each run follows the approval above.' : 'Conker won’t see it. You can still run it yourself.'}</span></Label><Switch id="conker-may-use" checked={conkerMayUse} disabled={busy} onCheckedChange={setConkerMayUse} /></div>}
-            <div className="divide-y rounded-lg border">{versions.length ? versions.map(version => <div key={version.version} className="flex items-center justify-between gap-3 p-3 text-sm"><div><p className="font-medium">Version {version.version}</p><p className="text-xs text-muted-foreground">{new Date(version.published_at).toLocaleString()}</p><details className="text-xs text-muted-foreground"><summary className="cursor-pointer">Technical details</summary><p className="mt-1">Draft revision {version.revision}</p></details></div><span className="text-xs text-muted-foreground">{version.available ? version.authorization === 'auto' ? 'Allowed access' : 'Ask me first' : 'Unavailable'}</span></div>) : <p className="p-3 text-sm text-muted-foreground">No published versions.</p>}</div>
+            <div className="divide-y rounded-lg border">{versions.length ? versions.map(version => <div key={version.version} className="flex items-center justify-between gap-3 p-3 text-sm"><div><p className="font-medium">Version {version.version}</p><p className="text-xs text-muted-foreground">{formatDateTime(version.published_at)}</p><details className="text-xs text-muted-foreground"><summary className="cursor-pointer">Technical details</summary><p className="mt-1">Draft revision {version.revision}</p></details></div><span className="text-xs text-muted-foreground">{version.available ? version.authorization === 'auto' ? 'Allowed access' : 'Ask me first' : 'Unavailable'}</span></div>) : <p className="p-3 text-sm text-muted-foreground">No published versions.</p>}</div>
           </>}
         </OverlayBody>
         <FormActions inset><Button variant="outline" disabled={busy} onClick={() => setOpen(false)}>Close</Button>{error && <Button variant="outline" disabled={busy || loading} onClick={() => void show()}>Reload versions</Button>}<Button disabled={busy || loading || !versions || published} onClick={() => void publish()}>{busy ? 'Publishing…' : published ? 'Current draft published' : 'Publish current draft'}</Button></FormActions>

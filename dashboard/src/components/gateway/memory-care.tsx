@@ -7,6 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import type { MemoryCareClient, MemoryUpkeepGroup, MemoryUpkeepPage } from '@/lib/gateway/memory-care'
 import { GatewayHeader } from './header'
 import { GatewayPageFrame } from './page-frame'
+import { formatDateTime } from '@/lib/date-format'
 
 /** The five groups in the order they matter: a disagreement can make Conker wrong, a memory nobody uses only takes room. */
 const groups: { key: MemoryUpkeepGroup; title: string; hint: string }[] = [
@@ -78,7 +79,7 @@ export function GatewayMemoryCare({ client }: { client: MemoryCareClient }) {
             <>
               <p className="text-sm text-muted-foreground" role="status">
                 Checked {page.memoriesChecked} {page.memoriesChecked === 1 ? 'memory' : 'memories'}
-                {page.truncated ? ' (the newest ones only)' : ''} · {new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(page.checkedAt))}
+                {page.truncated ? ' (the newest ones only)' : ''} · {formatDateTime(page.checkedAt, { dateStyle: 'medium', timeStyle: 'short' })}
               </p>
               {failed && (
                 <p role="alert" className="text-sm text-destructive-foreground">

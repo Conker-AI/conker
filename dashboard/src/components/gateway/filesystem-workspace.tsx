@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { gatewayError } from '@/lib/gateway/transport'
 import { createFilesystemRequestId, type GatewayDirectory, type GatewayDirectoryEntry, type GatewayFileCatalogue, type GatewayFilesystemClient } from '@/lib/gateway/filesystem'
+import { formatDateTime } from '@/lib/date-format'
 
 const storageKey = 'conker:last-filesystem-request'
 const icons = { directory: Folder, file: File, symlink: Link2, other: FileQuestion } as const
@@ -118,7 +119,7 @@ export function GatewayFilesystemWorkspace({ client }: { client: GatewayFilesyst
         <div className="divide-y border-y">
           {rows.length === 0 ? <div className="py-12 text-center"><p className="text-sm font-medium">This directory is empty</p><p className="mt-1 text-sm text-muted-foreground">No names were returned in this listing.</p></div> : rows.map(item => <DirectoryRow key={item.path} item={item} pending={pending} onOpen={() => void request(directory.rootId, item.path)} />)}
         </div>
-        <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-muted-foreground"><span>{rows.length} {rows.length === 1 ? 'entry' : 'entries'}</span><span>Sampled {new Date(directory.listing.sampledAt).toLocaleString()}</span><span>Names and kinds only</span></div>
+        <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-muted-foreground"><span>{rows.length} {rows.length === 1 ? 'entry' : 'entries'}</span><span>Sampled {formatDateTime(directory.listing.sampledAt)}</span><span>Names and kinds only</span></div>
       </section>}
     </>}
   </div></GatewayPageFrame>

@@ -7,7 +7,8 @@ const root = path.resolve(__dirname, '..')
 function load(file, globals = {}) {
   const code = ts.transpileModule(fs.readFileSync(path.join(root, file), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
   const record = { exports: {} }
-  new Function('require', 'module', 'exports', 'globalThis', code)(require, record, record.exports, { ...globalThis, ...globals })
+  const resolve = request => (request.startsWith('.') ? load(`${path.posix.normalize(path.posix.join(path.posix.dirname(file), request))}.ts`, globals) : require(request))
+  new Function('require', 'module', 'exports', 'globalThis', code)(resolve, record, record.exports, { ...globalThis, ...globals })
   return record.exports
 }
 const { buildResume, resumeAge, resumeChats, RESUME_LIMIT, RESUME_FALLBACK_CHATS } = load('src/components/gateway/home-resume-model.ts')
