@@ -93,5 +93,7 @@ export function useServerSetting(id: string, fallback: number): number
 export function useServerSetting(id: string, fallback: readonly string[]): string[]
 export function useServerSetting<T extends string = string>(id: string, fallback: NoInfer<T>): T
 export function useServerSetting(id: string, fallback: SettingValue | readonly string[]): SettingValue {
-  return useSyncExternalStore(subscribeServerSettings, () => serverSetting(id, fallback as never))
+  const read = () => serverSetting(id, fallback as never)
+  // The same read on the server (the render checks): no browser storage there, so the default.
+  return useSyncExternalStore(subscribeServerSettings, read, read)
 }

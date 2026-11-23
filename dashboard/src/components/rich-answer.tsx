@@ -11,6 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { fenceClosed, isAnswerUiLanguage } from '@/components/answer-ui/fence'
 import { AnswerTable, CopyAction } from '@/components/answer-ui/table'
 import type { ConversationCitation } from '@/lib/api/conversation-types'
+import { useServerSetting } from '@/settings/server-setting'
 import { citationId, codeFilename, downloadAnswerFile, safeAnswerUrl, tableRowsFromMarkdown } from '@/lib/rich-answer'
 import 'katex/dist/katex.min.css'
 import './rich-answer.css'
@@ -34,6 +35,7 @@ function highlightedNode(node: RootContent, index: number): ReactNode {
 
 function CodeBlock({ code, language }: { code: string; language: string }) {
   const [collapsed, setCollapsed] = useState(false)
+  const wrap = useServerSetting('chats.code_wrap', false)
   const highlighted = useMemo(() => {
     // Keep exceptionally large or unknown blocks cheap and readable during streaming.
     if (code.length > 40_000 || !lowlight.registered(language)) return code
@@ -58,7 +60,7 @@ function CodeBlock({ code, language }: { code: string; language: string }) {
         </div>
       </div>
       {!collapsed && (
-        <pre tabIndex={0} aria-label={`${language || 'Plain text'} code`}>
+        <pre tabIndex={0} aria-label={`${language || 'Plain text'} code`} data-wrap={wrap || undefined}>
           <code>{highlighted}</code>
         </pre>
       )}

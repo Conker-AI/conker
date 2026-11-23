@@ -103,6 +103,10 @@
   white-space: pre;
   overflow-wrap: normal;
 }
+.answer-block pre[data-wrap] {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
 .answer-block pre code {
   font-family: var(--font-mono);
 }
