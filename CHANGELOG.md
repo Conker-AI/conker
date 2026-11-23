@@ -6,6 +6,12 @@ which module versions a release pins.
 
 ## Unreleased
 
+## 0.6.18
+
+Beta build from main. Changes since the last tag:
+
+- test: first dashboard component render tests (12 components) (#426)
+
 ## 0.6.0
 
 - **The folded update card says "Updating to X.Y.Z...".** While an update runs, the card in the Inbox no longer loses its button in silence. (#391)
