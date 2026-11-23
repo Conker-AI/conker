@@ -40,7 +40,7 @@ from scripts.cli.conker_loops import operation as loops_operation
 from scripts.cli.conker_messages import operation as message_operation
 from scripts.cli.conker_parser import build_parser
 from scripts.cli.conker_prompt import operation as prompt_operation
-from scripts.cli.conker_spending import spending_operation
+from scripts.cli.conker_spending import dev_change_cap, spending_operation
 from scripts.cli.conker_workflows import TOOL_REQUESTS, tool_request, workflow_operation
 from scripts.workspace import read_config
 
@@ -465,7 +465,7 @@ def main():
     elif args.command == "limits":
         value = limits_operation(args, config, request, pi_call)
     elif args.command == "spending":
-        value = spending_operation(args, config, request, pi_call)
+        value = spending_operation(args, config, request, pi_call, dev_change_cap(config))
     elif args.command == "workflow" and args.operation in TOOL_REQUESTS:
         return tool_request(args, config, request, pi_caller, emit=tool_drafts.emit)
     elif args.command == "workflow":

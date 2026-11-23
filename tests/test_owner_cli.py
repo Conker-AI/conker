@@ -3,6 +3,7 @@ of the development CLI either has a launcher route or is named here as developme
 
 from __future__ import annotations
 
+import getpass
 import json
 import re
 import sys
@@ -97,6 +98,8 @@ def test_the_owner_commands_are_routed_to_the_owner_cli():
         ("/memory/objects", {"forget": True}),  # GET only
         ("/agents/companion", None),
         ("/inference/spending", {}),
+        ("/owner/preferences", None),  # the cap goes to the gateway, with the password
+        ("/owner/preferences", {"expected_revision": 7, "preferences": {"spendingCap": {}}}),
         ("/open-loops/loop_" + "a" * 32 + "/state", None),  # POST only
         ("/open-loops/loop_" + "a" * 32 + "/state/x", {"state": "done"}),
         ("/open-loops/loop_../state", {"state": "done"}),
@@ -264,25 +267,71 @@ def test_the_inbox_is_printed(monkeypatch, capsys):
     assert json.loads(capsys.readouterr().out) == {"needsYou": [], "handled": []}
 
 
-def test_a_spending_cap_change_saves_only_the_cap_at_the_read_revision(monkeypatch, capsys):
-    cap = {"enabled": True, "cents": 500, "tokens": 2_000_000}
-    preferences = {"spendingCap": cap, "other": 1}
-    saved = {"revision": 8, "preferences": {**preferences, "spendingCap": {**cap, "cents": 300}}}
-    relay = Relay(
-        monkeypatch,
-        {
-            ("GET", "/owner/preferences"): (200, {"revision": 7, "preferences": preferences}),
-            ("POST", "/owner/preferences"): (200, saved),
-        },
-    )
+SECRET = "owner passphrase used only in this test"
+
+
+def gateway(monkeypatch, *, returncode=0, stdout=b"", stderr=b""):
+    """The gateway container: records each `docker compose exec` and answers it."""
+    calls = []
+    monkeypatch.setattr(getpass, "getpass", lambda prompt: SECRET)
+
+    def run(argv, **options):
+        calls.append((argv, options))
+        return SimpleNamespace(returncode=returncode, stdout=stdout, stderr=stderr)
+
+    monkeypatch.setattr(config_cli.subprocess, "run", run)
+    return calls
+
+
+def test_a_spending_cap_change_asks_for_the_password_and_goes_to_the_gateway(monkeypatch, capsys):
+    saved = {"revision": 8, "spendingCap": {"enabled": True, "cents": 300, "tokens": 2_000_000}}
+    calls = gateway(monkeypatch, stdout=json.dumps(saved).encode())
     assert main("spending", "cap", "--dollars", "3") == 0
-    read, write = relay.sent
-    assert read == ("GET", "/owner/preferences", None)
-    assert write[2] == {
-        "expected_revision": 7,
-        "preferences": {"spendingCap": {**cap, "cents": 300}, "other": 1},
-    }
-    assert json.loads(capsys.readouterr().out)["spendingCap"]["cents"] == 300
+    [(argv, options)] = calls  # one call, and it is not Pi's recovery-key relay
+    assert argv[-7:] == ["exec", "-T", "gateway", "python", "-m", "gateway", "spending-cap"]
+    assert json.loads(options["input"]) == {"password": SECRET, "changes": {"cents": 300}}
+    assert SECRET not in " ".join(argv) and "env" not in options
+    out = capsys.readouterr()
+    assert json.loads(out.out) == saved and SECRET not in out.out + out.err
+
+
+def test_a_gateway_refusal_is_its_own_words_and_exits_1(monkeypatch, capsys):
+    said = b"Gateway did not complete: Password not accepted. Nothing was saved.\x1b[2J\n"
+    gateway(monkeypatch, returncode=1, stderr=said)
+    assert main("spending", "cap", "--off") == 1
+    err = capsys.readouterr().err
+    assert "Password not accepted. Nothing was saved." in err and "\x1b" not in err
+
+
+def test_an_empty_password_sends_nothing(monkeypatch, capsys):
+    calls = gateway(monkeypatch)
+    monkeypatch.setattr(getpass, "getpass", lambda prompt: "")
+    assert main("spending", "cap", "--dollars", "1000") == 2
+    assert calls == [] and "needs your password" in capsys.readouterr().err
+
+
+def test_a_gateway_that_does_not_answer_may_have_saved(monkeypatch, capsys):
+    gateway(monkeypatch)
+
+    def slow(argv, **options):
+        raise config_cli.subprocess.TimeoutExpired(argv, 150)
+
+    monkeypatch.setattr(config_cli.subprocess, "run", slow)
+    assert main("spending", "cap", "--on") == 1
+    assert "may already be changed" in capsys.readouterr().err
+
+
+def test_a_gateway_command_that_cannot_start_changed_nothing(monkeypatch, capsys):
+    gateway(monkeypatch)
+
+    def missing(argv, **options):
+        raise FileNotFoundError(2, "No such file or directory", "docker")
+
+    monkeypatch.setattr(config_cli.subprocess, "run", missing)
+    assert main("spending", "cap", "--on") == 1
+    err = capsys.readouterr().err
+    assert "Could not start the gateway command. Nothing was changed." in err
+    assert "may already" not in err and SECRET not in err
 
 
 def test_a_refusal_says_pis_words_and_exits_1(monkeypatch, capsys):
@@ -350,54 +399,3 @@ def test_stored_text_cannot_carry_terminal_controls_into_the_output():
     from scripts.cli.conker_inputs import plain
 
     assert plain("a\x1b[2Jb\x07c\nd  e\x9bf") == "a [2Jb c d e f"
-
-
-# --- the relay may change only the spending cap in the owner preferences ------------------------
-
-CAP = {"enabled": True, "cents": 500, "tokens": 2_000_000}
-PREFS = {"spendingCap": CAP, "other": 1}
-
-
-def preferences_call(monkeypatch, *, read=True):
-    sent = []
-
-    def request(command, service, path, body, query=None, timeout=30):
-        sent.append((path, body))
-        return {"revision": 7, "preferences": PREFS}
-
-    monkeypatch.setattr(config_cli, "request", request)
-    call = owner_cli.caller(["docker", "compose"])
-    if read:
-        call(None, "pi", "/owner/preferences")
-    return call, sent
-
-
-def test_a_write_of_only_the_cap_passes_through_the_relay(monkeypatch):
-    call, sent = preferences_call(monkeypatch)
-    body = {"expected_revision": 7, "preferences": {**PREFS, "spendingCap": {**CAP, "cents": 1}}}
-    call(None, "pi", "/owner/preferences", body)
-    assert sent[-1] == ("/owner/preferences", body)
-
-
-@pytest.mark.parametrize(
-    "body",
-    [
-        {"expected_revision": 7, "preferences": {"spendingCap": CAP, "other": 2}},
-        {"expected_revision": 6, "preferences": PREFS},
-        {"expected_revision": 7, "preferences": PREFS, "extra": 1},
-        {"expected_revision": 7, "preferences": {"other": 1}},
-        {"expected_revision": 7, "preferences": {"spendingCap": "off", "other": 1}},
-    ],
-)
-def test_a_preferences_write_that_is_not_only_the_cap_is_refused(monkeypatch, body):
-    call, sent = preferences_call(monkeypatch)
-    with pytest.raises(ValueError, match="may only change spendingCap"):
-        call(None, "pi", "/owner/preferences", body)
-    assert len(sent) == 1  # only the read reached config_cli.request
-
-
-def test_a_preferences_write_without_a_read_is_refused(monkeypatch):
-    call, sent = preferences_call(monkeypatch, read=False)
-    with pytest.raises(ValueError, match="may only change spendingCap"):
-        call(None, "pi", "/owner/preferences", {"expected_revision": 7, "preferences": PREFS})
-    assert not sent
