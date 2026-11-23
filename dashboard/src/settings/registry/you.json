@@ -159,7 +159,7 @@
           "default": "same",
           "tier": "basic",
           "scope": "global",
-          "effect": "stored",
+          "effect": "next-turn",
           "options": [
             {
               "value": "same",
