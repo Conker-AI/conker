@@ -6,6 +6,12 @@ which module versions a release pins.
 
 ## Unreleased
 
+## 0.6.22
+
+Beta build from main. Changes since the last tag:
+
+- fix: model picker keeps its list on window focus (#431)
+
 ## 0.6.0
 
 - **The folded update card says "Updating to X.Y.Z...".** While an update runs, the card in the Inbox no longer loses its button in silence. (#391)
