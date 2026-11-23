@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import type { GatewayAuthClient } from './auth'
+import { createPiClient, piData } from './pi-client'
 import { GatewayError, gatewayError } from './transport'
 
 const artifactId = z.string().regex(/^artifact_[0-9a-f]{32}$/)
@@ -75,8 +76,6 @@ const nativeExport = z.object({
 
 export type GatewayArtifactSummary = z.infer<typeof summary>
 export type GatewayArtifact = z.infer<typeof view>
-/** What Pi sends, before the client fills defaults. */
-export type GatewayArtifactWire = z.input<typeof view>
 export type GatewayArtifactExport = z.infer<typeof nativeExport>
 
 function parse<T>(schema: z.ZodType<T>, value: unknown, input = false): T {
@@ -107,6 +106,7 @@ export class GatewayArtifactMutationError extends Error {
 }
 
 export function createGatewayArtifactsClient(auth: Pick<GatewayAuthClient, 'request'>) {
+  const pi = createPiClient(auth)
   const path = (id: string) => `/api/control/pi/artifacts/${parse(artifactId, id, true)}`
   async function write(target: string, body: Record<string, unknown>, expectedId?: string) {
     try {
@@ -120,12 +120,12 @@ export function createGatewayArtifactsClient(auth: Pick<GatewayAuthClient, 'requ
       const limit = options.limit ?? 100
       if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) throw new GatewayError('validation')
       const cursor = options.cursor === undefined ? undefined : parse(artifactId, options.cursor, true)
-      const result = parse(collection, await auth.request('/api/control/pi/artifacts', { query: { limit, ...(cursor ? { cursor } : {}) }, signal: options.signal }))
+      const result = await piData(pi.GET('/artifacts', { params: { query: { limit, ...(cursor ? { cursor } : {}) } }, signal: options.signal }), collection)
       if (result.results.length > limit || new Set(result.results.map(item => item.id)).size !== result.results.length) throw new GatewayError('invalid-response')
       return result
     },
     async get(id: string, signal?: AbortSignal): Promise<GatewayArtifact> {
-      const selected = parse(artifactId, id, true), result = parse(view, await auth.request(path(selected), { signal }))
+      const selected = parse(artifactId, id, true), result = await piData(pi.GET('/artifacts/{identity}', { params: { path: { identity: selected } }, signal }), view)
       if (result.id !== selected) throw new GatewayError('invalid-response')
       return result
     },
@@ -153,7 +153,7 @@ export function createGatewayArtifactsClient(auth: Pick<GatewayAuthClient, 'requ
     },
     async export(id: string, selectedVersion?: number, signal?: AbortSignal): Promise<GatewayArtifactExport> {
       const selected = parse(artifactId, id, true), version = selectedVersion === undefined ? undefined : parse(z.number().int().min(1).max(100), selectedVersion, true)
-      const result = parse(nativeExport, await auth.request(`${path(selected)}/export`, { query: { ...(version ? { version } : {}) }, signal }))
+      const result = await piData(pi.GET('/artifacts/{identity}/export', { params: { path: { identity: selected }, query: { ...(version ? { version } : {}) } }, signal }), nativeExport)
       if (result.artifactId !== selected || version !== undefined && result.version !== version) throw new GatewayError('invalid-response')
       return result
     },
