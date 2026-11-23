@@ -125,12 +125,12 @@
         {
           "id": "files.answer_format",
           "title": "Answer format",
-          "description": "The shape of answers in new chats.",
+          "description": "The shape of answers in chats you leave on Auto.",
           "type": "select",
           "default": "auto",
           "tier": "basic",
           "scope": "global",
-          "effect": "stored",
+          "effect": "next-turn",
           "options": [
             {
               "value": "auto",
@@ -161,12 +161,12 @@
         {
           "id": "files.answer_length",
           "title": "Answer length",
-          "description": "How long answers are in new chats.",
+          "description": "How long answers are in chats you leave on Auto.",
           "type": "select",
           "default": "auto",
           "tier": "basic",
           "scope": "global",
-          "effect": "stored",
+          "effect": "next-turn",
           "options": [
             {
               "value": "auto",

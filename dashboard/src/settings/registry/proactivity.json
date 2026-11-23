@@ -71,7 +71,7 @@
           "default": [],
           "tier": "advanced",
           "scope": "global",
-          "effect": "stored",
+          "effect": "live",
           "max_items": 50
         }
       ]
@@ -256,7 +256,7 @@
           "default": "needs_you",
           "tier": "basic",
           "scope": "global",
-          "effect": "stored",
+          "effect": "live",
           "options": [
             {
               "value": "needs_you",

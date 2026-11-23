@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import type { GatewayAuthClient } from './auth'
+import { createPiClient, piData } from './pi-client'
 import { GatewayError } from './transport'
 
 const callId = z.string().regex(/^call_[a-f0-9]{32}$/)
@@ -61,6 +62,7 @@ export function createCallRequestId(kind: 'start' | 'turn' | 'audio') {
 }
 
 export function createGatewayCallsClient(auth: Pick<GatewayAuthClient, 'request' | 'audio'>) {
+  const pi = createPiClient(auth)
   const base = '/api/control/pi/calls/browser'
   const bound = (value: GatewayCall, expected?: { call?: string; conversation?: string }) => {
     if (expected?.call && value.id !== expected.call) throw new GatewayError('invalid-response')
@@ -69,7 +71,7 @@ export function createGatewayCallsClient(auth: Pick<GatewayAuthClient, 'request'
   }
   return {
     async availability(signal?: AbortSignal): Promise<GatewayCallAvailability> {
-      return parse(availability, await auth.request(`${base}/capabilities`, { signal }))
+      return piData(pi.GET('/calls/browser/capabilities', { signal }), availability)
     },
     async active(conversation: string, signal?: AbortSignal): Promise<GatewayCall> {
       const selected = parse(sessionId, conversation, true)
