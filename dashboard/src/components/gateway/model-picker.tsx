@@ -49,33 +49,41 @@ export function GatewayModelPicker({
     effortReady = chatEffort.ready && !chatEffort.saving
   // Settings > Home > Plan usage ring: in the message box, on Home, both or off.
   const ring = useServerSetting<'home' | 'composer' | 'both' | 'off'>('home.plan_ring', 'both')
+  // The list is read again when the tab comes back (a provider connected in another tab) and when it
+  // changes here. While that runs, the last list stays, so an open menu keeps its rows and focus; the
+  // new list replaces them in place. A failed read again keeps the last list; only a failed first read says so.
   useEffect(() => {
     let controller: AbortController
-    const load = () => {
+    let loaded = false
+    const load = (first: boolean) => {
+      if (first) {
+        setCatalogue(null)
+        setError('')
+      }
       controller?.abort()
       const request = new AbortController()
       controller = request
-      setCatalogue(null)
-      setError('')
       client
         .models(request.signal)
         .then(result => {
-          if (!request.signal.aborted) {
-            setCatalogue(result.configuration)
-            setRevision(result.revision)
-          }
+          if (request.signal.aborted) return
+          loaded = true
+          setCatalogue(result.configuration)
+          setRevision(result.revision)
+          setError('')
         })
         .catch(error => {
-          if (!request.signal.aborted) setError(error.message)
+          if (!request.signal.aborted && !loaded) setError(error.message)
         })
     }
-    load()
-    const unsubscribe = client.subscribeModels?.(load)
-    window.addEventListener('focus', load)
+    const refresh = () => load(false)
+    load(true)
+    const unsubscribe = client.subscribeModels?.(refresh)
+    window.addEventListener('focus', refresh)
     return () => {
       controller.abort()
       unsubscribe?.()
-      window.removeEventListener('focus', load)
+      window.removeEventListener('focus', refresh)
     }
   }, [client])
   const models = useMemo(
