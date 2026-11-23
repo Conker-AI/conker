@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import type { GatewayAuthClient } from './auth'
-import { GatewayError } from './transport'
+import { createPiClient, piData } from './pi-client'
 
 const memoryId = z.string().min(1).max(200)
 const group = z
@@ -38,13 +38,8 @@ export type MemoryUpkeepPage = z.infer<typeof upkeepPage>
 export type MemoryUpkeepGroup = 'exactDuplicates' | 'nearDuplicates' | 'contradictions' | 'expired' | 'notRecalled'
 
 export function createMemoryCareClient(auth: Pick<GatewayAuthClient, 'request'>) {
-  return {
-    async upkeep(signal?: AbortSignal): Promise<MemoryUpkeepPage> {
-      const result = upkeepPage.safeParse(await auth.request('/api/control/pi/memory/upkeep', { signal }))
-      if (!result.success) throw new GatewayError('invalid-response')
-      return result.data
-    },
-  }
+  const pi = createPiClient(auth)
+  return { upkeep: (signal?: AbortSignal): Promise<MemoryUpkeepPage> => piData(pi.GET('/memory/upkeep', { signal }), upkeepPage) }
 }
 
 export type MemoryCareClient = ReturnType<typeof createMemoryCareClient>

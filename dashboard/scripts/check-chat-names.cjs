@@ -10,7 +10,7 @@ function load(relative) {
   const code = ts.transpileModule(fs.readFileSync(path.join(root, relative), 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
   }).outputText
-  new Function('require', 'module', 'exports', code)(request => request === 'zod' ? require('zod') :
+  new Function('require', 'module', 'exports', code)(request => request === 'zod' || request === 'openapi-fetch' ? require(request) :
     load(request.startsWith('@/') ? `src/${request.slice(2)}.ts` : `${path.posix.normalize(path.posix.join(path.posix.dirname(relative), request))}.ts`), module, module.exports)
   return module.exports
 }

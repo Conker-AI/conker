@@ -51,6 +51,8 @@ def plan(files: list[str], everything: bool) -> list[tuple[str, list[str], Path]
         name.endswith((".py", ".json", ".env")) or name.startswith("scripts/") for name in files
     )
     dashboard = everything or any(name.startswith("dashboard/") for name in files)
+    # The generated Pi types (and the typed client built on them) against the pinned Pi's OpenAPI.
+    api_types = dashboard or "scripts/workspace-sources.json" in files
     jobs: list[tuple[str, list[str], Path]] = []
     if python:
         jobs += [
@@ -76,6 +78,8 @@ def plan(files: list[str], everything: bool) -> list[tuple[str, list[str], Path]
             ("dashboard build", [NPM, "run", "build"], web),
             ("dashboard check", [NPM, "run", "check"], web),
         ]
+    if api_types:
+        jobs.append(("dashboard api types", [NPM, "run", "api:types:check"], ROOT / "dashboard"))
     return jobs
 
 

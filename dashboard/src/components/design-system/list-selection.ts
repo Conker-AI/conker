@@ -23,13 +23,14 @@ export function useListSelection(ids: readonly string[]) {
   }, [active])
   const toggle = useCallback(
     (id: string, range = false) => {
+      const start = anchor.current
       setActive(true)
       setPicked(current => {
         const next = new Set([...current].filter(item => ids.includes(item)))
-        const from = anchor.current === null ? -1 : ids.indexOf(anchor.current),
+        const from = start === null ? -1 : ids.indexOf(start),
           to = ids.indexOf(id)
-        if (range && from >= 0 && to >= 0) {
-          const on = !next.has(id) || next.has(anchor.current!)
+        if (range && start !== null && from >= 0 && to >= 0) {
+          const on = !next.has(id) || next.has(start)
           ids.slice(Math.min(from, to), Math.max(from, to) + 1).forEach(item => (on ? next.add(item) : next.delete(item)))
         } else if (next.has(id)) next.delete(id)
         else next.add(id)
