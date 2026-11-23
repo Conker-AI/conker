@@ -1,8 +1,7 @@
 import { z } from 'zod'
 import type { GatewayAuthClient } from './auth'
-import { GatewayError } from './transport'
+import { createPiClient, piData } from './pi-client'
 
-const memoryId = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,199}$/)
 const use = z
   .object({
     sessionId: z.string(),
@@ -28,15 +27,10 @@ const usePage = z
 export type MemoryUsePage = z.infer<typeof usePage>
 
 export function createMemoryUsesClient(auth: Pick<GatewayAuthClient, 'request'>) {
+  const pi = createPiClient(auth)
   return {
     /** How many answers in how many chats used this memory. One item is enough: the totals come with the page. */
-    async uses(id: string, signal?: AbortSignal): Promise<MemoryUsePage> {
-      const parsedId = memoryId.safeParse(id)
-      if (!parsedId.success) throw new GatewayError('validation')
-      const result = usePage.safeParse(await auth.request(`/api/control/pi/memory/${parsedId.data}/uses`, { query: { limit: 1 }, signal }))
-      if (!result.success) throw new GatewayError('invalid-response')
-      return result.data
-    },
+    uses: (id: string, signal?: AbortSignal): Promise<MemoryUsePage> => piData(pi.GET('/memory/{memory_id}/uses', { params: { path: { memory_id: id }, query: { limit: 1 } }, signal }), usePage),
   }
 }
 
