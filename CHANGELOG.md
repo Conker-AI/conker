@@ -6,6 +6,13 @@ which module versions a release pins.
 
 ## Unreleased
 
+## 0.6.16
+
+Beta build from main. Changes since the last tag:
+
+- test: 390 px visual baselines for the nine main places (60 -> 78) (#422)
+- test: conker skip baseline 36 -> 33 lines (56 -> 52 markers) (#424)
+
 ## 0.6.0
 
 - **The folded update card says "Updating to X.Y.Z...".** While an update runs, the card in the Inbox no longer loses its button in silence. (#391)
