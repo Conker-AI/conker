@@ -15,6 +15,7 @@ from scripts.cli.conker_loops import register as register_loops
 from scripts.cli.conker_messages import register as register_message
 from scripts.cli.conker_prompt import register as register_prompt
 from scripts.cli.conker_spending import add_parser as register_spending
+from scripts.cli.conker_tomorrow import register as register_tomorrow
 from scripts.cli.conker_workflows import register as register_workflows
 from scripts.cli.tool_drafts import register as register_tool
 
@@ -95,6 +96,7 @@ def build_parser(description):
     register_inbox(commands)
     register_agents(commands)
     register_loops(commands)
+    register_tomorrow(commands)
     register_prompt(commands)
     register_config(commands)
     register_workflows(commands)

@@ -1125,6 +1125,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/owner/mcp/tools/{identity}/class": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mcp Class */
+        post: operations["mcp_class_api_owner_mcp_tools__identity__class_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/hooks/{job_id}": {
         parameters: {
             query?: never;
@@ -3111,6 +3128,37 @@ export interface operations {
         };
     };
     owner_decision_api_owner_requests__identity__decision_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                identity: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    mcp_class_api_owner_mcp_tools__identity__class_post: {
         parameters: {
             query?: never;
             header?: never;

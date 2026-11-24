@@ -5979,7 +5979,7 @@ export interface components {
             mode: "focus" | "character";
             /** Modelid */
             modelId?: string | null;
-            privacy: components["schemas"]["pi__calls__call_models__Privacy"];
+            privacy: components["schemas"]["pi__core__call_models__Privacy"];
             /** Events */
             events: components["schemas"]["BrowserEvent"][];
             /** Requests */
@@ -9866,7 +9866,7 @@ export interface components {
              * Status
              * @enum {string}
              */
-            status: "ready" | "awaiting_budget" | "dispatching" | "completed" | "failed" | "awaiting_approval" | "outcome_unknown" | "cancelled";
+            status: "ready" | "awaiting_budget" | "dispatching" | "completed" | "failed" | "awaiting_approval" | "outcome_unknown" | "cancelled" | "skipped";
             /** Manual */
             manual: boolean;
             /** Budgetbound */
@@ -9935,7 +9935,7 @@ export interface components {
              * Status
              * @enum {string}
              */
-            status: "ready" | "awaiting_budget" | "dispatching" | "completed" | "failed" | "awaiting_approval" | "outcome_unknown" | "cancelled";
+            status: "ready" | "awaiting_budget" | "dispatching" | "completed" | "failed" | "awaiting_approval" | "outcome_unknown" | "cancelled" | "skipped";
             /** Manual */
             manual: boolean;
             /** Budgetbound */
@@ -10782,6 +10782,10 @@ export interface components {
             runsPlanned: number;
             /** Approvals */
             approvals: components["schemas"]["TomorrowApproval"][];
+            /** Timezone */
+            timeZone: string;
+            /** Runs */
+            runs: components["schemas"]["TomorrowRun"][];
         };
         /** TomorrowApproval */
         TomorrowApproval: {
@@ -10814,6 +10818,26 @@ export interface components {
             runs: number | null;
             /** Held */
             held: boolean;
+        };
+        /** TomorrowRun */
+        TomorrowRun: {
+            /** At */
+            at: number | null;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "clock" | "watch" | "proposals";
+            /** Jobid */
+            jobId: string | null;
+            /** Name */
+            name: string;
+            /** Everyminutes */
+            everyMinutes: number | null;
+            /** Wouldrun */
+            wouldRun: boolean;
+            /** Reason */
+            reason: string | null;
         };
         /**
          * ToolGatePolicySummary
@@ -11190,47 +11214,6 @@ export interface components {
             answer?: string | null;
         };
         /** Privacy */
-        pi__calls__call_models__Privacy: {
-            /**
-             * Memory
-             * @default false
-             */
-            memory: boolean;
-            /**
-             * Harness
-             * @default false
-             */
-            harness: boolean;
-        };
-        /** Start */
-        pi__calls__call_models__Start: {
-            /** Request Id */
-            request_id: string;
-            /** Conversationid */
-            conversationId: string;
-            privacy?: components["schemas"]["pi__calls__call_models__Privacy"];
-        };
-        /** Update */
-        pi__calls__call_models__Update: {
-            /** Expected Revision */
-            expected_revision: number;
-            channels?: components["schemas"]["ChannelUpdate"] | null;
-            /** Mode */
-            mode?: ("focus" | "character") | null;
-            /** Paused */
-            paused?: boolean | null;
-            privacy?: components["schemas"]["pi__calls__call_models__Privacy"] | null;
-            /** Modelid */
-            modelId?: string | null;
-        };
-        /** Archive */
-        pi__content__artifact_models__Archive: {
-            /** Expected Revision */
-            expected_revision: number;
-            /** Archived */
-            archived: boolean;
-        };
-        /** Privacy */
         pi__content__artifact_models__Privacy: {
             /** Memorydisabled */
             memoryDisabled: boolean;
@@ -11241,42 +11224,6 @@ export interface components {
              * @default false
              */
             incognito: boolean;
-        };
-        /** Restore */
-        pi__content__artifact_models__Restore: {
-            /** Expected Revision */
-            expected_revision: number;
-            /** Version */
-            version: number;
-        };
-        /** Update */
-        pi__context__controls__Update: {
-            /** Expected Revision */
-            expected_revision: number;
-            policy: components["schemas"]["Policy-Input"];
-        };
-        /** State */
-        pi__context__decisions__State: {
-            /** Expected Revision */
-            expected_revision: number;
-            /**
-             * State
-             * @enum {string}
-             */
-            state: "active" | "open" | "resolved" | "withdrawn";
-            /**
-             * By
-             * @default owner
-             * @enum {string}
-             */
-            by: "owner" | "ai";
-        };
-        /** Archive */
-        pi__context__projects__Archive: {
-            /** Expected Revision */
-            expected_revision: number;
-            /** Archived */
-            archived: boolean;
         };
         /** Privacy */
         pi__context__projects__Privacy: {
@@ -11289,34 +11236,6 @@ export interface components {
              * @default false
              */
             incognito: boolean;
-        };
-        /** Update */
-        pi__context__projects__Update: {
-            /** Expected Revision */
-            expected_revision: number;
-            fields: components["schemas"]["Fields"];
-        };
-        /** Edit */
-        pi__context__summaries__Edit: {
-            /** Expected Revision */
-            expected_revision: number;
-            /** Summary */
-            summary: string;
-        };
-        /** Restore */
-        pi__context__summaries__Restore: {
-            /** Expected Revision */
-            expected_revision: number;
-            /** Revision */
-            revision: number;
-        };
-        /** Request */
-        pi__context__summary_draft__Request: {
-            /**
-             * Focus
-             * @default
-             */
-            focus: string;
         };
         /** Settings */
         pi__context__universal_search__Settings: {
@@ -11403,6 +11322,98 @@ export interface components {
             /** Expected Revision */
             expected_revision: number;
         };
+        /** Archive */
+        pi__core__artifact_requests__Archive: {
+            /** Expected Revision */
+            expected_revision: number;
+            /** Archived */
+            archived: boolean;
+        };
+        /** Restore */
+        pi__core__artifact_requests__Restore: {
+            /** Expected Revision */
+            expected_revision: number;
+            /** Version */
+            version: number;
+        };
+        /** Privacy */
+        pi__core__call_models__Privacy: {
+            /**
+             * Memory
+             * @default false
+             */
+            memory: boolean;
+            /**
+             * Harness
+             * @default false
+             */
+            harness: boolean;
+        };
+        /** Start */
+        pi__core__call_models__Start: {
+            /** Request Id */
+            request_id: string;
+            /** Conversationid */
+            conversationId: string;
+            privacy?: components["schemas"]["pi__core__call_models__Privacy"];
+        };
+        /** Update */
+        pi__core__call_models__Update: {
+            /** Expected Revision */
+            expected_revision: number;
+            channels?: components["schemas"]["ChannelUpdate"] | null;
+            /** Mode */
+            mode?: ("focus" | "character") | null;
+            /** Paused */
+            paused?: boolean | null;
+            privacy?: components["schemas"]["pi__core__call_models__Privacy"] | null;
+            /** Modelid */
+            modelId?: string | null;
+        };
+        /** Edit */
+        pi__core__context_bodies__Edit: {
+            /** Expected Revision */
+            expected_revision: number;
+            /** Summary */
+            summary: string;
+        };
+        /** Request */
+        pi__core__context_bodies__Request: {
+            /**
+             * Focus
+             * @default
+             */
+            focus: string;
+        };
+        /** Restore */
+        pi__core__context_bodies__Restore: {
+            /** Expected Revision */
+            expected_revision: number;
+            /** Revision */
+            revision: number;
+        };
+        /** State */
+        pi__core__context_bodies__State: {
+            /** Expected Revision */
+            expected_revision: number;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "active" | "open" | "resolved" | "withdrawn";
+            /**
+             * By
+             * @default owner
+             * @enum {string}
+             */
+            by: "owner" | "ai";
+        };
+        /** Update */
+        pi__core__context_bodies__Update: {
+            /** Expected Revision */
+            expected_revision: number;
+            policy: components["schemas"]["Policy-Input"];
+        };
         /** Budget */
         pi__core__context_policy__Budget: {
             /** Contextwindowtokens */
@@ -11412,29 +11423,8 @@ export interface components {
             /** Otherinputtokens */
             otherInputTokens: number;
         };
-        /** Update */
-        pi__core__owner_settings__Update: {
-            /** Expected Revision */
-            expected_revision: number;
-            /** Values */
-            values: {
-                [key: string]: unknown;
-            };
-        };
-        /** Request */
-        pi__host__actions__Request: {
-            /** Request Id */
-            request_id: string;
-            /** Container Id */
-            container_id: string;
-            /**
-             * Action
-             * @enum {string}
-             */
-            action: "start" | "stop" | "restart";
-        };
         /** Read */
-        pi__host__filesystem_reads__Read: {
+        pi__core__filesystem_bodies__Read: {
             /** Request Id */
             request_id: string;
             /** Root Id */
@@ -11451,7 +11441,7 @@ export interface components {
             limit: number;
         };
         /** Read */
-        pi__host__inventory_models__Read: {
+        pi__core__inventory_bodies__Read: {
             /** Request Id */
             request_id: string;
             /**
@@ -11459,6 +11449,40 @@ export interface components {
              * @default 100
              */
             limit: number;
+        };
+        /** Update */
+        pi__core__owner_settings__Update: {
+            /** Expected Revision */
+            expected_revision: number;
+            /** Values */
+            values: {
+                [key: string]: unknown;
+            };
+        };
+        /** Archive */
+        pi__core__project_bodies__Archive: {
+            /** Expected Revision */
+            expected_revision: number;
+            /** Archived */
+            archived: boolean;
+        };
+        /** Update */
+        pi__core__project_bodies__Update: {
+            /** Expected Revision */
+            expected_revision: number;
+            fields: components["schemas"]["Fields"];
+        };
+        /** Request */
+        pi__host__actions__Request: {
+            /** Request Id */
+            request_id: string;
+            /** Container Id */
+            container_id: string;
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "start" | "stop" | "restart";
         };
         /** Request */
         pi__host__port_finalization__Request: {
@@ -11673,7 +11697,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["pi__context__projects__Update"];
+                "application/json": components["schemas"]["pi__core__project_bodies__Update"];
             };
         };
         responses: {
@@ -11711,7 +11735,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["pi__context__projects__Archive"];
+                "application/json": components["schemas"]["pi__core__project_bodies__Archive"];
             };
         };
         responses: {
@@ -12113,7 +12137,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["pi__context__controls__Update"];
+                "application/json": components["schemas"]["pi__core__context_bodies__Update"];
             };
         };
         responses: {
@@ -12293,7 +12317,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["pi__context__summaries__Edit"];
+                "application/json": components["schemas"]["pi__core__context_bodies__Edit"];
             };
         };
         responses: {
@@ -12331,7 +12355,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["pi__context__summaries__Restore"];
+                "application/json": components["schemas"]["pi__core__context_bodies__Restore"];
             };
         };
         responses: {
@@ -13539,7 +13563,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["pi__host__inventory_models__Read"];
+                "application/json": components["schemas"]["pi__core__inventory_bodies__Read"];
             };
         };
         responses: {
@@ -13675,7 +13699,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["pi__host__filesystem_reads__Read"];
+                "application/json": components["schemas"]["pi__core__filesystem_bodies__Read"];
             };
         };
         responses: {
@@ -14229,7 +14253,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["pi__calls__call_models__Start"];
+                "application/json": components["schemas"]["pi__core__call_models__Start"];
             };
         };
         responses: {
@@ -14363,7 +14387,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["pi__calls__call_models__Start"];
+                "application/json": components["schemas"]["pi__core__call_models__Start"];
             };
         };
         responses: {
@@ -14435,7 +14459,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["pi__calls__call_models__Update"];
+                "application/json": components["schemas"]["pi__core__call_models__Update"];
             };
         };
         responses: {
@@ -14657,7 +14681,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["pi__calls__call_models__Update"];
+                "application/json": components["schemas"]["pi__core__call_models__Update"];
             };
         };
         responses: {
@@ -16119,7 +16143,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["pi__context__decisions__State"];
+                "application/json": components["schemas"]["pi__core__context_bodies__State"];
             };
         };
         responses: {
@@ -16949,7 +16973,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["pi__content__artifact_models__Restore"];
+                "application/json": components["schemas"]["pi__core__artifact_requests__Restore"];
             };
         };
         responses: {
@@ -16987,7 +17011,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["pi__content__artifact_models__Archive"];
+                "application/json": components["schemas"]["pi__core__artifact_requests__Archive"];
             };
         };
         responses: {
@@ -17393,7 +17417,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["pi__context__summary_draft__Request"];
+                "application/json": components["schemas"]["pi__core__context_bodies__Request"];
             };
         };
         responses: {
