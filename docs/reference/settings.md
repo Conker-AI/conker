@@ -207,7 +207,7 @@ When and how Conker gets your attention.
 | **Notify me about**<br>`notifications.events` | Which events send a notification. Choices: Requests, Conker's questions, Job findings, Failures, Budget limits, Plan usage, Server problems, Updates, Backups. (saved, not used yet) | Requests, Conker's questions, Failures, Budget limits, Plan usage | owner settings |
 | **Urgent means**<br>`notifications.urgent` | What may reach you during quiet hours. Choices: Failures, Money, Security, A person waiting. (saved, not used yet) | Failures, Money, Security | owner settings |
 | **Remind again**<br>`notifications.repeat` | Whether an unopened notification comes back. Choices: Never, After an hour, After a day. (saved, not used yet) | Never | owner settings |
-| **Show text in notifications**<br>`notifications.preview` | Shows what a notification is about; off shows only that something needs you. (saved, not used yet) | on | owner settings |
+| **Show text in notifications**<br>`notifications.preview` | Shows what a notification is about; off shows only that something needs you. (applies right away) | on | owner settings |
 
 ### Quiet hours
 
@@ -217,7 +217,7 @@ When and how Conker gets your attention.
 | **Quiet hours start**<br>`notifications.quiet_hours.start` | When quiet hours begin each day. (applies right away) | `22:00` | pi `/owner/preferences` `quietHours.start` |
 | **Quiet hours end**<br>`notifications.quiet_hours.end` | When quiet hours end each day. (applies right away) | `07:00` | pi `/owner/preferences` `quietHours.end` |
 | **Urgent exceptions**<br>`notifications.quiet_hours.urgent_exceptions` | Lets something urgent through during quiet hours. (applies right away) | off | pi `/owner/preferences` `quietHours.urgentExceptions` |
-| **Quiet all day on**<br>`notifications.quiet_days` | Days with no notifications at all. Choices: Sunday, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday. (saved, not used yet) | none | owner settings |
+| **Quiet all day on**<br>`notifications.quiet_days` | Days with no notifications at all. Choices: Sunday, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday. (applies right away) | none | owner settings |
 | **Quiet during calls**<br>`notifications.quiet_in_calls` | Holds notifications while you are in a call. (saved, not used yet) | on | owner settings |
 
 ## Chats
@@ -463,10 +463,10 @@ Which AI answers, thinks and helps, and how.
 | **Talking model**<br>`models.talking` | The model that answers you; Auto lets your router choose for each request. (applies right away) | its own screen | Settings screen |
 | **Thinking model**<br>`models.thinking` | Analyzes the conversation in the background while you keep talking. (applies right away) | its own screen | Settings screen |
 | **Where models run**<br>`models.locality` | Whether Conker may use online models or only ones on your server. Choices: Auto, Only on my server, Online allowed. (saved, not used yet) | Auto | owner settings |
-| **Think**<br>`models.think` | Whether Conker thinks before answering. Choices: Auto, On, Off. (saved, not used yet) | Auto | owner settings |
+| **Think**<br>`models.think` | Whether Conker thinks before answering. Choices: Auto, On, Off. (applies from the next message) | Auto | owner settings |
 | **Creativity**<br>`models.creativity` | How varied answers are; low is steady, high is inventive. (saved, not used yet) | `50` | owner settings |
 | **Longest answer**<br>`models.max_answer` | The most an answer may use. 256 to 32000 tokens. (saved, not used yet) | `4000` tokens | owner settings |
-| **Complexity hint**<br>`models.complexity` | Tells the router how hard requests usually are. Choices: Auto, Low, Medium, High. (saved, not used yet) | Auto | owner settings |
+| **Complexity hint**<br>`models.complexity` | Tells the router how hard requests usually are. Choices: Auto, Low, Medium, High. (applies from the next message) | Auto | owner settings |
 | **Compare models**<br>`models.compare` | Sends each request to several models side by side. Choices: Off, 2 models, 3 models, 4 models. (saved, not used yet) | Off | owner settings |
 
 ### Providers
@@ -480,9 +480,9 @@ Which AI answers, thinks and helps, and how.
 | Setting | What it does | Default | Home |
 |---|---|---|---|
 | **Show Auto's reasons**<br>`models.auto_reasons` | Shows why Auto chose each setting before you send. (applies right away) | on | owner settings |
-| **Fast mode models**<br>`models.mode_fast` | Models Fast mode uses, first choice first. (saved, not used yet) | none | owner settings |
-| **Balanced mode models**<br>`models.mode_balanced` | Models Balanced mode uses, first choice first. (saved, not used yet) | none | owner settings |
-| **Deep mode models**<br>`models.mode_deep` | Models Deep mode uses, first choice first. (saved, not used yet) | none | owner settings |
+| **Fast mode models**<br>`models.mode_fast` | Models Fast mode uses, first choice first. (applies from the next message) | none | owner settings |
+| **Balanced mode models**<br>`models.mode_balanced` | Models Balanced mode uses, first choice first. (applies from the next message) | none | owner settings |
+| **Deep mode models**<br>`models.mode_deep` | Models Deep mode uses, first choice first. (applies from the next message) | none | owner settings |
 
 ### AI jobs
 
@@ -490,8 +490,8 @@ Which AI answers, thinks and helps, and how.
 |---|---|---|---|
 | **Side jobs**<br>`models.side_jobs` | Smaller jobs the AI does in the background, and which model does each. (applies right away) | its own screen | Settings screen |
 | **Model roles**<br>`models.roles` | Every role's model, backup, time limit and what happens on failure. (applies right away) | its own screen | Settings screen |
-| **Judge models**<br>`models.jobs.judge` | Which models judge answers, first choice first. (saved, not used yet) | none | owner settings |
-| **Fact-check models**<br>`models.jobs.fact_check` | Which models check facts, first choice first. (saved, not used yet) | none | owner settings |
+| **Judge models**<br>`models.jobs.judge` | Which models judge answers, first choice first. (applies right away) | none | owner settings |
+| **Fact-check models**<br>`models.jobs.fact_check` | Which models check facts, first choice first. (applies right away) | none | owner settings |
 | **Prompt-check models**<br>`models.jobs.prompt_check` | Which models advise on your requests, first choice first. (saved, not used yet) | none | owner settings |
 | **Voice models**<br>`models.jobs.voice` | Which models speak Conker's answers, first choice first. (saved, not used yet) | none | owner settings |
 | **Image making models**<br>`models.jobs.images_out` | Which models make pictures, first choice first. (saved, not used yet) | none | owner settings |
@@ -637,7 +637,7 @@ How Conker's tools, Terminal, browser and web search behave.
 | **Safe search**<br>`tools.web.safe_search` | Filters adult results from web searches. Choices: Off, Moderate, Strict. (applies right away) | Moderate | toolgate `/v2/owner/settings` `web_safe_search` |
 | **Results per search**<br>`tools.web.results` | How many results one web search returns. 3 to 8. (applies from the next message) | `8` | owner settings |
 | **Search region**<br>`tools.web.region` | A two-letter country code for local results, such as il or us; empty searches everywhere. (applies right away) | empty | toolgate `/v2/owner/settings` `web_region` |
-| **Search engines**<br>`tools.web.engines` | Which engines web search asks; empty uses the defaults. (saved, not used yet) | none | owner settings |
+| **Search engines**<br>`tools.web.engines` | Which engines web search asks, such as duckduckgo; empty uses the defaults. (applies right away) | none | toolgate `/v2/owner/settings` `web_engines` |
 
 ## Money and limits
 

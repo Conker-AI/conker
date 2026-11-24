@@ -407,13 +407,20 @@
         {
           "id": "tools.web.engines",
           "title": "Search engines",
-          "description": "Which engines web search asks; empty uses the defaults.",
+          "description": "Which engines web search asks, such as duckduckgo; empty uses the defaults.",
           "type": "tags",
           "default": [],
           "tier": "advanced",
           "scope": "global",
-          "effect": "stored",
-          "max_items": 50
+          "effect": "live",
+          "max_items": 50,
+          "home": {
+            "service": "toolgate",
+            "path": "/v2/owner/settings",
+            "key": "settings",
+            "verify": true,
+            "field": "web_engines"
+          }
         }
       ]
     }
