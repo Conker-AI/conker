@@ -65,7 +65,7 @@
           "default": "auto",
           "tier": "basic",
           "scope": "global",
-          "effect": "stored",
+          "effect": "next-turn",
           "options": [
             {
               "value": "auto",
@@ -120,7 +120,7 @@
           "default": "auto",
           "tier": "advanced",
           "scope": "global",
-          "effect": "stored",
+          "effect": "next-turn",
           "options": [
             {
               "value": "auto",
@@ -209,7 +209,7 @@
           "default": [],
           "tier": "basic",
           "scope": "global",
-          "effect": "stored",
+          "effect": "next-turn",
           "max_items": 5
         },
         {
@@ -220,7 +220,7 @@
           "default": [],
           "tier": "basic",
           "scope": "global",
-          "effect": "stored",
+          "effect": "next-turn",
           "max_items": 5
         },
         {
@@ -231,7 +231,7 @@
           "default": [],
           "tier": "basic",
           "scope": "global",
-          "effect": "stored",
+          "effect": "next-turn",
           "max_items": 5
         }
       ]
@@ -270,7 +270,7 @@
           "default": [],
           "tier": "advanced",
           "scope": "global",
-          "effect": "stored",
+          "effect": "live",
           "max_items": 5
         },
         {
@@ -281,7 +281,7 @@
           "default": [],
           "tier": "advanced",
           "scope": "global",
-          "effect": "stored",
+          "effect": "live",
           "max_items": 5
         },
         {

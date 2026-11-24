@@ -87,7 +87,7 @@ async function main() {
   await assert.rejects(client.setLockdown(false), error => error.kind === 'invalid-response', 'a lockdown answer that did not change is not trusted')
 
   // Every ToolGate home names a field of ToolGate's document, or its lockdown switch.
-  const toolFields = ['tool_seconds', 'terminal_seconds', 'terminal_memory_mb', 'terminal_cpus', 'terminal_workspace_mb', 'web_safe_search', 'web_region', 'web_skip_sites', 'web_page_characters', 'run_window_minutes']
+  const toolFields = ['tool_seconds', 'terminal_seconds', 'terminal_memory_mb', 'terminal_cpus', 'terminal_workspace_mb', 'web_safe_search', 'web_region', 'web_skip_sites', 'web_engines', 'web_page_characters', 'run_window_minutes']
   for (const setting of settings.filter(item => item.home?.service === 'toolgate')) {
     if (setting.home.path === '/v2/owner/lockdown') assert.deepEqual([setting.home.key, setting.home.field, setting.type], ['enabled', 'lockdown', 'toggle'], setting.id)
     else assert.ok(setting.home.path === '/v2/owner/settings' && setting.home.key === 'settings' && toolFields.includes(setting.home.field), setting.id)
