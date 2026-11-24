@@ -10,12 +10,20 @@ export type OwnerUnavailableReason = 'invalid_origin' | 'invalid_action' | 'argu
 /** How much an owner decision must prove: 1 normal (do/run/save), 2 outward (send/publish/ship), 3 serious (delete/pay). */
 export type OwnerApprovalLevel = 1 | 2 | 3
 export type OwnerRequest = {
-  id: string; kind: 'verification'; title: string; details: string; actor: string; severity: string
-  status: OwnerRequestStatus; createdAt: string; updatedAt: string
+  id: string
+  kind: 'verification'
+  title: string
+  details: string
+  actor: string
+  severity: string
+  status: OwnerRequestStatus
+  createdAt: string
+  updatedAt: string
   decision: { status: OwnerRequestStatus; actor: string; note: string; at: string } | null
   action: { subjectType: string | null; subjectId: string | null; version: number | null; args: Record<string, unknown> | null }
   approval: { expiresAt: string | null; consumedAt: string | null; originValid: boolean }
-  reviewable: boolean; unavailableReason: OwnerUnavailableReason | null
+  reviewable: boolean
+  unavailableReason: OwnerUnavailableReason | null
   /** The buttons the tool had when it asked; labels only. An older ToolGate sends none: Do it. */
   card: CardTemplate
   /** The server decides how much proof it asks for; a missing or odd value is the serious level. */
@@ -24,7 +32,9 @@ export type OwnerRequest = {
 export type OwnerRequestPage = { results: OwnerRequest[]; nextCursor: string | null }
 const statuses = new Set(['pending', 'approved', 'rejected', 'dismissed', 'cancelled'])
 const reasons = new Set(['invalid_origin', 'invalid_action', 'arguments_unavailable', 'unsupported_subject', 'expired', 'consumed', 'already_decided'])
-const fail = (): never => { throw new GatewayError('invalid-response') }
+const fail = (): never => {
+  throw new GatewayError('invalid-response')
+}
 function record(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return fail()
   return value as Record<string, unknown>
@@ -45,7 +55,7 @@ function date(value: unknown): string {
   if (!Number.isFinite(Date.parse(raw))) return fail()
   return raw
 }
-const optionalDate = (value: unknown) => value === null ? null : date(value)
+const optionalDate = (value: unknown) => (value === null ? null : date(value))
 function jsonArgs(value: unknown): Record<string, unknown> | null {
   if (value === null) return null
   const root = record(value)
@@ -63,29 +73,56 @@ function jsonArgs(value: unknown): Record<string, unknown> | null {
   return JSON.parse(encoded) as Record<string, unknown>
 }
 export function parseOwnerRequest(value: unknown, expectedId?: string): OwnerRequest {
-  const row = record(value), action = record(row.action), approval = record(row.approval)
+  const row = record(value),
+    action = record(row.action),
+    approval = record(row.approval)
   const id = identity(row.id)
-  if (expectedId && expectedId !== id || row.kind !== 'verification' || !statuses.has(String(row.status)) ||
-    typeof row.reviewable !== 'boolean' || typeof approval.origin_valid !== 'boolean' ||
-    row.unavailable_reason !== null && !reasons.has(String(row.unavailable_reason))) return fail()
+  if (
+    (expectedId && expectedId !== id) ||
+    row.kind !== 'verification' ||
+    !statuses.has(String(row.status)) ||
+    typeof row.reviewable !== 'boolean' ||
+    typeof approval.origin_valid !== 'boolean' ||
+    (row.unavailable_reason !== null && !reasons.has(String(row.unavailable_reason)))
+  )
+    return fail()
   const version = action.version
   if (version !== null && (typeof version !== 'number' || !Number.isSafeInteger(version) || version < 1)) return fail()
   const result: OwnerRequest = {
-    id, kind: 'verification', title: text(row.title, 1024), details: text(row.details, 8192), actor: text(row.actor, 256), severity: text(row.severity, 32),
-    status: row.status as OwnerRequestStatus, createdAt: date(row.created_at), updatedAt: date(row.updated_at), decision: null,
+    id,
+    kind: 'verification',
+    title: text(row.title, 1024),
+    details: text(row.details, 8192),
+    actor: text(row.actor, 256),
+    severity: text(row.severity, 32),
+    status: row.status as OwnerRequestStatus,
+    createdAt: date(row.created_at),
+    updatedAt: date(row.updated_at),
+    decision: null,
     action: { subjectType: action.subject_type === null ? null : text(action.subject_type, 64), subjectId: action.subject_id === null ? null : text(action.subject_id, 256), version, args: jsonArgs(action.args) },
     approval: { expiresAt: optionalDate(approval.expires_at), consumedAt: optionalDate(approval.consumed_at), originValid: approval.origin_valid },
-    reviewable: row.reviewable, unavailableReason: row.unavailable_reason as OwnerUnavailableReason | null,
+    reviewable: row.reviewable,
+    unavailableReason: row.unavailable_reason as OwnerUnavailableReason | null,
     card: isCardTemplate(row.card) ? row.card : 'do',
-    level: (row.approval_level === 1 || row.approval_level === 2 || row.approval_level === 3) ? row.approval_level : 3,
+    level: row.approval_level === 1 || row.approval_level === 2 || row.approval_level === 3 ? row.approval_level : 3,
   }
   if (row.decision !== null) {
     const decision = record(row.decision)
     if (!statuses.has(String(decision.status)) || decision.status !== result.status) return fail()
     result.decision = { status: decision.status as OwnerRequestStatus, actor: text(decision.actor, 256), note: text(decision.note, 2000), at: date(decision.at) }
   }
-  if (result.reviewable && (result.status !== 'pending' || !result.approval.originValid || result.approval.consumedAt !== null ||
-    result.unavailableReason !== null || !['tool', 'automation'].includes(result.action.subjectType ?? '') || !result.action.subjectId || result.action.args === null || result.action.version === null)) fail()
+  if (
+    result.reviewable &&
+    (result.status !== 'pending' ||
+      !result.approval.originValid ||
+      result.approval.consumedAt !== null ||
+      result.unavailableReason !== null ||
+      !['tool', 'automation'].includes(result.action.subjectType ?? '') ||
+      !result.action.subjectId ||
+      result.action.args === null ||
+      result.action.version === null)
+  )
+    fail()
   return result
 }
 
@@ -94,11 +131,20 @@ export class OwnerDecisionError extends Error {
   readonly requestId: string
   constructor(error: unknown, requestId: string) {
     const failure = gatewayError(error)
-    const rejected = ['configuration', 'validation', 'browser-expired', 'upstream-denied', 'verification-cancelled', 'verification-required'].includes(failure.kind) ||
-      failure.status !== undefined && [400, 401, 403, 404, 413, 422, 428, 429].includes(failure.status)
+    const rejected =
+      ['configuration', 'validation', 'browser-expired', 'upstream-denied', 'verification-cancelled', 'verification-required'].includes(failure.kind) ||
+      (failure.status !== undefined && [400, 401, 403, 404, 413, 422, 428, 429].includes(failure.status))
     const outcome = failure.status === 409 ? 'conflict' : rejected ? 'rejected' : 'unknown'
-    super(outcome === 'conflict' ? 'This request changed or is no longer eligible. Check its current record before deciding.' : outcome === 'rejected' ? failure.message : 'The decision outcome is uncertain. Check the saved request before taking another action.')
-    this.name = 'OwnerDecisionError'; this.outcome = outcome; this.requestId = requestId
+    super(
+      outcome === 'conflict'
+        ? 'This request changed or is no longer eligible. Check its current record before deciding.'
+        : outcome === 'rejected'
+          ? failure.message
+          : 'The decision outcome is uncertain. Check the saved request before taking another action.',
+    )
+    this.name = 'OwnerDecisionError'
+    this.outcome = outcome
+    this.requestId = requestId
   }
 }
 
@@ -127,12 +173,14 @@ export function createGatewayOwnerClient(auth: Pick<GatewayAuthClient, 'request'
       if (!['approved', 'rejected', 'dismissed'].includes(status) || typeof note !== 'string' || [...note].length > 2000) throw new GatewayError('validation')
       // The server decides whether the decision needs the password. Only approving a delete or a
       // payment (level 3) is known to, so only that asks first; anything else asks only on 428.
-      const password = status === 'approved' && options.level === 3 ? 'first' as const : undefined
+      const password = status === 'approved' && options.level === 3 ? ('first' as const) : undefined
       try {
         const result = parseOwnerRequest(await auth.request(`/api/owner/requests/${id}/decision`, { method: 'POST', body: { status, note }, signal: options.signal, ...(password ? { password } : {}) }), id)
         if (result.status !== status || !result.decision) return fail()
         return result
-      } catch (error) { throw new OwnerDecisionError(error, id) }
+      } catch (error) {
+        throw new OwnerDecisionError(error, id)
+      }
     },
   }
 }

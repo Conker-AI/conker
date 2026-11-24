@@ -4,41 +4,78 @@ import { GatewayError } from './transport'
 
 const requestId = z.string().regex(/^[A-Za-z0-9_-]{16,100}$/)
 const rootId = z.string().regex(/^[A-Za-z0-9_-]{1,64}$/)
-const safePart = (part: string) => part.length > 0 && part.length <= 255 && part !== '.' && part !== '..' && Array.from(part).every(character => {
-  const code = character.codePointAt(0) ?? 0
-  return character !== '/' && character !== '\\' && code >= 32 && code !== 127 && !(code >= 0xd800 && code <= 0xdfff)
-})
-const relativePath = z.string().max(4096).refine(value => value === '' || value.split('/').every(safePart))
+const safePart = (part: string) =>
+  part.length > 0 &&
+  part.length <= 255 &&
+  part !== '.' &&
+  part !== '..' &&
+  Array.from(part).every(character => {
+    const code = character.codePointAt(0) ?? 0
+    return character !== '/' && character !== '\\' && code >= 32 && code !== 127 && !(code >= 0xd800 && code <= 0xdfff)
+  })
+const relativePath = z
+  .string()
+  .max(4096)
+  .refine(value => value === '' || value.split('/').every(safePart))
 const root = z.object({ id: rootId, path: z.string().min(1).max(4097) }).strict()
 const rootCapabilities = z.object({ list: z.literal(true), read: z.literal(false), write: z.literal(false) }).strict()
 const catalogueBase = {
-  schemaVersion: z.literal(1), authority: z.literal('none'), execution: z.literal('directory-listing-only'), contentIncluded: z.literal(false),
+  schemaVersion: z.literal(1),
+  authority: z.literal('none'),
+  execution: z.literal('directory-listing-only'),
+  contentIncluded: z.literal(false),
 }
 const catalogue = z.discriminatedUnion('mode', [
   z.object({ ...catalogueBase, mode: z.literal('configured'), code: z.null(), roots: z.array(root).min(1).max(64), capabilities: rootCapabilities }).strict(),
   z.object({ ...catalogueBase, mode: z.literal('unavailable'), code: z.enum(['disabled', 'not_configured', 'invalid_configuration', 'unsupported_platform']), roots: z.array(root).length(0), capabilities: z.null() }).strict(),
 ])
-const entry = z.object({
-  name: z.string().min(1).max(255).refine(safePart), path: relativePath, kind: z.enum(['directory', 'file', 'symlink', 'other']),
-}).strict()
-const listing = z.object({
-  mode: z.literal('observed'), rootId, path: relativePath, truncated: z.boolean(), sampledAt: z.string().datetime({ offset: true }), entries: z.array(entry).max(200),
-}).strict().superRefine((value, context) => {
-  const names = new Set<string>()
-  for (const item of value.entries) {
-    const expected = value.path ? `${value.path}/${item.name}` : item.name
-    if (item.path !== expected || names.has(item.name)) context.addIssue({ code: 'custom', message: 'Directory entries must be unique children of the requested path.' })
-    names.add(item.name)
-  }
-})
-const directory = z.object({
-  schemaVersion: z.literal(1), requestId, state: z.enum(['dispatching', 'awaiting_approval', 'unknown', 'failed', 'complete']),
-  limit: z.number().int().min(1).max(200), rootId, path: relativePath, approvalRequired: z.boolean(),
-  errorCode: z.enum(['invalid_approval', 'invalid_listing', 'read_failed']).nullable(), listing: listing.nullable(),
-  receiptStatus: z.literal('unavailable').nullable(), currentAgeSeconds: z.number().finite().nonnegative().nullable(),
-  createdAt: z.number().finite().nonnegative(), updatedAt: z.number().finite().nonnegative(), source: z.literal('toolgate/system.files-list'),
-  refreshRequiresNewRequest: z.literal(true), authority: z.literal('none'), contentIncluded: z.literal(false), execution: z.literal('directory-listing-only'),
-}).strict()
+const entry = z
+  .object({
+    name: z.string().min(1).max(255).refine(safePart),
+    path: relativePath,
+    kind: z.enum(['directory', 'file', 'symlink', 'other']),
+  })
+  .strict()
+const listing = z
+  .object({
+    mode: z.literal('observed'),
+    rootId,
+    path: relativePath,
+    truncated: z.boolean(),
+    sampledAt: z.string().datetime({ offset: true }),
+    entries: z.array(entry).max(200),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    const names = new Set<string>()
+    for (const item of value.entries) {
+      const expected = value.path ? `${value.path}/${item.name}` : item.name
+      if (item.path !== expected || names.has(item.name)) context.addIssue({ code: 'custom', message: 'Directory entries must be unique children of the requested path.' })
+      names.add(item.name)
+    }
+  })
+const directory = z
+  .object({
+    schemaVersion: z.literal(1),
+    requestId,
+    state: z.enum(['dispatching', 'awaiting_approval', 'unknown', 'failed', 'complete']),
+    limit: z.number().int().min(1).max(200),
+    rootId,
+    path: relativePath,
+    approvalRequired: z.boolean(),
+    errorCode: z.enum(['invalid_approval', 'invalid_listing', 'read_failed']).nullable(),
+    listing: listing.nullable(),
+    receiptStatus: z.literal('unavailable').nullable(),
+    currentAgeSeconds: z.number().finite().nonnegative().nullable(),
+    createdAt: z.number().finite().nonnegative(),
+    updatedAt: z.number().finite().nonnegative(),
+    source: z.literal('toolgate/system.files-list'),
+    refreshRequiresNewRequest: z.literal(true),
+    authority: z.literal('none'),
+    contentIncluded: z.literal(false),
+    execution: z.literal('directory-listing-only'),
+  })
+  .strict()
 
 export type GatewayFileCatalogue = z.infer<typeof catalogue>
 export type GatewayDirectory = z.infer<typeof directory>

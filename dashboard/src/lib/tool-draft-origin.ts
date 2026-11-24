@@ -14,12 +14,17 @@ function read(): Record<string, string> {
     const value: unknown = JSON.parse(globalThis.localStorage?.getItem(KEY) ?? '{}')
     if (!value || typeof value !== 'object' || Array.isArray(value)) return {}
     return Object.fromEntries(Object.entries(value).filter(([draft, request]) => DRAFT.test(draft) && typeof request === 'string' && REQUEST.test(request)))
-  } catch { return {} }
+  } catch {
+    return {}
+  }
 }
 
 function write(origins: Record<string, string>) {
-  try { globalThis.localStorage?.setItem(KEY, JSON.stringify(Object.fromEntries(Object.entries(origins).slice(-LIMIT)))) }
-  catch { /* Private windows and blocked storage: the address still carries the request. */ }
+  try {
+    globalThis.localStorage?.setItem(KEY, JSON.stringify(Object.fromEntries(Object.entries(origins).slice(-LIMIT))))
+  } catch {
+    /* Private windows and blocked storage: the address still carries the request. */
+  }
 }
 
 export function rememberDraftOrigin(draftId: string, requestId: string) {
