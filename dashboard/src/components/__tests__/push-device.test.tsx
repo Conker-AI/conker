@@ -304,6 +304,16 @@ describe('renewing this device for the current sign-in', () => {
     expect(server.push.subscribe).not.toHaveBeenCalled()
   })
 
+  it('a renewal the server refuses changes nothing on the screen', async () => {
+    const server = fakeServer([row(ID)])
+    server.push.renew.mockRejectedValueOnce(new GatewayError('network'))
+    render(<PushDeviceBlock client={asClient(server)} device={fakeDevice('ok', { id: ID, endpoint: KEYS.endpoint })} />)
+    await waitFor(() => expect(server.push.renew).toHaveBeenCalledTimes(1))
+    await act(async () => undefined)
+    expect(status().textContent).toBe(PUSH_WORDS.on)
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+
   it('a device the server does not list is never sent again (it stays off)', async () => {
     const server = fakeServer([row(OTHER)]),
       device = fakeDevice('ok', { id: ID, endpoint: KEYS.endpoint })
