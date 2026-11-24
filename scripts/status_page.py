@@ -2,8 +2,8 @@
 that they still match.
 
 Four blocks between `<!-- generated:NAME -->` and `<!-- /generated:NAME -->` are written here:
-`families` (how many capability families are active and deferred), `release` (the version or
-state versions.env pins for each service), `deferred` (each deferred family, its gap and what
+`families` (how many capability families are active and deferred), `release` (the Conker
+version, and the version or state versions.env pins for each service), `deferred` (each deferred family, its gap and what
 it still needs) and `frozen` (each family kept as built, and why). Everything else on the page is written by hand. Run from the repository root
 after changing either file: python scripts/status_page.py [--check]
 """
@@ -24,6 +24,7 @@ CAPABILITIES = ROOT / "capabilities.json"
 MANIFEST = ROOT / "versions.env"
 # Each row of the release table: its name, the versions.env key it shows, what the service does.
 RELEASE = (
+    ("Conker", "CONKER_VERSION", "The release: dashboard, installer, compose, CLI and these pins"),
     (
         "Pi and the Gateway",
         "PI_VERSION",
@@ -66,6 +67,8 @@ def families(capabilities: list[dict]) -> str:
 
 def release(pins: dict[str, str]) -> str:
     rows = ["| Service | Version | |", "|---|---|---|"]
+    # versions.env without CONKER_VERSION is an unreleased build, not a broken manifest.
+    pins = {"CONKER_VERSION": "unreleased", **pins}
     for name, key, what in RELEASE:
         if key not in pins:
             raise StatusPageError(f"versions.env has no {key} for the row {name!r}")
