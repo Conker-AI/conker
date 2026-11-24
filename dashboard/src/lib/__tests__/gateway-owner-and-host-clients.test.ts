@@ -177,7 +177,7 @@ describe('owner settings', () => {
     await kind(createOwnerSettingsClient(fakeAuth(preferences).auth).savePreferences({}, 2), 'invalid-response')
   })
 
-  it('reads and replaces ToolGate settings with PUT', async () => {
+  it('reads and replaces the tool settings with PUT', async () => {
     const { auth, calls } = fakeAuth(tools, { ...tools, revision: 8 })
     const client = createOwnerSettingsClient(auth)
     expect(await client.tools()).toEqual(tools)
@@ -302,7 +302,7 @@ describe('host inventory', () => {
     execution: 'not-triggered',
   })
 
-  it('makes a request id the gateway accepts', () => {
+  it('makes a request id the server accepts', () => {
     const made = createHostInventoryRequestId()
     expect(made).toMatch(/^browser_[0-9a-f]{32}$/)
     expect(createHostInventoryRequestId()).not.toBe(made)

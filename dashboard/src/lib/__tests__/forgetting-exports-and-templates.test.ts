@@ -204,7 +204,7 @@ describe('export formats and words', () => {
     expect(exportNames.pptx).toBe('slides')
   })
 
-  it('words a coded refusal, and falls back to the gateway message', () => {
+  it('words a coded refusal, and falls back to the standard message', () => {
     expect(exportRefusalMessage(new GatewayRefusal('export_no_table', 400))).toBe('There is no table here to put in a spreadsheet. Choose Word or PDF.')
     expect(exportRefusalMessage(new GatewayRefusal('too_large', 413))).toBe('The file would be larger than 16 MB, too big to download.')
     expect(exportRefusalMessage(new GatewayRefusal('not_json', 400))).toBe(new GatewayError('http').message)

@@ -101,7 +101,7 @@ describe('chat forgetting', () => {
   const plan = (id: string) => ({ sessionId: id, sessionIds: [id], messages: 3, turns: 2, approvalRequests: 0, confirmation, alreadyForgotten: false })
   const overview = (ids: string[], extra: Record<string, unknown> = {}) => ({ supervised: true, pending: [], results: [], chats: ids.map(plan), ...extra })
 
-  it('words Pi refusals and falls back to the gateway message', () => {
+  it('words each refusal and falls back to the standard message', () => {
     const code = (value: string) => chatForgetMessage(new GatewayError('http', 409, undefined, value as never))
     expect(code('not_supervised')).toContain('cannot restart itself')
     expect(code('scope_changed')).toContain('changed since you reviewed')

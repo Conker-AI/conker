@@ -197,7 +197,7 @@ describe('team runs', () => {
     expect(words('not_found').stale).toBe(false)
   })
 
-  it('falls back to the gateway message for an unknown code or any other failure', () => {
+  it('falls back to the standard message for an unknown code or any other failure', () => {
     expect(new TeamRunError(new GatewayError('http', 409, undefined, 'draft_changed'))).toMatchObject({ code: null, stale: false, message: new GatewayError('http').message })
     expect(new TeamRunError(new GatewayError('dependency')).message).toBe(new GatewayError('dependency').message)
     expect(new TeamRunError(new Error('boom')).message).toBe(new GatewayError('network').message)
