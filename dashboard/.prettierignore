@@ -65,6 +65,7 @@ src/components/gateway/host-inventory-workspace.tsx
 src/components/gateway/memory-correction.tsx
 src/components/gateway/provider-credentials.tsx
 src/components/gateway/session-access-control.tsx
+src/components/gateway/system-status.tsx
 src/components/gateway/team-runs.tsx
 src/components/gateway/tool-drafts.tsx
 src/components/gateway/tools-inventory.tsx
