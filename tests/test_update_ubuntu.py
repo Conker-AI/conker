@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from scripts import update_core, update_download, update_ubuntu
+from scripts import update_core, update_download, update_ubuntu, update_ubuntu_transport
 from scripts.update_core import UpdateCoordinator, UpdateError, UpdateStore
 from scripts.update_ubuntu import UbuntuTransport, tell_inbox
 
@@ -45,8 +45,8 @@ def deployment(tmp_path, monkeypatch):
     )
     compose = {"volumes": {"agent_workspaces": {"driver_opts": {"device": "/srv/workspaces"}}}}
     (root / "compose.json").write_text(json.dumps(compose), encoding="utf-8")
-    monkeypatch.setattr(update_ubuntu.shutil, "disk_usage", lambda _path: Disk())
-    monkeypatch.setattr(update_ubuntu.time, "sleep", lambda _seconds: None)
+    monkeypatch.setattr(update_ubuntu_transport.shutil, "disk_usage", lambda _path: Disk())
+    monkeypatch.setattr(update_ubuntu_transport.time, "sleep", lambda _seconds: None)
     monkeypatch.setenv("CONKER_UPDATE_HEALTH_TIMEOUT", "0")
     monkeypatch.setenv("CONKER_UPDATE_SNAPSHOTS", str(tmp_path / "snapshots"))
     return root
@@ -252,7 +252,7 @@ def serve(monkeypatch, body: bytes) -> None:
 
 def test_a_release_archive_unpacks_without_its_top_folder(tmp_path, monkeypatch):
     serve(monkeypatch, archive(("conker-0.2.0/versions.env", b"CONKER_VERSION=0.2.0\n")))
-    update_ubuntu.download("https://codeload.github.com/x", tmp_path / "out")
+    update_ubuntu_transport.download("https://codeload.github.com/x", tmp_path / "out")
     assert (tmp_path / "out" / "versions.env").read_text() == "CONKER_VERSION=0.2.0\n"
 
 
@@ -260,7 +260,7 @@ def test_an_archive_that_unpacks_too_large_is_refused_before_writing(tmp_path, m
     serve(monkeypatch, archive(("conker-0.2.0/a", b"x" * 64), ("conker-0.2.0/b", b"y" * 64)))
     monkeypatch.setattr(update_download, "MAX_UNPACKED", 100)
     with pytest.raises(UpdateError, match="unpacks to more"):
-        update_ubuntu.download("https://codeload.github.com/x", tmp_path / "out")
+        update_ubuntu_transport.download("https://codeload.github.com/x", tmp_path / "out")
     assert not (tmp_path / "out").exists()
 
 
