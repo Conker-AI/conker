@@ -6,6 +6,12 @@ which module versions a release pins.
 
 ## Unreleased
 
+## 0.6.41
+
+Beta build from main. Changes since the last tag:
+
+- chore: format 41 files and cut .prettierignore from 113 to 72 entries (#453)
+
 ## 0.6.0
 
 - **The folded update card says "Updating to X.Y.Z...".** While an update runs, the card in the Inbox no longer loses its button in silence. (#391)
