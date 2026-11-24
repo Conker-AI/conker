@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from scripts import update_swap, update_ubuntu
+from scripts import update_swap, update_ubuntu, update_ubuntu_transport
 from scripts.update_swap import identity, put_back, swap_in
 from tests.test_update_ubuntu import Host, deployment, update  # noqa: F401  (fixture)
 
@@ -145,7 +145,7 @@ def test_a_power_cut_inside_the_swap_leaves_sources_and_recover_rolls_back(
         assert update_swap.exchange(staging, sources)
         raise Cut
 
-    monkeypatch.setattr(update_ubuntu, "swap_in", cut)
+    monkeypatch.setattr(update_ubuntu_transport, "swap_in", cut)
     with pytest.raises(Cut):
         update(deployment, host)[1].run()
     assert host.running() == "0.2.0"  # sources/ is there: the helper can start and recover
