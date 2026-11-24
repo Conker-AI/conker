@@ -426,7 +426,7 @@
           "default": "collapsed",
           "tier": "basic",
           "scope": "global",
-          "effect": "stored",
+          "effect": "live",
           "options": [
             {
               "value": "collapsed",
@@ -474,7 +474,7 @@
           "default": true,
           "tier": "basic",
           "scope": "global",
-          "effect": "stored"
+          "effect": "live"
         },
         {
           "id": "chats.code_wrap",

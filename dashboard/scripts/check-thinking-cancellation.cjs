@@ -12,6 +12,8 @@ function load(relative) {
   new Function('require', 'module', 'exports', code)(name => {
     if (name === 'react' && relative.endsWith('/thinking-status.tsx')) return { useRef: value => ({ current: value }), useLayoutEffect: () => {} }
     if (name === '@/components/ui/button') return { Button: 'button' }
+    // Rendered as a plain function here: the owner's Thinking setting stays at its default.
+    if (name === '@/settings/server-setting') return { useServerSetting: (_id, fallback) => fallback }
     if (!name.startsWith('.') && !name.startsWith('@/')) return require(name)
     const file = name.startsWith('@/') ? `src/${name.slice(2)}` : path.posix.normalize(path.posix.join(path.posix.dirname(relative), name))
     return load(file + (fs.existsSync(path.join(root, file + '.ts')) ? '.ts' : '.tsx'))

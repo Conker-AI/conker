@@ -29,6 +29,8 @@ function historyHarness() {
       }
     },
   }
+  // Effects run in order like layout effects here; the owner's settings stay at their defaults.
+  react.useEffect = react.useLayoutEffect
   global.ResizeObserver = class {
     constructor(callback) { this.callback = callback; this.disconnected = false; observers.push(this) }
     observe() {}
@@ -40,6 +42,7 @@ function historyHarness() {
     if (name === 'react') return react
     if (name === 'react/jsx-runtime') return { jsx, jsxs: jsx }
     if (name === './composer') return { conversationColumn: 'conversation-column' }
+    if (name === '@/settings/server-setting') return { useServerSetting: (_id, fallback) => fallback }
     if (name === '@/pwa/chat-navigation') return { useSwipeBack: () => {}, useBackToChats: () => () => {} }
     return new Proxy({}, { get: (_, property) => property })
   }, module, module.exports)
