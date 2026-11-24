@@ -8,32 +8,43 @@ const sessionId = z.string().regex(/^ses_[0-9a-f]{16}$/)
 const taskId = z.string().regex(/^tsk_[0-9a-f]{32}$/)
 const fileId = z.string().regex(/^attachment_[0-9a-f]{32}$/)
 const revision = z.number().int().positive()
-const fields = z.object({
-  name: z.string().trim().min(1).max(120),
-  description: z.string().max(2000),
-  instructions: z.string().max(16000),
-}).strict()
-const reference = z.discriminatedUnion('kind', [
-  z.object({ kind: z.literal('conversation'), sessionId }).strict(),
-  z.object({ kind: z.literal('task'), taskId }).strict(),
-  z.object({ kind: z.literal('file'), sessionId, fileId }).strict(),
-])
+const fields = z
+  .object({
+    name: z.string().trim().min(1).max(120),
+    description: z.string().max(2000),
+    instructions: z.string().max(16000),
+  })
+  .strict()
+const reference = z.discriminatedUnion('kind', [z.object({ kind: z.literal('conversation'), sessionId }).strict(), z.object({ kind: z.literal('task'), taskId }).strict(), z.object({ kind: z.literal('file'), sessionId, fileId }).strict()])
 const privacy = z.object({ memoryDisabled: z.boolean(), harnessDisabled: z.boolean(), incognito: z.boolean() }).strict()
-const link = z.object({
-  reference,
-  mode: z.literal('live-reference'),
-  snapshot: z.object({ originSessionId: sessionId, linkedAt: z.number().finite().nonnegative() }).strict(),
-  availability: z.enum(['available', 'archived', 'unavailable', 'origin-changed']),
-  label: z.string().min(1).max(500),
-  labelSource: z.enum(['live-source', 'unavailable']),
-  privacy: privacy.nullable(),
-}).strict()
-const project = z.object({
-  schemaVersion: z.literal(1), id: projectId, revision,
-  name: z.string().min(1).max(120), description: z.string().max(2000), instructions: z.string().max(16000),
-  createdAt: z.number().finite().nonnegative(), updatedAt: z.number().finite().nonnegative(), archivedAt: z.number().finite().nonnegative().nullable(),
-  links: z.array(link).max(1000), authority: z.literal('none'), contentIncluded: z.literal(false), grantsInherited: z.literal(false),
-}).strict()
+const link = z
+  .object({
+    reference,
+    mode: z.literal('live-reference'),
+    snapshot: z.object({ originSessionId: sessionId, linkedAt: z.number().finite().nonnegative() }).strict(),
+    availability: z.enum(['available', 'archived', 'unavailable', 'origin-changed']),
+    label: z.string().min(1).max(500),
+    labelSource: z.enum(['live-source', 'unavailable']),
+    privacy: privacy.nullable(),
+  })
+  .strict()
+const project = z
+  .object({
+    schemaVersion: z.literal(1),
+    id: projectId,
+    revision,
+    name: z.string().min(1).max(120),
+    description: z.string().max(2000),
+    instructions: z.string().max(16000),
+    createdAt: z.number().finite().nonnegative(),
+    updatedAt: z.number().finite().nonnegative(),
+    archivedAt: z.number().finite().nonnegative().nullable(),
+    links: z.array(link).max(1000),
+    authority: z.literal('none'),
+    contentIncluded: z.literal(false),
+    grantsInherited: z.literal(false),
+  })
+  .strict()
 const collection = z.object({ schemaVersion: z.literal(1), results: z.array(project).max(200), nextCursor: projectId.nullable() }).strict()
 
 export type ProjectFields = z.infer<typeof fields>
@@ -49,8 +60,7 @@ function parse<T>(schema: z.ZodType<T>, value: unknown, input = false): T {
 }
 
 export function projectReferenceKey(value: ProjectReference) {
-  return value.kind === 'conversation' ? `conversation:${value.sessionId}`
-    : value.kind === 'task' ? `task:${value.taskId}` : `file:${value.sessionId}:${value.fileId}`
+  return value.kind === 'conversation' ? `conversation:${value.sessionId}` : value.kind === 'task' ? `task:${value.taskId}` : `file:${value.sessionId}:${value.fileId}`
 }
 
 /** Project writes are never retried: a missing acknowledgement must be reconciled by reading. */
@@ -59,11 +69,11 @@ export class GatewayProjectMutationError extends Error {
   readonly status?: number
   constructor(error: unknown) {
     const failure = gatewayError(error)
-    const rejected = ['configuration', 'validation', 'browser-expired', 'upstream-denied', 'verification-cancelled', 'verification-required'].includes(failure.kind) ||
-      failure.status !== undefined && [400, 401, 403, 404, 413, 422, 428, 429].includes(failure.status)
+    const rejected =
+      ['configuration', 'validation', 'browser-expired', 'upstream-denied', 'verification-cancelled', 'verification-required'].includes(failure.kind) ||
+      (failure.status !== undefined && [400, 401, 403, 404, 413, 422, 428, 429].includes(failure.status))
     const conflict = failure.status === 409
-    super(conflict ? 'This project changed elsewhere. Reload its current revision before making another change.'
-      : rejected ? failure.message : 'The change outcome is uncertain. Reload the project before deciding whether to try again.')
+    super(conflict ? 'This project changed elsewhere. Reload its current revision before making another change.' : rejected ? failure.message : 'The change outcome is uncertain. Reload the project before deciding whether to try again.')
     this.name = 'GatewayProjectMutationError'
     this.outcome = conflict ? 'conflict' : rejected ? 'rejected' : 'unknown'
     this.status = failure.status
@@ -78,7 +88,9 @@ export function createGatewayProjectsClient(auth: Pick<GatewayAuthClient, 'reque
       const saved = parse(project, await auth.request(target, { method: 'POST', body }))
       if (expectedId && saved.id !== expectedId) throw new GatewayError('invalid-response')
       return saved
-    } catch (error) { throw error instanceof GatewayError && error.kind === 'invalid-response' ? error : new GatewayProjectMutationError(error) }
+    } catch (error) {
+      throw error instanceof GatewayError && error.kind === 'invalid-response' ? error : new GatewayProjectMutationError(error)
+    }
   }
   return {
     async list(options: { limit?: number; cursor?: string; signal?: AbortSignal } = {}): Promise<GatewayProjectPage> {
