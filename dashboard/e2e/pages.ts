@@ -18,7 +18,7 @@ export function card(page: Page, title: string) {
 }
 
 // Screens reached from a link on another page are listed by hand.
-const linked = ['/memory?view=care', '/memory?view=beliefs', '/chat?session=ses_1111111111111111']
+const linked = ['/memory?view=care', '/memory?view=beliefs', '/chat?session=ses_1111111111111111', '/share']
 /** Every place and tab in the navigation table, plus the linked screens. */
 export const allPlaces = [
   ...new Set([

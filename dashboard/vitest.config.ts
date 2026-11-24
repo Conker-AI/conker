@@ -17,7 +17,7 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       include: [
-        'src/lib/{date-format,due-date,skill-label,tool-draft-id,command-query,route-actions,utils,inbox-buttons,recent-chats,refresh-state,theme-resolution,connection-store}.ts',
+        'src/lib/{date-format,due-date,skill-label,tool-draft-id,command-query,route-actions,utils,inbox-buttons,recent-chats,refresh-state,theme-resolution,connection-store,share-capture}.ts',
         'src/lib/{tool-run,tool-workspace,tool-value-sources,tool-draft-origin,team-run-view,team-run-memory,memory-explorer,memory-layout}.ts',
         'src/lib/{conversation-research,conversation-attachments,artifact-html,artifact-media,plain-words,runtime-mode,rich-answer,job-starters,server-actions}.ts',
         'src/lib/chat/{smooth-text,tool-record,tool-requests,turn-details,message-context-rules,prompt-templates,template-fill,turn-outcomes,memory-feedback,template-editor}.ts',
@@ -36,7 +36,7 @@ export default defineConfig({
         'src/components/brand/identity-mark.tsx',
         'src/components/inbox/{inbox-card,recall-notice-card}.tsx',
         'src/components/resilience/{inline-error,skeletons}.tsx',
-        'src/components/gateway/{imported-chats-line,memory-uses-line,open-loops-workspace,thinking-status}.tsx',
+        'src/components/gateway/{imported-chats-line,memory-uses-line,open-loops-workspace,share-capture,thinking-status}.tsx',
         'src/components/{status-badge,message-action-button,reference-section}.tsx',
         'src/components/chat/{chat-feature-error,tool-record}.tsx',
         'src/components/gateway/{mode-chips,system-status,pending-submissions}.tsx',

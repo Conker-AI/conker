@@ -15,6 +15,7 @@ export type GatewayRoute =
   | 'system'
   | 'settings'
   | 'companion-settings'
+  | 'share'
 
 /**
  * The connected product's labels and destinations have one source of truth. Sidebar groups follow
@@ -76,6 +77,7 @@ export function gatewayPageNavigation(pathname: string, search: string) {
   const destination = gatewayDestinations.find(item => item.route === route && new URLSearchParams(item.path.split('?')[1]).get('tab') === shown)
     ?? gatewayDestinations.find(item => item.route === route)
   const title = route === 'chat' ? params.has('session') ? 'Chat' : 'New chat'
+    : route === 'share' ? 'Shared text'
     : route === 'agents' && normalizedPath(pathname) !== '/agents' ? 'Edit agent'
       : route === 'tools' && params.has('draft') ? 'Workflow'
         : route === 'tools' && params.get('view') === 'mcp' ? 'MCP servers'
@@ -113,6 +115,7 @@ const exactRoutes: Readonly<Record<string, GatewayRoute>> = {
   '/system': 'system',
   '/settings': 'settings',
   '/settings/companion': 'companion-settings',
+  '/share': 'share',
 }
 
 const detailRoutes: readonly [RegExp, GatewayRoute][] = [
