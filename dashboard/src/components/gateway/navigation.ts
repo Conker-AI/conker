@@ -1,4 +1,4 @@
-export type GatewayRoute = 'today' | 'setup' | 'chat' | 'chats' | 'inbox' | 'projects' | 'artifacts' | 'jobs' | 'memory' | 'loops' | 'activity' | 'agents' | 'tools' | 'system' | 'settings' | 'companion-settings'
+export type GatewayRoute = 'today' | 'setup' | 'chat' | 'chats' | 'inbox' | 'projects' | 'artifacts' | 'jobs' | 'memory' | 'loops' | 'activity' | 'agents' | 'tools' | 'system' | 'settings' | 'companion-settings' | 'share'
 
 /**
  * The connected product's labels and destinations have one source of truth. Sidebar groups follow
@@ -89,13 +89,15 @@ export function gatewayPageNavigation(pathname: string, search: string) {
       ? params.has('session')
         ? 'Chat'
         : 'New chat'
-      : route === 'agents' && normalizedPath(pathname) !== '/agents'
-        ? 'Edit agent'
-        : route === 'tools' && params.has('draft')
-          ? 'Workflow'
-          : route === 'tools' && params.get('view') === 'mcp'
-            ? 'MCP servers'
-            : (destination?.title ?? 'Conker')
+      : route === 'share'
+        ? 'Shared text'
+        : route === 'agents' && normalizedPath(pathname) !== '/agents'
+          ? 'Edit agent'
+          : route === 'tools' && params.has('draft')
+            ? 'Workflow'
+            : route === 'tools' && params.get('view') === 'mcp'
+              ? 'MCP servers'
+              : (destination?.title ?? 'Conker')
   const sections = definitions
     .filter(entry => !entry[2])
     .map(([value, label], index) => {
@@ -132,6 +134,7 @@ const exactRoutes: Readonly<Record<string, GatewayRoute>> = {
   '/system': 'system',
   '/settings': 'settings',
   '/settings/companion': 'companion-settings',
+  '/share': 'share',
 }
 
 const detailRoutes: readonly [RegExp, GatewayRoute][] = [

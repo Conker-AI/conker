@@ -65,6 +65,7 @@ const GatewayNativeSessionsPage = lazy(() => import('./native-sessions-page').th
 const GatewayServerServices = lazy(() => import('./server-services').then(module => ({ default: module.GatewayServerServices })))
 const GatewayServerBackups = lazy(() => import('./server-backups').then(module => ({ default: module.GatewayServerBackups })))
 const GatewayTerminalWorkspace = lazy(() => import('./terminal-workspace').then(module => ({ default: module.GatewayTerminalWorkspace })))
+const GatewayShareCapture = lazy(() => import('./share-capture').then(module => ({ default: module.GatewayShareCapture })))
 
 const workspaceFallback = <PageSkeleton label="Opening workspace…" />
 const workspaceError = (props: Parameters<typeof WorkspaceError>[0]) => <WorkspaceError {...props} />
@@ -121,6 +122,7 @@ export function GatewayWorkspace({ runtime, activity, authStore, conversationSta
       {companionSettingsActive && (params.get('tab') === 'harness' ? <GatewayAgentsWorkspace client={control} companion /> : <GatewayCharacterWorkspace client={control} />)}
       {projectsActive && <GatewayProjectsWorkspace control={control} runtime={runtime} activity={activity} />}
       {route === 'loops' && <GatewayOpenLoops client={control.openLoops} />}
+      {route === 'share' && <GatewayShareCapture client={control} />}
       {artifactsActive && <GatewayArtifactsWorkspace control={control} activity={activity} />}
       {jobsActive && <GatewayJobsWorkspace control={control} />}
     </Fragment></Suspense></ErrorBoundary>
