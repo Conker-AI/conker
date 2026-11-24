@@ -15,6 +15,20 @@
   --scrollbar-thumb: color-mix(in oklab, var(--foreground) 45%, var(--background));
   --scrollbar-thumb-hover: color-mix(in oklab, var(--foreground) 65%, var(--background));
   --scrollbar-thumb-active: var(--primary);
+  /* Chat width (Settings, Appearance), Medium: about 80 characters of 16 px answer text (ledger: Line length). */
+  --chat-width: 816px;
+}
+
+/* Narrow keeps answers near 65 characters (ledger: Line length, 45-80); Wide and Full width are the
+   owner's choice past it, for tables and code. */
+:root[data-chat-width='narrow'] {
+  --chat-width: 640px;
+}
+:root[data-chat-width='wide'] {
+  --chat-width: 1024px;
+}
+:root[data-chat-width='full'] {
+  --chat-width: none;
 }
 
 /* Keep fixed navigation/profile and recent lists reachable on short windows. */

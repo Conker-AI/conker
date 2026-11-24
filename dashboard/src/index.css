@@ -239,6 +239,21 @@
   outline-offset: 2px;
 }
 
+/* Larger buttons (Settings, Accessibility): every button and disclosure toggle gets the 44 px reach
+   a touch screen already gives it (ledger: Targets, 44 px AAA), with a mouse or pen too. The art
+   stays the same size; the area that takes the tap grows around it. */
+:root[data-targets="large"] [data-slot="button"]::after {
+  content: "";
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+}
+:root[data-targets="large"] summary {
+  padding-block: max(0px, calc((2.75rem - 1lh) / 2));
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

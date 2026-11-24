@@ -1,9 +1,10 @@
-import { useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { ArrowDown, ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { useBackToChats, useSwipeBack } from '@/pwa/chat-navigation'
+import { useServerSetting } from '@/settings/server-setting'
 import { conversationColumn } from './composer'
 
 /** A phone's way from a chat back to the chat list (a swipe right on the history does the same). */
@@ -18,12 +19,17 @@ export function BackToChats() {
   )
 }
 
-export function ConversationHistory({ sessionId, focusedMessageId, children }: { sessionId: string; focusedMessageId?: string | null; children: ReactNode }) {
+/** `writing`: an answer is being written. With Follow new text off (Settings, Chats) the view holds still while it grows and Latest appears. */
+export function ConversationHistory({ sessionId, focusedMessageId, writing = false, children }: { sessionId: string; focusedMessageId?: string | null; writing?: boolean; children: ReactNode }) {
   const viewport = useRef<HTMLDivElement>(null)
   const content = useRef<HTMLDivElement>(null)
   const following = useRef(true)
   const [showLatest, setShowLatest] = useState(false)
+  const autoscroll = useServerSetting('chats.autoscroll', true)
   useSwipeBack(viewport)
+  useEffect(() => {
+    if (writing && !autoscroll) following.current = false
+  }, [writing, autoscroll])
   useLayoutEffect(() => {
     const scroller = viewport.current
     const body = content.current
@@ -45,6 +51,8 @@ export function ConversationHistory({ sessionId, focusedMessageId, children }: {
       }
       // The on-screen keyboard opening or closing keeps the lines being read at the bottom in view.
       else if (before && height && height !== before) scroller.scrollTop = Math.max(0, scroller.scrollTop + before - height)
+      // Not following (scrolled up, or held still while an answer is written): offer Latest once there is more below.
+      if (!following.current && !focusedMessageId && scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight >= 80) setShowLatest(true)
     }
     follow()
     const observer = new ResizeObserver(follow)
