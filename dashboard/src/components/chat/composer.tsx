@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { useEnterSends } from '@/pwa/enter-key'
 import { Textarea } from '@/components/ui/textarea'
+import { useServerSetting } from '@/settings/server-setting'
 import type { ChatContract } from '@/lib/chat/contract'
 import { ComposerItemContext, FOLD_BELOW, itemSummary, splitComposerItems, withItemValue, type ComposerItemId, type ComposerItemValues } from './composer-items'
 
@@ -36,7 +37,10 @@ function ComposerOverflow({ values, children }: { values: string[]; children: Re
 
 export function ChatComposerFrame({ id, label, placeholder, value, onChange, onSend, disabled, inputRef, controls, settings, actions, feedback, input }: ComposerFrameProps) {
   const localInput = useRef<HTMLTextAreaElement>(null)
-  const enterSends = useEnterSends()
+  // Send with Ctrl+Enter: Enter always makes a new line and Ctrl (or Cmd) + Enter sends, on any screen.
+  const ctrlSends = useServerSetting<'enter' | 'ctrl_enter'>('chats.send_with', 'enter') === 'ctrl_enter'
+  const enterSends = useEnterSends() && !ctrlSends
+  const spellCheck = useServerSetting('chats.spellcheck', true)
   const inputEl = inputRef ?? localInput
   const [moreValues, setMoreValues] = useState<ComposerItemValues>({})
   const report = useCallback((control: ComposerItemId, next: string | null) => setMoreValues(current => withItemValue(current, control, next)), [])
@@ -75,8 +79,8 @@ export function ChatComposerFrame({ id, label, placeholder, value, onChange, onS
   const named = itemSummary(Object.fromEntries(Object.entries(moreValues).filter(([id]) => isFolded(id as ComposerItemId))))
   return <ComposerItemContext.Provider value={report}><form aria-label="Message composer" className="@container relative min-w-0 rounded-3xl border bg-card text-card-foreground shadow-composer transition-colors focus-within:border-foreground/16 has-[textarea:focus-visible]:border-ring has-[textarea:focus-visible]:ring-2 has-[textarea:focus-visible]:ring-ring" onSubmit={event => { event.preventDefault(); onSend() }}>
     {input ?? <><Label htmlFor={id} className="sr-only">{label}</Label>
-    <Textarea ref={inputEl} id={id} dir="auto" rows={2} value={value} placeholder={placeholder} disabled={disabled} aria-invalid={[...value].length > 16_000 || undefined} aria-describedby={`${id}-help`} enterKeyHint={enterSends ? 'send' : 'enter'} onChange={event => onChange(event.target.value)} onKeyDown={event => { if (enterSends && event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); onSend() } }} unstyled className="block [&>textarea]:max-h-[min(16.5rem,calc(var(--app-height)*0.3+1.5rem))] [&>textarea]:min-h-16 [&>textarea]:resize-none [&>textarea]:overflow-y-auto [&>textarea]:bg-transparent [&>textarea]:px-4 [&>textarea]:pb-2 [&>textarea]:pt-4 [&>textarea]:text-base" />
-    <p id={`${id}-help`} className="sr-only">{enterSends ? 'Enter to send. Shift+Enter for a new line.' : 'Enter for a new line. Use the Send button to send.'}</p></>}
+    <Textarea ref={inputEl} id={id} dir="auto" rows={2} value={value} placeholder={placeholder} disabled={disabled} aria-invalid={[...value].length > 16_000 || undefined} aria-describedby={`${id}-help`} enterKeyHint={enterSends ? 'send' : 'enter'} spellCheck={spellCheck} onChange={event => onChange(event.target.value)} onKeyDown={event => { if (enterSends && event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); onSend() } else if (ctrlSends && event.key === 'Enter' && (event.ctrlKey || event.metaKey) && !event.nativeEvent.isComposing) { event.preventDefault(); onSend() } }} unstyled className="block [&>textarea]:max-h-[min(16.5rem,calc(var(--app-height)*0.3+1.5rem))] [&>textarea]:min-h-16 [&>textarea]:resize-none [&>textarea]:overflow-y-auto [&>textarea]:bg-transparent [&>textarea]:px-4 [&>textarea]:pb-2 [&>textarea]:pt-4 [&>textarea]:text-base" />
+    <p id={`${id}-help`} className="sr-only">{ctrlSends ? 'Enter for a new line. Ctrl+Enter to send.' : enterSends ? 'Enter to send. Shift+Enter for a new line.' : 'Enter for a new line. Use the Send button to send.'}</p></>}
     {folded.length > 0 && <p aria-hidden className="truncate px-4 pb-1 text-sm text-muted-foreground">{named.join(' · ')}</p>}
     <div ref={toolbar} className="flex min-w-0 flex-wrap items-center gap-x-1 gap-y-1 px-3 pb-3 pointer-coarse:gap-3">
       {controls}{onBar}

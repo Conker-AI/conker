@@ -3,6 +3,7 @@ import { Wrench } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { gatewayConversationLink } from '@/components/gateway/navigation'
 import { readToolRecord, type ToolRecordView } from '@/lib/chat/tool-record'
+import { useServerSetting } from '@/settings/server-setting'
 
 const variants = { ok: 'success', failed: 'error', 'timed out': 'error', declined: 'warning', unknown: 'outline' } as const satisfies Record<ToolRecordView['status'], string>
 const statusWords = { ok: 'Done', failed: 'Failed', 'timed out': 'Timed out', declined: 'Declined', unknown: 'Unknown' } as const satisfies Record<ToolRecordView['status'], string>
@@ -12,11 +13,13 @@ function duration(ms: number) {
   return ms >= 1000 ? `${(ms / 1000).toFixed(1)} s` : `${Math.round(ms)} ms`
 }
 
-/** One tool step in a chat: folded to a single readable row, opened to its output and raw record. */
+/** One tool step in a chat: folded to a single readable row, opened to its output and raw record. The owner's Tool calls setting starts it open or leaves it out. */
 export function ToolRecord({ text, sequence }: { text: string; sequence: number }) {
+  const shown = useServerSetting<'collapsed' | 'expanded' | 'hidden'>('chats.tool_calls', 'collapsed')
   const record = readToolRecord(text)
+  if (shown === 'hidden') return null
   return (
-    <details className="group min-w-0 rounded-lg border bg-card">
+    <details className="group min-w-0 rounded-lg border bg-card" open={shown === 'expanded' || undefined}>
       <summary
         aria-label={`Tool ${record.label}, ${statusWords[record.status]}, step ${sequence}`}
         className="flex min-h-9 pointer-coarse:min-h-11 min-w-0 cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm focus-visible:outline-2 focus-visible:outline-ring"

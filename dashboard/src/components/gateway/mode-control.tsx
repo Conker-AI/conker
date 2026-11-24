@@ -8,6 +8,7 @@ import type { AutoMode, AutoSettings, AutoSettingsField, Research } from '@/lib/
 import type { ChatEffort } from '@/lib/gateway/chat-names'
 import type { ModelMenuLayout } from '@/lib/gateway/claude-models'
 import { gatewayError } from '@/lib/gateway/transport'
+import { useServerSetting } from '@/settings/server-setting'
 import { composerModes, effectiveMode, modeLabel, offersModel, type ComposerMode, type ModeValues } from './composer-mode'
 import { composerOutlined } from './composer-select'
 import { effortLabel } from './use-chat-effort'
@@ -55,7 +56,9 @@ export const useComposerMode = () => useContext(ModeContext)
 
 /** One composer per chat; remount it per draft so a mode never leaks between chats. A mode sets the model, effort, thinking and search together. */
 export function ComposerModeProvider({ text, think, research, thinkAvailable, harnessDisabled, sessionId, disabled, modelId, setModel, propose, apply, children }: Props) {
-  const [mode, setMode] = useState<ComposerMode>('auto')
+  // The owner's Mode for a new chat starts each composer; a later change waits for the next one.
+  const startMode = useServerSetting<'auto' | 'fast' | 'balanced' | 'deep'>('chats.default_mode', 'auto')
+  const [mode, setMode] = useState<ComposerMode>(startMode)
   const [bridge, setBridge] = useState<ModeBridge | null>(null)
   const [proposal, setProposal] = useState<(AutoSettings & { text: string }) | null>(null)
   const [status, setStatus] = useState<ComposerModeState['status']>({ kind: 'idle' })
