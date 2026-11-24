@@ -6,6 +6,12 @@ which module versions a release pins.
 
 ## Unreleased
 
+## 0.6.39
+
+Beta build from main. Changes since the last tag:
+
+- test: cover 25 more dashboard lib modules and hold them in the coverage gate (#451)
+
 ## 0.6.0
 
 - **The folded update card says "Updating to X.Y.Z...".** While an update runs, the card in the Inbox no longer loses its button in silence. (#391)
