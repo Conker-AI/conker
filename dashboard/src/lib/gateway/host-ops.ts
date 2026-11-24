@@ -18,20 +18,30 @@ const VALUE = /^[A-Za-z0-9_.:-]{1,128}$/
 export const RELEASE = /^\d{1,4}\.\d{1,4}\.\d{1,4}$/
 const time = z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/)
 
-const service = z.object({
-  service: z.string().regex(SERVICE),
-  state: z.enum(['created', 'running', 'restarting', 'paused', 'exited', 'removing', 'dead', 'unknown']),
-  health: z.enum(['healthy', 'unhealthy', 'starting', 'none']),
-  startedAt: time.nullable(), restarts: z.number().int().nonnegative(), oneShot: z.boolean(),
-}).strict()
+const service = z
+  .object({
+    service: z.string().regex(SERVICE),
+    state: z.enum(['created', 'running', 'restarting', 'paused', 'exited', 'removing', 'dead', 'unknown']),
+    health: z.enum(['healthy', 'unhealthy', 'starting', 'none']),
+    startedAt: time.nullable(),
+    restarts: z.number().int().nonnegative(),
+    oneShot: z.boolean(),
+  })
+  .strict()
 const holds = { backupLock: z.boolean(), recoveryHeld: z.boolean() }
 const servicesStatus = z.object({ services: z.array(service).max(64), ...holds }).strict()
-const backupList = z.object({
-  destination: z.string().min(1).max(4096).nullable(), retentionCopies: z.number().int().positive().nullable(),
-  ready: z.boolean(), separateDisk: z.boolean().nullable(), freeBytes: z.number().finite().nonnegative().nullable(),
-  snapshots: z.array(z.object({ name: z.string().regex(SNAPSHOT), createdAt: time }).strict()).max(100),
-  partialSnapshots: z.number().int().nonnegative(), ...holds,
-}).strict()
+const backupList = z
+  .object({
+    destination: z.string().min(1).max(4096).nullable(),
+    retentionCopies: z.number().int().positive().nullable(),
+    ready: z.boolean(),
+    separateDisk: z.boolean().nullable(),
+    freeBytes: z.number().finite().nonnegative().nullable(),
+    snapshots: z.array(z.object({ name: z.string().regex(SNAPSHOT), createdAt: time }).strict()).max(100),
+    partialSnapshots: z.number().int().nonnegative(),
+    ...holds,
+  })
+  .strict()
 const operationName = z.string().regex(/^[a-z]+(?:\.[a-z]+)+$/)
 const argumentsRecord = z.record(z.string().max(64), z.string().regex(VALUE))
 /**
@@ -41,19 +51,29 @@ const argumentsRecord = z.record(z.string().max(64), z.string().regex(VALUE))
  * running (reason says which); unsupported = this layout has no daily check. ok is null until a check
  * has finished since the helper started.
  */
-const updateCheck = z.object({
-  state: z.enum(['started', 'running', 'fresh', 'skipped', 'unsupported']),
-  checkedAt: time.nullable(), ok: z.boolean().nullable(),
-  reason: z.enum(['update_running', 'host_busy', 'github_unreachable', 'failed']).nullable(),
-  nextCheckAfter: time.nullable(),
-}).strict()
-const receipt = z.object({
-  id: z.string().regex(HOST_OP_ID), operation: operationName, arguments: argumentsRecord,
-  argumentsDigest: z.string().regex(/^[0-9a-f]{64}$/), source: z.enum(['ui', 'cli']),
-  startedAt: z.string().max(64), endedAt: z.string().max(64).nullable(),
-  outcome: z.enum(['working', 'done', 'failed', 'unknown']), reason: z.string().max(600).nullable(),
-  check: z.object({ operation: operationName, arguments: argumentsRecord }).strict().nullable(),
-}).strict()
+const updateCheck = z
+  .object({
+    state: z.enum(['started', 'running', 'fresh', 'skipped', 'unsupported']),
+    checkedAt: time.nullable(),
+    ok: z.boolean().nullable(),
+    reason: z.enum(['update_running', 'host_busy', 'github_unreachable', 'failed']).nullable(),
+    nextCheckAfter: time.nullable(),
+  })
+  .strict()
+const receipt = z
+  .object({
+    id: z.string().regex(HOST_OP_ID),
+    operation: operationName,
+    arguments: argumentsRecord,
+    argumentsDigest: z.string().regex(/^[0-9a-f]{64}$/),
+    source: z.enum(['ui', 'cli']),
+    startedAt: z.string().max(64),
+    endedAt: z.string().max(64).nullable(),
+    outcome: z.enum(['working', 'done', 'failed', 'unknown']),
+    reason: z.string().max(600).nullable(),
+    check: z.object({ operation: operationName, arguments: argumentsRecord }).strict().nullable(),
+  })
+  .strict()
 const receipts = z.object({ schemaVersion: z.literal(1), operations: z.array(receipt).max(200), damagedRecords: z.number().int().nonnegative() }).strict()
 
 export type HostService = z.infer<typeof service>
@@ -108,7 +128,8 @@ export function createGatewayHostOpsClient(auth: Pick<GatewayAuthClient, 'reques
     },
     /** Starts it under the signed-in session; the id makes a retry return the same receipt. */
     async start(id: string, value: HostAction, options: { signal?: AbortSignal; onDispatch?: () => void } = {}): Promise<HostReceipt> {
-      const selected = parse(z.string().regex(HOST_OP_ID), id, true), requested = parse(action, value, true)
+      const selected = parse(z.string().regex(HOST_OP_ID), id, true),
+        requested = parse(action, value, true)
       const answer = parse(receipt, await auth.request('/api/host/ops', { method: 'POST', body: { id: selected, operation: requested.operation, arguments: requested.arguments }, ...options }))
       if (answer.id !== selected || answer.operation !== requested.operation) throw new GatewayError('invalid-response')
       return answer

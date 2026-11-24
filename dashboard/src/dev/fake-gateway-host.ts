@@ -3,7 +3,18 @@ import { createFakeUpdates } from './fake-gateway-updates'
 
 type Json = Record<string, unknown>
 type Request = { method?: 'GET' | 'POST' | 'PUT'; body?: Json; onDispatch?: () => void }
-type Receipt = { id: string; operation: string; arguments: Record<string, string>; argumentsDigest: string; source: 'ui' | 'cli'; startedAt: string; endedAt: string | null; outcome: 'working' | 'done' | 'failed' | 'unknown'; reason: string | null; check: { operation: string; arguments: Record<string, string> } | null }
+type Receipt = {
+  id: string
+  operation: string
+  arguments: Record<string, string>
+  argumentsDigest: string
+  source: 'ui' | 'cli'
+  startedAt: string
+  endedAt: string | null
+  outcome: 'working' | 'done' | 'failed' | 'unknown'
+  reason: string | null
+  check: { operation: string; arguments: Record<string, string> } | null
+}
 
 /**
  * Preview-only host helper (ADR-0014) for the Server screens, in the helper's exact shapes. Pick a
@@ -11,18 +22,33 @@ type Receipt = { id: string; operation: string; arguments: Record<string, string
  * refused, lost, unknown, failed, working, no-update-check (an older server that does not know update.check). Actions finish after a few seconds; nothing leaves the tab.
  */
 export function createFakeHostOps(scenario: string | null) {
-  const minute = 60_000, hour = 60 * minute, day = 24 * hour, start = Date.now()
+  const minute = 60_000,
+    hour = 60 * minute,
+    day = 24 * hour,
+    start = Date.now()
   const iso = (ms: number) => new Date(ms).toISOString().replace(/\.\d+Z$/, 'Z')
   const snapshot = (ms: number, tag: string) => ({ name: `snapshot-${iso(ms).replace(/[-:]/g, '').replace(/Z$/, '')}Z-${tag}`, createdAt: iso(ms) })
   const up = start - 3 * day - 2 * hour
   const service = (name: string, health: string, restarts = 0, oneShot = false) => ({ service: name, state: oneShot ? 'exited' : 'running', health, startedAt: oneShot ? null : iso(up), restarts, oneShot })
   const services: Json[] = [
-    service('data-owner', 'none', 0, true), service('embeddings', 'healthy'), service('gateway', 'healthy'), service('memorygate', 'healthy'),
-    service('ollama', 'none'), service('pi', 'healthy'), service('postgres', 'healthy'), service('qdrant', 'none'),
-    service('searxng', 'none', 2), service('systemgate', 'healthy'), service('toolgate', 'healthy'),
+    service('data-owner', 'none', 0, true),
+    service('embeddings', 'healthy'),
+    service('gateway', 'healthy'),
+    service('memorygate', 'healthy'),
+    service('ollama', 'none'),
+    service('pi', 'healthy'),
+    service('postgres', 'healthy'),
+    service('qdrant', 'none'),
+    service('searxng', 'none', 2),
+    service('systemgate', 'healthy'),
+    service('toolgate', 'healthy'),
   ]
   const snapshots = [snapshot(start - 21 * hour, '3f2a91c0'), snapshot(start - 4 * day, '9b17e4d2'), snapshot(start - 9 * day, '0c55a7e1')]
-  const digest = (seed: string) => [...seed.padEnd(64, '0')].map(character => (character.charCodeAt(0) % 16).toString(16)).join('').slice(0, 64)
+  const digest = (seed: string) =>
+    [...seed.padEnd(64, '0')]
+      .map(character => (character.charCodeAt(0) % 16).toString(16))
+      .join('')
+      .slice(0, 64)
   const CUT_OFF = 'This was cut off before it finished, so it may or may not have happened. Check before trying again.'
   const failure: Record<string, string> = {
     'services.restart': 'The service did not restart. Check its status and logs, then try again.',
@@ -32,10 +58,18 @@ export function createFakeHostOps(scenario: string | null) {
   }
   const checks: Record<string, string> = { 'services.restart': 'services.status', 'backup.run': 'backup.list', 'backup.verify': 'backup.verify', 'update.run': 'services.status' }
   // update.check never waits: the first call starts a check that ends 1.5 s later, then the answer holds for 90 s.
-  let checking: number | null = null, lastCheck: number | null = null
+  let checking: number | null = null,
+    lastCheck: number | null = null
   const updates = createFakeUpdates(new URLSearchParams(globalThis.location?.search).get('preview-updates'))
   const receipt = (id: string, operation: string, args: Record<string, string>, source: 'ui' | 'cli', started: number, outcome: Receipt['outcome'], ended: number | null): Receipt => ({
-    id, operation, arguments: args, argumentsDigest: digest(id), source, startedAt: iso(started), endedAt: ended === null ? null : iso(ended), outcome,
+    id,
+    operation,
+    arguments: args,
+    argumentsDigest: digest(id),
+    source,
+    startedAt: iso(started),
+    endedAt: ended === null ? null : iso(ended),
+    outcome,
     reason: outcome === 'failed' ? failure[operation] : outcome === 'unknown' ? CUT_OFF : null,
     check: outcome === 'unknown' ? { operation: checks[operation], arguments: operation === 'backup.verify' ? args : {} } : null,
   })
@@ -43,17 +77,20 @@ export function createFakeHostOps(scenario: string | null) {
     receipt('ui_preview_backup_yesterday', 'backup.run', {}, 'ui', start - 21 * hour, 'done', start - 21 * hour + 6 * minute),
     receipt('cli-preview-restart-pi', 'services.restart', { service: 'pi' }, 'cli', start - 2 * day, 'done', start - 2 * day + minute),
   ]
-  if (scenario === 'unknown') journal.unshift(
-    receipt('ui_preview_backup_cut_off', 'backup.run', {}, 'ui', start - 3 * hour, 'unknown', start - 3 * hour + 4 * minute),
-    receipt('ui_preview_restart_cut_off', 'services.restart', { service: 'memorygate' }, 'ui', start - 20 * minute, 'unknown', start - 19 * minute),
-  )
+  if (scenario === 'unknown')
+    journal.unshift(
+      receipt('ui_preview_backup_cut_off', 'backup.run', {}, 'ui', start - 3 * hour, 'unknown', start - 3 * hour + 4 * minute),
+      receipt('ui_preview_restart_cut_off', 'services.restart', { service: 'memorygate' }, 'ui', start - 20 * minute, 'unknown', start - 19 * minute),
+    )
   // ?preview-updates=cut-off: an update to the offered 0.2.0 that a reboot cut off part way.
   if (new URLSearchParams(globalThis.location?.search).get('preview-updates') === 'cut-off')
     journal.unshift(receipt('ui_preview_update_cut_off', 'update.run', { version: '0.2.0' }, 'ui', start - 40 * minute, 'unknown', start - 31 * minute))
   if (scenario === 'failed') {
     Object.assign(services[8], { state: 'exited', startedAt: null, health: 'none' })
-    journal.unshift(receipt('ui_preview_verify_failed', 'backup.verify', { snapshot: snapshots[1].name }, 'ui', start - 2 * hour, 'failed', start - 2 * hour + 3 * minute),
-      receipt('ui_preview_restart_failed', 'services.restart', { service: 'searxng' }, 'ui', start - 15 * minute, 'failed', start - 14 * minute))
+    journal.unshift(
+      receipt('ui_preview_verify_failed', 'backup.verify', { snapshot: snapshots[1].name }, 'ui', start - 2 * hour, 'failed', start - 2 * hour + 3 * minute),
+      receipt('ui_preview_restart_failed', 'services.restart', { service: 'searxng' }, 'ui', start - 15 * minute, 'failed', start - 14 * minute),
+    )
   }
   // A backup started on the server's command line, still copying.
   const running = new Map<string, { finishAt: number; outcome: Receipt['outcome']; pausedUntil?: number }>()
@@ -75,26 +112,44 @@ export function createFakeHostOps(scenario: string | null) {
       if (job.outcome !== 'done') continue
       if (row.operation === 'services.restart') Object.assign(services.find(item => item.service === row.arguments.service) ?? {}, { state: 'running', startedAt: iso(Date.now()), health: 'healthy' })
       if (row.operation === 'update.run') updates.finished(row.arguments.version, true)
-      if (row.operation === 'backup.run') { snapshots.unshift(snapshot(Date.parse(row.startedAt), Math.random().toString(16).slice(2, 10).padEnd(8, '0'))); snapshots.splice(policy?.retentionCopies ?? 7) }
+      if (row.operation === 'backup.run') {
+        snapshots.unshift(snapshot(Date.parse(row.startedAt), Math.random().toString(16).slice(2, 10).padEnd(8, '0')))
+        snapshots.splice(policy?.retentionCopies ?? 7)
+      }
     }
   }
   const status = () => {
     settle()
     const restarting = new Set(journal.filter(row => row.outcome === 'working' && row.operation === 'services.restart').map(row => row.arguments.service))
-    return { services: services.map(row => restarting.has(String(row.service)) ? { ...row, state: 'restarting', health: 'starting', startedAt: null } : structuredClone(row)), backupLock: scenario === 'held' || journal.some(row => row.outcome === 'working' && row.operation === 'backup.run'), recoveryHeld: false }
+    return {
+      services: services.map(row => (restarting.has(String(row.service)) ? { ...row, state: 'restarting', health: 'starting', startedAt: null } : structuredClone(row))),
+      backupLock: scenario === 'held' || journal.some(row => row.outcome === 'working' && row.operation === 'backup.run'),
+      recoveryHeld: false,
+    }
   }
   const backups = () => {
     settle()
     const lock = scenario === 'held' || journal.some(row => row.outcome === 'working' && row.operation === 'backup.run')
     if (!policy) return { destination: null, retentionCopies: null, ready: false, separateDisk: null, freeBytes: null, snapshots: [], partialSnapshots: 0, backupLock: lock, recoveryHeld: false }
     const ready = scenario !== 'unmounted'
-    return { ...policy, ready, separateDisk: ready ? scenario !== 'same-disk' : null, freeBytes: ready ? (scenario === 'same-disk' ? 41.6e9 : 3.62e12) : null,
-      snapshots: ready ? structuredClone(snapshots) : [], partialSnapshots: scenario === 'unknown' && ready ? 1 : 0, backupLock: lock, recoveryHeld: false }
+    return {
+      ...policy,
+      ready,
+      separateDisk: ready ? scenario !== 'same-disk' : null,
+      freeBytes: ready ? (scenario === 'same-disk' ? 41.6e9 : 3.62e12) : null,
+      snapshots: ready ? structuredClone(snapshots) : [],
+      partialSnapshots: scenario === 'unknown' && ready ? 1 : 0,
+      backupLock: lock,
+      recoveryHeld: false,
+    }
   }
 
   return function handle(path: string, options: Request): Json {
     const method = options.method ?? 'GET'
-    if (path.startsWith('/api/control/pi/updates')) { settle(); return updates.handle(path, options) }
+    if (path.startsWith('/api/control/pi/updates')) {
+      settle()
+      return updates.handle(path, options)
+    }
     if (scenario === 'unavailable') fail(503)
     if (path === '/api/host/read' && method === 'POST') {
       const operation = options.body?.operation
@@ -106,7 +161,11 @@ export function createFakeHostOps(scenario: string | null) {
         // Tests read how many checks the page asked for.
         const asked = globalThis as { __conkerFakeUpdateChecks?: number }
         asked.__conkerFakeUpdateChecks = (asked.__conkerFakeUpdateChecks ?? 0) + 1
-        if (checking !== null && at - checking >= 1500) { checking = null; lastCheck = at; updates.checked() }
+        if (checking !== null && at - checking >= 1500) {
+          checking = null
+          lastCheck = at
+          updates.checked()
+        }
         const answer = (state: string, last: number | null) => ({ state, checkedAt: last === null ? null : iso(last), ok: last === null ? null : true, reason: null, nextCheckAfter: last === null ? null : iso(last + 90_000) })
         if (checking !== null) return { operation, result: answer('running', lastCheck) }
         if (lastCheck !== null && at - lastCheck < 90_000) return { operation, result: answer('fresh', lastCheck) }
@@ -115,7 +174,10 @@ export function createFakeHostOps(scenario: string | null) {
       }
       return fail(422, 'invalid_host_operation', 'This server read is not allowed.')
     }
-    if (path === '/api/host/ops' && method === 'GET') { settle(); return { schemaVersion: 1, operations: structuredClone(journal), damagedRecords: 0 } }
+    if (path === '/api/host/ops' && method === 'GET') {
+      settle()
+      return { schemaVersion: 1, operations: structuredClone(journal), damagedRecords: 0 }
+    }
     const one = path.match(/^\/api\/host\/ops\/([A-Za-z0-9_.:-]{16,128})$/)
     if (one && method === 'GET') {
       settle()
@@ -128,7 +190,10 @@ export function createFakeHostOps(scenario: string | null) {
     }
     if (path === '/api/host/ops' && method === 'POST') {
       options.onDispatch?.()
-      const body = options.body ?? {}, operation = String(body.operation), args = (body.arguments ?? {}) as Record<string, string>, id = String(body.id)
+      const body = options.body ?? {},
+        operation = String(body.operation),
+        args = (body.arguments ?? {}) as Record<string, string>,
+        id = String(body.id)
       const existing = journal.find(item => item.id === id)
       if (existing) return structuredClone(existing)
       settle()

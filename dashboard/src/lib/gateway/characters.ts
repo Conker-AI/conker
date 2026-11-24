@@ -5,10 +5,13 @@ import { GatewayError, gatewayError } from './transport'
 
 const revision = z.number().int().min(0).max(100)
 const saved = z.object({ agentId: z.literal('companion'), revision, profile: characterSchema.nullable() }).strict()
-const historyItem = z.object({
-  revision: z.number().int().min(1).max(100), created_at: z.number().finite().nonnegative(),
-  restored_from: z.number().int().min(1).max(100).nullable(),
-}).strict()
+const historyItem = z
+  .object({
+    revision: z.number().int().min(1).max(100),
+    created_at: z.number().finite().nonnegative(),
+    restored_from: z.number().int().min(1).max(100).nullable(),
+  })
+  .strict()
 const history = z.object({ results: z.array(historyItem).max(100) }).strict()
 const imported = z.object({ profile: characterSchema, note: z.string().min(1).max(500) }).strict()
 const exported = z.object({ format: z.literal('conker-character'), version: z.literal(1), character: characterSchema }).strict()
@@ -27,8 +30,9 @@ export class GatewayCharacterMutationError extends Error {
   constructor(error: unknown) {
     const failure = gatewayError(error)
     const conflict = failure.status === 409
-    const rejected = ['configuration', 'validation', 'browser-expired', 'upstream-denied', 'verification-cancelled', 'verification-required'].includes(failure.kind) ||
-      failure.status !== undefined && [400, 401, 403, 404, 413, 422, 428, 429].includes(failure.status)
+    const rejected =
+      ['configuration', 'validation', 'browser-expired', 'upstream-denied', 'verification-cancelled', 'verification-required'].includes(failure.kind) ||
+      (failure.status !== undefined && [400, 401, 403, 404, 413, 422, 428, 429].includes(failure.status))
     super(conflict ? 'The Companion changed elsewhere. Reload before saving this draft.' : rejected ? failure.message : 'The save outcome is uncertain. Reload the Companion before deciding whether to try again.')
     this.name = 'GatewayCharacterMutationError'
     this.outcome = conflict ? 'conflict' : rejected ? 'rejected' : 'unknown'
@@ -38,8 +42,11 @@ export class GatewayCharacterMutationError extends Error {
 export function createGatewayCharactersClient(auth: Pick<GatewayAuthClient, 'request'>) {
   const base = '/api/control/pi/characters/companion'
   async function mutate(path: string, body: Record<string, unknown>) {
-    try { return parse(saved, await auth.request(path, { method: 'POST', body })) }
-    catch (error) { throw error instanceof GatewayError && error.kind === 'invalid-response' ? error : new GatewayCharacterMutationError(error) }
+    try {
+      return parse(saved, await auth.request(path, { method: 'POST', body }))
+    } catch (error) {
+      throw error instanceof GatewayError && error.kind === 'invalid-response' ? error : new GatewayCharacterMutationError(error)
+    }
   }
   return {
     async get(revision?: number, signal?: AbortSignal): Promise<GatewayCharacter> {

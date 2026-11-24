@@ -10,7 +10,9 @@ export function skillImportBytes(markdown: string, expectedRevision: number, exp
 }
 export type SkillMetadata = { id: string; name: string; description: string; revision: number; enabled: boolean; sha256: string; createdAt: number; updatedAt: number }
 export type SkillRecord = SkillMetadata & { markdown: string }
-const invalid = (): never => { throw new GatewayError('invalid-response') }
+const invalid = (): never => {
+  throw new GatewayError('invalid-response')
+}
 export function validateSkillIds(ids: string[]): string[] {
   if (!Array.isArray(ids) || ids.length > 3 || new Set(ids).size !== ids.length || ids.some(id => typeof id !== 'string' || id.length > 64 || !skillIdPattern.test(id))) throw new GatewayError('validation')
   return [...ids]
@@ -18,7 +20,25 @@ export function validateSkillIds(ids: string[]): string[] {
 export function parseSkill(value: unknown): SkillMetadata {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return invalid()
   const row = value as Record<string, unknown>
-  if (typeof row.id !== 'string' || row.id.length > 64 || !skillIdPattern.test(row.id) || row.name !== row.id || typeof row.description !== 'string' || row.description.length > 1024 || typeof row.revision !== 'number' || !Number.isSafeInteger(row.revision) || row.revision < 1 || typeof row.enabled !== 'boolean' || typeof row.sha256 !== 'string' || !/^[0-9a-f]{64}$/.test(row.sha256) || typeof row.createdAt !== 'number' || !Number.isFinite(row.createdAt) || typeof row.updatedAt !== 'number' || !Number.isFinite(row.updatedAt)) return invalid()
+  if (
+    typeof row.id !== 'string' ||
+    row.id.length > 64 ||
+    !skillIdPattern.test(row.id) ||
+    row.name !== row.id ||
+    typeof row.description !== 'string' ||
+    row.description.length > 1024 ||
+    typeof row.revision !== 'number' ||
+    !Number.isSafeInteger(row.revision) ||
+    row.revision < 1 ||
+    typeof row.enabled !== 'boolean' ||
+    typeof row.sha256 !== 'string' ||
+    !/^[0-9a-f]{64}$/.test(row.sha256) ||
+    typeof row.createdAt !== 'number' ||
+    !Number.isFinite(row.createdAt) ||
+    typeof row.updatedAt !== 'number' ||
+    !Number.isFinite(row.updatedAt)
+  )
+    return invalid()
   return { id: row.id, name: row.name, description: row.description, revision: row.revision, enabled: row.enabled, sha256: row.sha256, createdAt: row.createdAt, updatedAt: row.updatedAt }
 }
 export function parseSkills(value: unknown): SkillMetadata[] {
@@ -30,7 +50,8 @@ export function parseSkills(value: unknown): SkillMetadata[] {
   return results
 }
 function parseRecord(value: unknown): SkillRecord {
-  const metadata = parseSkill(value), markdown = (value as Record<string, unknown>).markdown
+  const metadata = parseSkill(value),
+    markdown = (value as Record<string, unknown>).markdown
   if (typeof markdown !== 'string' || [...markdown].length > SKILL_MAX_CHARACTERS) return invalid()
   return { ...metadata, markdown }
 }
@@ -40,7 +61,9 @@ function validId(id: string) {
 }
 export function createGatewaySkillsClient(auth: Pick<GatewayAuthClient, 'request'>) {
   return {
-    async list(signal?: AbortSignal) { return parseSkills(await auth.request('/api/control/pi/skills', { signal })) },
+    async list(signal?: AbortSignal) {
+      return parseSkills(await auth.request('/api/control/pi/skills', { signal }))
+    },
     async get(id: string, signal?: AbortSignal) {
       const saved = parseRecord(await auth.request(`/api/control/pi/skills/${validId(id)}`, { signal }))
       if (saved.id !== id) return invalid()

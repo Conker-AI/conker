@@ -4,12 +4,19 @@ import { GatewayError } from './transport'
 
 const requestId = z.string().regex(/^creq_[0-9a-f]{32}$/)
 const timing = z.object({ kind: z.enum(['daily', 'weekly', 'interval']), time: z.string(), day: z.number().int(), hours: z.number().int() }).strict()
-const aiJob = z.object({
-  name: z.string().min(1).max(80), instructions: z.string().min(1).max(4000), agentId: z.string().min(1).max(200), timing,
-  timeZone: z.string().min(1).max(100), enabled: z.boolean(), clock: z.boolean().optional(),
-}).passthrough()
+const aiJob = z
+  .object({
+    name: z.string().min(1).max(80),
+    instructions: z.string().min(1).max(4000),
+    agentId: z.string().min(1).max(200),
+    timing,
+    timeZone: z.string().min(1).max(100),
+    enabled: z.boolean(),
+    clock: z.boolean().optional(),
+  })
+  .passthrough()
 // Pi's own check notes are plain strings; ToolGate's check answers objects with a message.
-const issue = z.union([z.string().max(2000), z.object({ message: z.string().max(2000) }).passthrough()]).transform(value => typeof value === 'string' ? value : value.message)
+const issue = z.union([z.string().max(2000), z.object({ message: z.string().max(2000) }).passthrough()]).transform(value => (typeof value === 'string' ? value : value.message))
 // What the drafter and the owner said to each other; it can appear on any status once a question was answered.
 const conversation = z.array(z.object({ role: z.enum(['builder', 'owner']), content: z.string().max(20000) }).passthrough()).max(100)
 const described = { description: z.string().max(4000), conversation: conversation.nullish() }
@@ -27,29 +34,58 @@ const toolDraft = z.union([
 ])
 const memory = z.object({ text: z.string().min(1).max(2000) }).strict()
 /** One promise Conker would put on the open-loops list: his own or Conker's, with a day when one was named. */
-const promise = z.object({
-  text: z.string().min(1).max(500), by: z.enum(['owner', 'conker']),
-  dueOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullish(), messageId: z.string().max(200).nullish(),
-}).passthrough()
+const promise = z
+  .object({
+    text: z.string().min(1).max(500),
+    by: z.enum(['owner', 'conker']),
+    dueOn: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/)
+      .nullish(),
+    messageId: z.string().max(200).nullish(),
+  })
+  .passthrough()
 const toolIds = z.array(z.string().min(1).max(200)).max(1000)
 /** A new agent exactly as Conker filed it (Pi's AgentInput): it exists only once he approves. */
-const agent = z.object({
-  name: z.string().min(1).max(80), role: z.string().min(1).max(160), instructions: z.string().min(1).max(8000), modelId: z.string().max(200).nullable(),
-  toolIds, toolAccess: z.record(z.string(), z.enum(['allow', 'ai', 'ask'])).default({}),
-  memory: z.object({ scope: z.enum(['none', 'conversation', 'selected', 'owner']), memoryIds: z.array(z.string().max(200)).max(1000) }).passthrough(),
-}).passthrough()
-const role = z.object({
-  id: z.string().min(1).max(64), name: z.string().min(1).max(80), agentId: z.string().min(1).max(200), instructions: z.string().min(1).max(8000), toolIds,
-}).passthrough()
+const agent = z
+  .object({
+    name: z.string().min(1).max(80),
+    role: z.string().min(1).max(160),
+    instructions: z.string().min(1).max(8000),
+    modelId: z.string().max(200).nullable(),
+    toolIds,
+    toolAccess: z.record(z.string(), z.enum(['allow', 'ai', 'ask'])).default({}),
+    memory: z.object({ scope: z.enum(['none', 'conversation', 'selected', 'owner']), memoryIds: z.array(z.string().max(200)).max(1000) }).passthrough(),
+  })
+  .passthrough()
+const role = z
+  .object({
+    id: z.string().min(1).max(64),
+    name: z.string().min(1).max(80),
+    agentId: z.string().min(1).max(200),
+    instructions: z.string().min(1).max(8000),
+    toolIds,
+  })
+  .passthrough()
 /** A new linear team of existing agents (Pi's Team definition): role 1 hands its result to role 2, and so on. */
-const team = z.object({
-  name: z.string().min(1).max(80), objective: z.string().min(1).max(2000), roles: z.array(role).min(1).max(12),
-  handoffs: z.array(z.record(z.string(), z.unknown())).max(30), budget: z.record(z.string(), z.unknown()),
-}).passthrough()
+const team = z
+  .object({
+    name: z.string().min(1).max(80),
+    objective: z.string().min(1).max(2000),
+    roles: z.array(role).min(1).max(12),
+    handoffs: z.array(z.record(z.string(), z.unknown())).max(30),
+    budget: z.record(z.string(), z.unknown()),
+  })
+  .passthrough()
 const base = {
-  id: requestId, title: z.string().min(1).max(160), summary: z.string().max(600), sessionId: z.string().nullable(),
-  state: z.enum(['open', 'approved', 'declined', 'failed']), result: z.record(z.string(), z.unknown()).nullable(),
-  createdAt: z.number().nonnegative(), decidedAt: z.number().nonnegative().nullable(),
+  id: requestId,
+  title: z.string().min(1).max(160),
+  summary: z.string().max(600),
+  sessionId: z.string().nullable(),
+  state: z.enum(['open', 'approved', 'declined', 'failed']),
+  result: z.record(z.string(), z.unknown()).nullable(),
+  createdAt: z.number().nonnegative(),
+  decidedAt: z.number().nonnegative().nullable(),
 }
 const KINDS = ['ai_job', 'tool_draft', 'memory', 'agent', 'team', 'promise']
 /** What Conker asked to create, exactly as filed; only the owner's approval makes it real. */
@@ -66,13 +102,24 @@ const known = z.discriminatedUnion('kind', [
  * can be declined but never approved here, since nothing shows what approving would make. A known
  * kind with the wrong shape is still refused: what he approves is exactly what is shown.
  */
-const other = z.object({ ...base, kind: z.string().min(1).max(40).refine(kind => !KINDS.includes(kind)), payload: z.record(z.string(), z.unknown()) }).strict()
+const other = z
+  .object({
+    ...base,
+    kind: z
+      .string()
+      .min(1)
+      .max(40)
+      .refine(kind => !KINDS.includes(kind)),
+    payload: z.record(z.string(), z.unknown()),
+  })
+  .strict()
   .transform(({ kind, ...rest }) => ({ ...rest, kind: 'other' as const, filedKind: kind }))
 const request = z.union([known, other])
 const collection = z.object({ schemaVersion: z.literal(1), results: z.array(request).max(50) }).strict()
 const draftId = z.string().regex(/^[a-zA-Z][a-zA-Z0-9_-]{0,63}$/)
 const submission = z.string().regex(/^[A-Za-z0-9_.:-]{16,128}$/)
-const toolId = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._:-]{0,199}$/), toolName = z.string().trim().min(1).max(160)
+const toolId = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._:-]{0,199}$/),
+  toolName = z.string().trim().min(1).max(160)
 
 export type ChangeRequest = z.infer<typeof request>
 export type ToolDraftRequest = Extract<ChangeRequest, { kind: 'tool_draft' }>

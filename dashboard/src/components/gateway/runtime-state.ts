@@ -6,7 +6,19 @@ export type RequestModelOptions = { modelId?: string; skillIds?: string[]; think
 /** Asking ToolGate what became of an action whose result was never confirmed. Pi checks the same action id and never sends it again. */
 export type TurnCheck = { turnId: string } & ({ phase: 'checking' } | { phase: 'checked'; status: string | null } | { phase: 'failed'; reason: string })
 export const checkableTurn = (status: string) => status === 'outcome_unknown' || status === 'action_in_progress'
-export type UncertainTurn = { requestOptions?: RequestModelOptions; taskBinding?: TaskSubmissionBinding; rejectionStatus?: 409; text: string; turnId?: string; checked: boolean; accepted?: boolean; requestId?: string; requestedSessionId?: string; submission?: RuntimeSubmission; notFound?: boolean }
+export type UncertainTurn = {
+  requestOptions?: RequestModelOptions
+  taskBinding?: TaskSubmissionBinding
+  rejectionStatus?: 409
+  text: string
+  turnId?: string
+  checked: boolean
+  accepted?: boolean
+  requestId?: string
+  requestedSessionId?: string
+  submission?: RuntimeSubmission
+  notFound?: boolean
+}
 
 /** The composer's empty selection means Automatic, so no model override is sent. */
 export function createRequestOptions(modelId?: string | null, skillIds: string[] = [], think = false, draftRevision?: number | null, researchMode?: 'off' | 'web' | 'deep'): RequestModelOptions {
@@ -16,15 +28,37 @@ export function createRequestOptions(modelId?: string | null, skillIds: string[]
 /** A same-request retry must replay the options frozen at the original send. */
 export function retainedRequestOptions(attempt: UncertainTurn): RequestModelOptions {
   const options = attempt.requestOptions
-  return options ? createRequestOptions(options.modelId, options.skillIds, options.think, options.draftRevision, options.researchMode) : createRequestOptions(attempt.submission?.modelId, attempt.submission?.skillIds, attempt.submission?.think, attempt.submission?.draftRevision, attempt.submission?.researchMode)
+  return options
+    ? createRequestOptions(options.modelId, options.skillIds, options.think, options.draftRevision, options.researchMode)
+    : createRequestOptions(attempt.submission?.modelId, attempt.submission?.skillIds, attempt.submission?.think, attempt.submission?.draftRevision, attempt.submission?.researchMode)
 }
 
 export function createGatewayRuntimeWorkspaceState() {
   return createStore<{
-    epoch: number; selected: string | null; drafts: Record<string, string>; skillChoices: Record<string, string[]>; thinkChoices: Record<string, boolean>; uncertain: Record<string, UncertainTurn>
-    taskIntent: TaskDispatchIntent | null; title: string; createUnknown: 'unchecked' | 'checked' | null; operation: 'create' | 'send' | 'resume' | null; turnCheck: TurnCheck | null
+    epoch: number
+    selected: string | null
+    drafts: Record<string, string>
+    skillChoices: Record<string, string[]>
+    thinkChoices: Record<string, boolean>
+    uncertain: Record<string, UncertainTurn>
+    taskIntent: TaskDispatchIntent | null
+    title: string
+    createUnknown: 'unchecked' | 'checked' | null
+    operation: 'create' | 'send' | 'resume' | null
+    turnCheck: TurnCheck | null
     reset: () => void
-  }>((set, get) => ({ epoch: 0, selected: null, drafts: {}, skillChoices: {}, thinkChoices: {}, uncertain: {}, taskIntent: null, title: '', createUnknown: null, operation: null, turnCheck: null,
+  }>((set, get) => ({
+    epoch: 0,
+    selected: null,
+    drafts: {},
+    skillChoices: {},
+    thinkChoices: {},
+    uncertain: {},
+    taskIntent: null,
+    title: '',
+    createUnknown: null,
+    operation: null,
+    turnCheck: null,
     reset: () => set({ epoch: get().epoch + 1, selected: null, drafts: {}, skillChoices: {}, thinkChoices: {}, uncertain: {}, taskIntent: null, title: '', createUnknown: null, operation: null, turnCheck: null }),
   }))
 }
@@ -51,7 +85,7 @@ export function canSubmitRuntime(text: string, pending: boolean, uncertain: Unce
 export function hasActiveRuntimeTurn(detail: RuntimeSessionDetail): boolean {
   // Pi records an ended_at timestamp when parking a recoverable turn too.
   const unresolved = new Set(['awaiting_approval', 'awaiting_budget', 'acted_no_reply', 'action_in_progress', 'outcome_unknown'])
-  return detail.turns.some(turn => turn.endedAt === null || unresolved.has(turn.status) || turn.status === 'interrupted' && turn.acted) || (detail.pendingSubmissions ?? []).some(item => item.state === 'preparing')
+  return detail.turns.some(turn => turn.endedAt === null || unresolved.has(turn.status) || (turn.status === 'interrupted' && turn.acted)) || (detail.pendingSubmissions ?? []).some(item => item.state === 'preparing')
 }
 
 /** A received conflict plus an absent durable receipt proves this task request did not bind. */

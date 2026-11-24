@@ -11,7 +11,9 @@ import type { GatewayControlClient, GatewayDiagnostics } from '@/lib/gateway/con
 import { formatDateTime } from '@/lib/date-format'
 
 const areaLabels: Record<GatewayDiagnostics['findings'][number]['area'], string> = {
-  access: 'Owner access', services: 'Services', models: 'Answer models',
+  access: 'Owner access',
+  services: 'Services',
+  models: 'Answer models',
 }
 // "Working" means "Conker is doing it now" everywhere else, so a healthy check says OK.
 const statusLabels = { ok: 'OK', attention: 'Needs attention', optional: 'Optional' } as const
@@ -29,30 +31,100 @@ export function GatewaySystemStatus({ client }: { client: GatewayControlClient }
   const [revision, setRevision] = useState(0)
   useEffect(() => {
     const controller = new AbortController()
-    client.diagnostics(controller.signal).then(value => {
-      if (!controller.signal.aborted) { setReport(value); setFailed(false); setPending(false) }
-    }).catch(() => {
-      if (!controller.signal.aborted) { setReport(null); setFailed(true); setPending(false) }
-    })
+    client
+      .diagnostics(controller.signal)
+      .then(value => {
+        if (!controller.signal.aborted) {
+          setReport(value)
+          setFailed(false)
+          setPending(false)
+        }
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) {
+          setReport(null)
+          setFailed(true)
+          setPending(false)
+        }
+      })
     return () => controller.abort()
   }, [client, revision])
-  const refresh = () => { setPending(true); setFailed(false); setRevision(value => value + 1) }
-  return <GatewayPageFrame>
-    <div className="space-y-6">
-      <PageHeader title="Server" actionsOnly actions={<WorkspaceAction iconOnly aria-label="Refresh Server" title="Refresh Server" disabled={pending} onClick={refresh}><RefreshCw /></WorkspaceAction>} />
-      {pending && <p role="status" className="text-sm text-muted-foreground">Checking connected services…</p>}
-      {failed && <div className="space-y-3"><p role="alert" className="text-sm text-destructive-foreground">Conker could not produce a diagnostic report. No recovery action was attempted.</p><Button variant="outline" size="sm" onClick={refresh}><RefreshCw />Try again</Button></div>}
-      {report && <>
-        <WorkspaceSection title={report.status === 'ok' ? 'Core checks passed' : `${report.summary.attention} ${report.summary.attention === 1 ? 'check needs' : 'checks need'} attention`} description={`${report.summary.ok} passed · ${report.summary.optional} optional`} />
-        {(['access', 'services', 'models'] as const).map(area => <CollectionSection key={area} title={areaLabels[area]}><ul>{report.findings.filter(item => item.area === area).map(item => <li key={item.id} className="flex min-h-(--collection-row-height) min-w-0 items-start gap-3 px-4 py-3">
-          <div className="min-w-0 flex-1"><p className="text-sm font-medium">{plainWords(item.label)}</p>{item.status !== 'ok' && <p className="mt-1 text-xs leading-5 text-muted-foreground">{plainWords(item.detail)}</p>}
-            {item.recovery && <div className="mt-3 flex flex-wrap items-center gap-2">{item.recovery.uiRoute && item.recovery.uiRoute !== '/system' && <Button variant="outline" size="sm" render={<Link to={item.recovery.uiRoute} />}>{item.recovery.label}</Button>}{item.recovery.command && <code className="rounded-md border bg-background px-2.5 py-1.5 text-xs">{item.recovery.command}</code>}</div>}
+  const refresh = () => {
+    setPending(true)
+    setFailed(false)
+    setRevision(value => value + 1)
+  }
+  return (
+    <GatewayPageFrame>
+      <div className="space-y-6">
+        <PageHeader
+          title="Server"
+          actionsOnly
+          actions={
+            <WorkspaceAction iconOnly aria-label="Refresh Server" title="Refresh Server" disabled={pending} onClick={refresh}>
+              <RefreshCw />
+            </WorkspaceAction>
+          }
+        />
+        {pending && (
+          <p role="status" className="text-sm text-muted-foreground">
+            Checking connected services…
+          </p>
+        )}
+        {failed && (
+          <div className="space-y-3">
+            <p role="alert" className="text-sm text-destructive-foreground">
+              Conker could not produce a diagnostic report. No recovery action was attempted.
+            </p>
+            <Button variant="outline" size="sm" onClick={refresh}>
+              <RefreshCw />
+              Try again
+            </Button>
           </div>
-          <Badge variant={item.status === 'attention' ? 'destructive' : 'outline'} className="shrink-0"><StatusIcon status={item.status} />{statusLabels[item.status]}</Badge>
-        </li>)}</ul></CollectionSection>)}
-        <p className="text-xs leading-5 text-muted-foreground">Checked {formatDateTime(report.generatedAt)}. These checks cover core connections, not every tool, schedule or host capability. Findings contain status only; credentials and service responses are never included.</p>
-      </>}
-      <RecentServerActions client={client.hostOps} />
-    </div>
-  </GatewayPageFrame>
+        )}
+        {report && (
+          <>
+            <WorkspaceSection
+              title={report.status === 'ok' ? 'Core checks passed' : `${report.summary.attention} ${report.summary.attention === 1 ? 'check needs' : 'checks need'} attention`}
+              description={`${report.summary.ok} passed · ${report.summary.optional} optional`}
+            />
+            {(['access', 'services', 'models'] as const).map(area => (
+              <CollectionSection key={area} title={areaLabels[area]}>
+                <ul>
+                  {report.findings
+                    .filter(item => item.area === area)
+                    .map(item => (
+                      <li key={item.id} className="flex min-h-(--collection-row-height) min-w-0 items-start gap-3 px-4 py-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium">{plainWords(item.label)}</p>
+                          {item.status !== 'ok' && <p className="mt-1 text-xs leading-5 text-muted-foreground">{plainWords(item.detail)}</p>}
+                          {item.recovery && (
+                            <div className="mt-3 flex flex-wrap items-center gap-2">
+                              {item.recovery.uiRoute && item.recovery.uiRoute !== '/system' && (
+                                <Button variant="outline" size="sm" render={<Link to={item.recovery.uiRoute} />}>
+                                  {item.recovery.label}
+                                </Button>
+                              )}
+                              {item.recovery.command && <code className="rounded-md border bg-background px-2.5 py-1.5 text-xs">{item.recovery.command}</code>}
+                            </div>
+                          )}
+                        </div>
+                        <Badge variant={item.status === 'attention' ? 'destructive' : 'outline'} className="shrink-0">
+                          <StatusIcon status={item.status} />
+                          {statusLabels[item.status]}
+                        </Badge>
+                      </li>
+                    ))}
+                </ul>
+              </CollectionSection>
+            ))}
+            <p className="text-xs leading-5 text-muted-foreground">
+              Checked {formatDateTime(report.generatedAt)}. These checks cover core connections, not every tool, schedule or host capability. Findings contain status only; credentials and service responses are never included.
+            </p>
+          </>
+        )}
+        <RecentServerActions client={client.hostOps} />
+      </div>
+    </GatewayPageFrame>
+  )
 }

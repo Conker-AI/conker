@@ -6,17 +6,38 @@ import { formatDateTime } from './date-format'
  * for the Server screens and the password sheet, so a restart reads the same everywhere.
  */
 const names: Record<string, string> = {
-  pi: 'Chat engine', gateway: 'Dashboard', memorygate: 'Memory', toolgate: 'Tools', postgres: 'Memory storage',
-  qdrant: 'Memory search', embeddings: 'Meaning search', ollama: 'Local models', searxng: 'Web search',
-  systemgate: 'Server health', subscriptions: 'Plan sign-ins', 'sandbox-runner': 'Tool sandbox',
-  'package-proxy': 'Package downloads', 'owner-terminal': 'Terminal', 'data-owner': 'Folder setup',
+  pi: 'Chat engine',
+  gateway: 'Dashboard',
+  memorygate: 'Memory',
+  toolgate: 'Tools',
+  postgres: 'Memory storage',
+  qdrant: 'Memory search',
+  embeddings: 'Meaning search',
+  ollama: 'Local models',
+  searxng: 'Web search',
+  systemgate: 'Server health',
+  subscriptions: 'Plan sign-ins',
+  'sandbox-runner': 'Tool sandbox',
+  'package-proxy': 'Package downloads',
+  'owner-terminal': 'Terminal',
+  'data-owner': 'Folder setup',
 }
 const jobs: Record<string, string> = {
-  pi: 'Runs your chats, agents and jobs.', gateway: 'Serves this page and signs you in.', memorygate: 'Keeps and recalls what Conker remembers.',
-  toolgate: 'Runs tools and checks what they may do.', postgres: 'Stores memories and their history.', qdrant: 'Finds memories by meaning.',
-  embeddings: 'Turns text into numbers for meaning search.', ollama: 'Runs the AI models on this server.', searxng: 'Searches the web for Conker.',
-  systemgate: 'Reads the server’s health for this page.', subscriptions: 'Uses your Claude and ChatGPT plans.', 'sandbox-runner': 'Runs tool commands in a closed box.',
-  'package-proxy': 'Fetches packages for the tool sandbox.', 'owner-terminal': 'Opens the terminal on this page.', 'data-owner': 'Fixes folder permissions each time Conker starts.',
+  pi: 'Runs your chats, agents and jobs.',
+  gateway: 'Serves this page and signs you in.',
+  memorygate: 'Keeps and recalls what Conker remembers.',
+  toolgate: 'Runs tools and checks what they may do.',
+  postgres: 'Stores memories and their history.',
+  qdrant: 'Finds memories by meaning.',
+  embeddings: 'Turns text into numbers for meaning search.',
+  ollama: 'Runs the AI models on this server.',
+  searxng: 'Searches the web for Conker.',
+  systemgate: 'Reads the server’s health for this page.',
+  subscriptions: 'Uses your Claude and ChatGPT plans.',
+  'sandbox-runner': 'Runs tool commands in a closed box.',
+  'package-proxy': 'Fetches packages for the tool sandbox.',
+  'owner-terminal': 'Opens the terminal on this page.',
+  'data-owner': 'Fixes folder permissions each time Conker starts.',
 }
 const pauses: Record<string, string> = {
   pi: 'Chats and jobs stop until it is back; a reply being written may be cut off.',
@@ -35,11 +56,17 @@ export function restartEffect(name: string) {
 }
 
 const stateWords: Record<HostService['state'], string> = {
-  created: 'Not started', running: 'Running', restarting: 'Restarting', paused: 'Paused', exited: 'Stopped',
-  removing: 'Being removed', dead: 'Stopped', unknown: 'State unknown',
+  created: 'Not started',
+  running: 'Running',
+  restarting: 'Restarting',
+  paused: 'Paused',
+  exited: 'Stopped',
+  removing: 'Being removed',
+  dead: 'Stopped',
+  unknown: 'State unknown',
 }
 /** Running and healthy (or without a health check) is fine; anything else needs a look. */
-export const serviceFine = (row: HostService) => row.oneShot ? row.state !== 'dead' : row.state === 'running' && row.health !== 'unhealthy'
+export const serviceFine = (row: HostService) => (row.oneShot ? row.state !== 'dead' : row.state === 'running' && row.health !== 'unhealthy')
 export function serviceState(row: HostService, now = Date.now()) {
   if (row.oneShot) return row.state === 'exited' ? 'Ran when Conker started' : stateWords[row.state]
   const parts = [stateWords[row.state]]
@@ -72,14 +99,18 @@ export function servicesSummary(status: HostServicesStatus, restarting: string[]
   if (!off.length) return `${head} ${rest.length === 1 ? 'The other service is' : `The other ${rest.length} services are`} running.`
   return fine.length ? `${head} ${fine.length} of the other ${rest.length} are running fine. ${look}` : `${head} ${look}`
 }
-const list = (items: string[]) => items.length < 3 ? items.join(' and ') : `${items.slice(0, -1).join(', ')} and ${items.at(-1)}`
+const list = (items: string[]) => (items.length < 3 ? items.join(' and ') : `${items.slice(0, -1).join(', ')} and ${items.at(-1)}`)
 
 export const when = (value: string | number) => formatDateTime(value, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
 export const snapshotTime = (createdAt: string) => when(createdAt)
 export function bytes(value: number) {
   const units = ['bytes', 'KB', 'MB', 'GB', 'TB']
-  let amount = value, unit = 0
-  while (amount >= 1000 && unit < units.length - 1) { amount /= 1000; unit++ }
+  let amount = value,
+    unit = 0
+  while (amount >= 1000 && unit < units.length - 1) {
+    amount /= 1000
+    unit++
+  }
   return `${new Intl.NumberFormat(undefined, { maximumFractionDigits: amount < 10 && unit ? 1 : 0 }).format(amount)} ${units[unit]}`
 }
 /** Where the backups are and what that place does not protect against (owner, 2026-10-29). */
@@ -114,7 +145,7 @@ function receiptWords(receipt: Pick<HostReceipt, 'operation' | 'arguments'>): Wo
 }
 const capital = (value: string) => value.replace(/^./, letter => letter.toUpperCase())
 export const receiptTitle = (receipt: Pick<HostReceipt, 'operation' | 'arguments' | 'outcome'>) => receiptWords(receipt)[receipt.outcome]
-export const receiptSource = (receipt: Pick<HostReceipt, 'source'>) => receipt.source === 'cli' ? 'from the server’s command line' : 'from this app'
+export const receiptSource = (receipt: Pick<HostReceipt, 'source'>) => (receipt.source === 'cli' ? 'from the server’s command line' : 'from this app')
 /** The time a receipt is about: when it ended, or when it started while it runs. */
 export const receiptTime = (receipt: Pick<HostReceipt, 'startedAt' | 'endedAt'>) => receipt.endedAt ?? receipt.startedAt
 /** Live first, then what needs a look, then the rest, each newest first (server-actions design). */
@@ -123,7 +154,15 @@ export function sortReceipts(rows: readonly HostReceipt[]) {
   return [...rows].sort((a, b) => rank[a.outcome] - rank[b.outcome] || Date.parse(receiptTime(b)) - Date.parse(receiptTime(a)))
 }
 export const receiptTarget = (receipt: Pick<HostReceipt, 'operation' | 'arguments'>) =>
-  receipt.operation === 'services.restart' ? `service:${receipt.arguments.service}` : receipt.operation === 'backup.verify' ? `snapshot:${receipt.arguments.snapshot}` : receipt.operation === 'backup.run' ? 'backup' : receipt.operation === 'update.run' ? 'update' : receipt.operation
+  receipt.operation === 'services.restart'
+    ? `service:${receipt.arguments.service}`
+    : receipt.operation === 'backup.verify'
+      ? `snapshot:${receipt.arguments.snapshot}`
+      : receipt.operation === 'backup.run'
+        ? 'backup'
+        : receipt.operation === 'update.run'
+          ? 'update'
+          : receipt.operation
 
 /** The command that does the same thing on the server (parity: the CLI works with the helper down). */
 export function actionCommand(receipt: Pick<HostReceipt, 'operation' | 'arguments'>) {
@@ -136,20 +175,39 @@ export function actionCommand(receipt: Pick<HostReceipt, 'operation' | 'argument
 
 /** The password sheet for a server action: the effect in plain words and a button named after it. */
 export function describeHostAction(body: Record<string, unknown>) {
-  const args = body.arguments && typeof body.arguments === 'object' && !Array.isArray(body.arguments) ? body.arguments as Record<string, unknown> : {}
+  const args = body.arguments && typeof body.arguments === 'object' && !Array.isArray(body.arguments) ? (body.arguments as Record<string, unknown>) : {}
   const once = 'One server action runs at a time. If the answer is lost, it is never sent again by itself.'
   if (body.operation === 'services.restart' && typeof args.service === 'string' && /^[a-z][a-z0-9-]{0,62}$/.test(args.service)) {
     const name = serviceLabel(args.service)
     return { title: `Restart ${name}`, target: `${name} (${args.service}) on your server`, details: [restartEffect(args.service), once], action: `Restart ${name}` }
   }
   if (body.operation === 'backup.run') {
-    return { title: 'Back up now', target: 'Your backup folder on the server', details: ['Conker pauses for a few minutes while it copies everything: chats, tools and memory stop until it is done, and this page may lose the connection and reconnect by itself.', 'Then it checks the new backup and keeps the number of copies you saved.', once], action: 'Back up now' }
+    return {
+      title: 'Back up now',
+      target: 'Your backup folder on the server',
+      details: [
+        'Conker pauses for a few minutes while it copies everything: chats, tools and memory stop until it is done, and this page may lose the connection and reconnect by itself.',
+        'Then it checks the new backup and keeps the number of copies you saved.',
+        once,
+      ],
+      action: 'Back up now',
+    }
   }
   if (body.operation === 'backup.verify' && typeof args.snapshot === 'string' && /^snapshot-\d{8}T\d{6}Z-[0-9a-f]{8}$/.test(args.snapshot)) {
-    return { title: 'Check this backup', target: capital(snapshotLabel(args.snapshot)), details: ['Checks every file in this backup against its saved fingerprints. Conker keeps running; nothing is changed or restored.', once], action: 'Check backup' }
+    return {
+      title: 'Check this backup',
+      target: capital(snapshotLabel(args.snapshot)),
+      details: ['Checks every file in this backup against its saved fingerprints. Conker keeps running; nothing is changed or restored.', once],
+      action: 'Check backup',
+    }
   }
   if (body.operation === 'update.run' && typeof args.version === 'string' && /^\d{1,4}\.\d{1,4}\.\d{1,4}$/.test(args.version)) {
-    return { title: `Update Conker to ${args.version}`, target: 'Conker on your server', details: [UPDATE_EFFECT, 'If the new version does not start properly, Conker goes back to the one it has now by itself. The Inbox tells you how it ended.', once], action: `Update to ${args.version}` }
+    return {
+      title: `Update Conker to ${args.version}`,
+      target: 'Conker on your server',
+      details: [UPDATE_EFFECT, 'If the new version does not start properly, Conker goes back to the one it has now by itself. The Inbox tells you how it ended.', once],
+      action: `Update to ${args.version}`,
+    }
   }
   return null
 }
