@@ -36,6 +36,7 @@ PI_QUERY_KEYS = {
     "/memory/upkeep": ("unused_days", "limit"),
     "/open-loops": ("state", "due_before", "limit", "after"),
     "/insights/tomorrow": ("hours",),
+    "/insights/quiet/weeks": ("weeks",),
 }
 
 

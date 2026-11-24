@@ -1,7 +1,7 @@
 """conker memory search, beliefs and upkeep, agent create, team create, inbox, spending, loops,
-tomorrow and prompt enhance on an installed stack: the development CLI's own modules
-(conker_agents, conker_inbox, conker_spending, conker_loops, conker_tomorrow, conker_prompt), with
-Pi reached in its container.
+tomorrow, quiet and prompt enhance on an installed stack: the development CLI's own modules
+(conker_agents, conker_inbox, conker_spending, conker_loops, conker_tomorrow, conker_quiet,
+conker_prompt), with Pi reached in its container.
 
 As for conker config (scripts/config_cli.py), each call is one `docker compose exec` into the pi
 container, where a short relay calls Pi on its own port with the key Pi was started with: the key
@@ -32,12 +32,14 @@ from scripts.cli.conker_loops import operation as loops_operation
 from scripts.cli.conker_loops import register as register_loops
 from scripts.cli.conker_prompt import operation as prompt_operation
 from scripts.cli.conker_prompt import register as register_prompt
+from scripts.cli.conker_quiet import operation as quiet_operation
+from scripts.cli.conker_quiet import register as register_quiet
 from scripts.cli.conker_spending import add_parser as register_spending
 from scripts.cli.conker_spending import spending_operation
 from scripts.cli.conker_tomorrow import operation as tomorrow_operation
 from scripts.cli.conker_tomorrow import register as register_tomorrow
 
-COMMANDS = ("memory", "agent", "team", "inbox", "spending", "loops", "tomorrow", "prompt")
+COMMANDS = ("memory", "agent", "team", "inbox", "spending", "loops", "tomorrow", "quiet", "prompt")
 # What these commands may ask of Pi: (method, path). A body makes it a POST.
 ROUTES = {
     ("GET", "/memory/objects"),
@@ -52,6 +54,7 @@ ROUTES = {
     ("POST", "/owner/preferences"),
     ("GET", "/open-loops"),
     ("GET", "/insights/tomorrow"),
+    ("GET", "/insights/quiet/weeks"),
     ("POST", "/open-loops"),
     ("POST", "/prompts/enhance"),
     ("GET", "/prompts/templates"),
@@ -133,6 +136,7 @@ def parser() -> argparse.ArgumentParser:
     register_spending(commands)
     register_loops(commands)
     register_tomorrow(commands)
+    register_quiet(commands)
     register_prompt(commands)
     return parsed
 
@@ -149,6 +153,10 @@ def run(args, request) -> int:
     elif args.command == "tomorrow":
         value = tomorrow_operation(args, None, request)
         if value is None:  # the forecast printed itself
+            return 0
+    elif args.command == "quiet":
+        value = quiet_operation(args, None, request)
+        if value is None:  # the table printed itself
             return 0
     elif args.command == "prompt":
         value = prompt_operation(args, None, request)
