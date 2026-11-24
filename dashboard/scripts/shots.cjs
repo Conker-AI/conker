@@ -30,6 +30,11 @@ async function shoot(browser, width, theme) {
         await page.locator('main:not([role="status"])').first().waitFor()
         // Skeletons mark themselves busy; a screen that stays busy is shot as it is.
         await page.waitForFunction(() => !document.querySelector('[aria-busy="true"]'), null, { timeout: 10000 }).catch(() => {})
+        // An open chat's answers show "Formatting response…" until the rich-text chunk loads; it
+        // appears a moment after the transcript, so an open chat first waits for it to show.
+        const formatting = `[...document.querySelectorAll('[role="status"]')].some(node => node.textContent.includes('Formatting response'))`
+        if (address.includes('session=')) await page.waitForFunction(formatting, null, { timeout: 3000 }).catch(() => {})
+        await page.waitForFunction(`!(${formatting})`, null, { timeout: 15000 }).catch(() => {})
         await page.waitForTimeout(500)
         const file = path.join(out, `${slug(address)}-${width}-${theme}.png`)
         if (await page.getByRole('dialog').isVisible()) await page.screenshot({ path: file })
