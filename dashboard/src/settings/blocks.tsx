@@ -7,6 +7,7 @@ import type { GatewayAuthStore } from '@/lib/gateway/auth-store'
 import type { GatewayControlClient } from '@/lib/gateway/control'
 import { AccessDelegateBlock, AlwaysAskBlock, InboxButtonsBlock, ToolsUsableBlock } from './access-blocks'
 import { HelperRoleBlock, IdeasBlock, JumpTo, PlaceLink, ProfileBlock, TalkingModelBlock } from './blocks-parts'
+import { PushDeviceBlock } from './push-device'
 import { SideJobsBlock } from './side-jobs'
 
 /** The settings with a screen of their own, by the `component` name in the registry. */
@@ -25,6 +26,7 @@ export function settingBlocks({ client, authStore, onSignOut }: { client: Gatewa
     'tools-usable': () => <ToolsUsableBlock />,
     'always-ask': () => <AlwaysAskBlock />,
     'browser-sessions': () => <BrowserSessions client={client} />,
+    'push-device': () => <PushDeviceBlock client={client} />,
     'sign-out': () =>
       onSignOut ? (
         <Button type="button" variant="outline" className="w-auto!" onClick={onSignOut}>

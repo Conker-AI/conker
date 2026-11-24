@@ -31,6 +31,7 @@ import { fakeTurnUsage } from './fake-gateway-usage'
 import { withAgentTools } from './fake-gateway-agent-steps'
 import { fakeApprovalLevels, fakePasswordAlerts } from './fake-approval-levels'
 import { previewComposerDrafts } from './fake-gateway-resume'
+import { fakePush } from './fake-gateway-push'
 
 type Json = Record<string, unknown>
 type Request = { method?: 'GET' | 'POST' | 'PUT'; body?: Json; query?: Record<string, string | number | boolean | readonly string[]>; signal?: AbortSignal; onDispatch?: () => void }
@@ -207,6 +208,7 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
     if (path === '/auth/sessions') return { results: [] }
     if (path === '/auth/alerts' || path === '/auth/alerts/seen') return fakePasswordAlerts(path, options)
     if (path === '/auth/revoke-all' || /^\/auth\/sessions\/.+\/revoke$/.test(path)) throw new GatewayError('dependency', 503)
+    if (path.startsWith('/api/push')) return (await fakePush(path, options)) ?? fail(404)
     const method = options.method ?? 'GET'
     await new Promise(resolve => setTimeout(resolve, method === 'POST' && /^\/api\/owner\/editor-drafts\/[^/]+\/runs$/.test(path) ? 2500 : 120)) // A tool run by hand takes a moment.
     let match: RegExpMatchArray | null; if (path === '/api/host/read' || path.startsWith('/api/host/ops') || path.startsWith('/api/control/pi/updates')) return hostOps(path, options)

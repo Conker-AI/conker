@@ -14,6 +14,7 @@ import { createGatewayActivityWorkspaceState } from '@/components/gateway/activi
 import { bindGatewayWorkspaceReset } from '@/components/gateway/auth-workspace-reset'
 import { createGatewayActivityClient } from '@/lib/gateway/activity'
 import { createGatewaySourcePrivacyState } from '@/components/gateway/source-privacy'
+import { renewAfterSignIn, renewPush, thisBrowserPush } from '@/pwa/register'
 
 // Create once per document, including React StrictMode mounts. Configuration failures stay visible.
 const services = (() => {
@@ -24,13 +25,16 @@ const services = (() => {
     const ownerState = createGatewayOwnerState()
     const sourcePrivacy = createGatewaySourcePrivacyState()
     bindGatewayWorkspaceReset(value.store, [workspace, activityState, sourcePrivacy, ownerState])
+    const control = createGatewayControlClient(value.auth, () => value.store.getState().confirmSessionRevoked())
+    // Each sign-in takes this browser's notifications along, so signing out here turns them off.
+    renewAfterSignIn(value.store, () => renewPush(control.push, thisBrowserPush()))
     return {
       value: {
         ...value,
         ownerState,
         owner: createGatewayOwnerClient(value.auth, () => value.store.getState().confirmSessionRevoked()),
         proposals: createGatewayProposalClient(value.auth),
-        control: createGatewayControlClient(value.auth, () => value.store.getState().confirmSessionRevoked()),
+        control,
         workspace,
         activityState,
         sourcePrivacy,
