@@ -11,6 +11,7 @@ import { createRecallNoticesClient } from './recall-notices'
 import { createMemoryBeliefsClient } from './memory-beliefs'
 import { createMemoryUsesClient } from './memory-uses'
 import { createOpenLoopsClient } from './open-loops'
+import type { Tomorrow } from './tomorrow'
 import { createMemoryCareClient } from './memory-care'
 import { createPromptEnhanceClient } from './prompt-enhance'
 import { createPromptTemplatesClient } from './prompt-templates'
@@ -111,6 +112,8 @@ export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'reques
     memoryBeliefs: createMemoryBeliefsClient(auth),
     memoryUses: createMemoryUsesClient(auth),
     openLoops: createOpenLoopsClient(auth),
+    /** What Conker will do on its own in the next 24 hours (R-U10). Read only; loaded with the Jobs screen, out of the first bundle. */
+    tomorrow: { read: (signal?: AbortSignal): Promise<Tomorrow> => import('./tomorrow').then(module => module.createTomorrowClient(auth).read(signal)) },
     promptEnhance: createPromptEnhanceClient(auth),
     promptTemplates: createPromptTemplatesClient(auth),
     /** Chat features: answer versions and reviews, names and output settings, context editing. */
