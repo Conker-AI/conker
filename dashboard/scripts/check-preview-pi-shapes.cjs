@@ -47,6 +47,7 @@ export async function run() {
     memoryUses: () => control.memoryUses.uses('mem_judo'),
     recallNotices: () => control.recallNotices.list(),
     openLoops: () => control.openLoops.list('open'),
+    tomorrow: () => control.tomorrow.read(),
     chatOutput: () => control.chatNames.output('ses_' + '1'.repeat(16)),
     memoryBeliefs: () => control.memoryBeliefs.list({ origin: 'all', state: 'all' }),
     promptEnhance: () => control.promptEnhance.enhance('Plan my week'),

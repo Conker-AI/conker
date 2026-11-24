@@ -18,6 +18,7 @@ import type { GatewayControlClient } from '@/lib/gateway/control'
 import { createJobRunRequestId, GatewayJobMutationError, isAiJob, type GatewayJob, type GatewayScheduledRun, type GatewayScheduledRunStatus } from '@/lib/gateway/jobs'
 import { NewAgentJobDialog } from './new-agent-job-dialog'
 import { AgentJobWebhook } from './agent-job-webhook'
+import { JobsTomorrow } from './jobs-tomorrow'
 import { gatewayError } from '@/lib/gateway/transport'
 import { failedRunReason, skippedRunLabel } from '@/lib/gateway/job-run-words'
 import { jobStarters, type JobStarter, type JobStarterWhen } from '@/lib/job-starters'
@@ -217,6 +218,7 @@ export function GatewayJobsWorkspace({ control }: { control: GatewayControlClien
         sub={`${isAiJob(job) ? 'AI job · ' : ''}${describeTiming(job)} · ${job.definition.timeZone}`} meta={!job.definition.enabled ? 'Paused' : job.definition.watch ? job.definition.watch.problem ? 'Needs a look' : 'Watching' : job.definition.target.kind === 'agent' && job.definition.target.clock === false ? 'On webhook' : `Next ${soon(job.nextAt, job.definition.timeZone)}`} />)}
     </ListCard>}
     <p className="text-xs text-muted-foreground">AI jobs use tools that need no confirmation on their own and ask before changing anything. Other jobs run tools published on your server.</p>
+    <JobsTomorrow control={control} />
     <section aria-labelledby="job-starters-heading" className="space-y-3 pt-2">
       <div><h2 id="job-starters-heading" className="text-base font-semibold">Start from an idea</h2><p className="mt-1 max-w-prose text-sm leading-6 text-muted-foreground">Ready-made AI jobs. Picking one fills in the New AI job form; change anything, then create it as usual.</p></div>
       <Card className="min-w-0 gap-0 overflow-hidden p-0"><ul className="flex flex-col divide-y">{jobStarters.map(starter => <li key={starter.id}>

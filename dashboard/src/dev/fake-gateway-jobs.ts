@@ -2,6 +2,8 @@
  * Development-only cron job for the preview: one daily job with its run history, pause and resume,
  * manual runs replayed by request id, and run recovery actions.
  */
+import { fakeTomorrow } from './fake-gateway-tomorrow'
+
 type Json = Record<string, unknown>
 type Request = { method?: 'GET' | 'POST' | 'PUT'; body?: Json; query?: Record<string, string | number | boolean | readonly string[]> }
 
@@ -122,6 +124,8 @@ export function createFakeJobs(now: () => number, fail: (status: number) => neve
   return {
     jobs,
     handle(path: string, method: 'GET' | 'POST' | 'PUT', options: Request): Json | undefined {
+      const forecast = fakeTomorrow(path, method)
+      if (forecast) return forecast
       let match: RegExpMatchArray | null
       if ((match = path.match(/^\/api\/control\/pi\/jobs\/(job_[0-9a-f]{32})$/)) && method === 'GET') return jobs.find(item => item.id === match![1]) ?? fail(404)
       if ((match = path.match(/^\/api\/control\/pi\/jobs\/(job_[0-9a-f]{32})\/runs$/)) && method === 'GET') return { schemaVersion: 1, results: jobRuns.get(match![1]) ?? [], nextCursor: null }

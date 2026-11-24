@@ -6,9 +6,9 @@ inventory of what the source can do, [`versions.env`](../versions.env) pins the 
 [release-acceptance](reference/release-acceptance.md) evidence bundle is the only proof that an
 assembled deployment works. One never stands in for another.
 
-Last updated **22 November 2026**. The newest proof on the owner's server is Conker 0.2.0 (16 November: `conker status --strict`, a new chat answers, `conker post-update-check`); the "Proven" dates below are older than the releases that followed it, and nothing newer than 0.2.0 is claimed as run there. The family counts, the release table and the deferred table
-are written by `python scripts/status_page.py` from `capabilities.json` and `versions.env`; CI
-fails when they drift.
+Last updated **24 November 2026**. The newest proof on the owner's server is Conker 0.6.0 (23 November: updated after a snapshot, `conker status --strict` and `conker post-update-check` all ok, a new chat answers); the "Proven" dates below are older than that, and each names what ran on that day. The family counts, the release table (with the Conker version) and the deferred
+and frozen tables are written by `python scripts/status_page.py` from `capabilities.json` and
+`versions.env`; CI fails when they drift.
 
 <!-- generated:families -->
 The source has **41 tracked
@@ -22,6 +22,7 @@ it, or that a server runs it.
 <!-- generated:release -->
 | Service | Version | |
 |---|---|---|
+| Conker | 0.6.0 | The release: dashboard, installer, compose, CLI and these pins |
 | Pi and the Gateway | 0.29.1 | Conversations, model roles for every AI job, direct providers (OpenAI, Anthropic, Gemini, xAI, Mistral, DeepSeek, Groq, OpenRouter), access, Inbox, tool drafting, imports and exports |
 | ToolGate | 0.17.1 | Tools, approvals, spending, the agent sandbox, draft checks, owner tool settings |
 | MemoryGate | 0.10.1 | Memory with sources; its AI through Pi |

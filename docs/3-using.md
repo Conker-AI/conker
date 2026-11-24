@@ -249,7 +249,7 @@ Start a new independent chat when you need a conversation without that context.
 | **Memory** | What Conker remembers, the map of how it connects, and the chat each memory came from. Correct or forget any memory here. |
 | **Agents** | Profiles with their own model, toolkit and memory; teams; and the skills you can pick for a message (a skill is instructions only and is not attached to an agent). Instructions do not grant execution rights. |
 | **Tools** | Registered tools, workflow drafts, publication and runs, and which tools Conker may use. |
-| **Jobs** | Your instructions run by the AI with tools, on a schedule, an event or a webhook, and their recorded runs. |
+| **Jobs** | Your instructions run by the AI with tools, on a schedule, an event or a webhook, and their recorded runs. **Tomorrow** lists what Conker will start on its own in the next 24 hours and what would hold each start back (also `conker tomorrow`). |
 | **Prompt templates** | Forms for a request: a name and 1 to 12 typed fields. Pick one beside the message box, or let the wand fill it from your draft (nothing is sent; Show original and Undo stay). Four starters come with Conker and are yours to change or delete. Open it from Agents or search (Ctrl+K). `conker prompt templates` does the same from the terminal. |
 | **Open loops** | What you and Conker promised, with the due day and the chat it came from. Read only: add, finish or drop one with `conker loops`. Open it from search (Ctrl+K). |
 | **Server** | Diagnostics and host observations. The production owner terminal remains deferred. |
