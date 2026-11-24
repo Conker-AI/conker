@@ -65,7 +65,7 @@ How Conker looks on your screens.
 | Setting | What it does | Default | Home |
 |---|---|---|---|
 | **Text size** (this device)<br>`appearance.text_size` | The size of all text on this device. Choices: Small, Default, Large, Larger. (applies right away) | Default | this browser |
-| **Chat text size**<br>`appearance.chat_text_size` | The size of messages, apart from the rest of the screen. Choices: Small, Default, Large, Larger. (saved, not used yet) | Default | owner settings |
+| **Chat text size**<br>`appearance.chat_text_size` | The size of messages, apart from the rest of the screen. Choices: Small, Default, Large, Larger. (applies right away) | Default | owner settings |
 | **Font**<br>`appearance.font` | The font for screens and messages. Choices: System, Inter, Atkinson Hyperlegible, OpenDyslexic. (saved, not used yet) | System | owner settings |
 | **Code font**<br>`appearance.code_font` | The font for code and commands. Choices: System monospace, JetBrains Mono, Fira Code. (saved, not used yet) | System monospace | owner settings |
 | **Code ligatures**<br>`appearance.ligatures` | Joins symbol pairs like => into one sign in code. (saved, not used yet) | off | owner settings |
@@ -77,9 +77,9 @@ How Conker looks on your screens.
 |---|---|---|---|
 | **Density**<br>`appearance.density` | How much fits on the screen. Choices: Comfortable, Compact, Spacious. (saved, not used yet) | Comfortable | owner settings |
 | **Corners**<br>`appearance.corners` | How round cards and buttons are. Choices: Sharp, Soft, Round. (applies right away) | Soft | owner settings |
-| **Chat width**<br>`appearance.chat_width` | How wide messages can grow on large screens. Choices: Narrow, Medium, Wide, Full width. (saved, not used yet) | Medium | owner settings |
+| **Chat width**<br>`appearance.chat_width` | How wide messages can grow on large screens. Choices: Narrow, Medium, Wide, Full width. (applies right away) | Medium | owner settings |
 | **Message style**<br>`appearance.message_style` | How messages are drawn in chats. Choices: Flat, Bubbles, Cards. (saved, not used yet) | Flat | owner settings |
-| **Portraits in chat**<br>`appearance.portraits` | Shows the agent's portrait next to its messages. (saved, not used yet) | on | owner settings |
+| **Portraits in chat**<br>`appearance.portraits` | Shows the agent's portrait next to its messages. (applies right away) | on | owner settings |
 | **Sidebar**<br>`appearance.sidebar` | How the sidebar starts on large screens. Choices: Open, Collapsed, Collapse on small screens. (applies right away) | Open | owner settings |
 | **Sidebar places**<br>`appearance.sidebar_places` | Which places show in the sidebar. Choices: Projects, Memory, Agents, Tools, Jobs, Server. (applies right away) | Projects, Memory, Agents, Tools, Jobs, Server | owner settings |
 | **Chat views**<br>`appearance.chat_views` | Which views a chat's title bar offers. Choices: Context, Thinking, Files, Browser, Terminal, Logs. (saved, not used yet) | Context, Thinking, Files, Browser, Terminal, Logs | owner settings |
@@ -89,7 +89,7 @@ How Conker looks on your screens.
 | Setting | What it does | Default | Home |
 |---|---|---|---|
 | **Animations** (this device)<br>`appearance.motion` | How much moves on screen. Choices: Follow this device, On, Reduced, Off. (applies right away) | Follow this device | this browser |
-| **How answers appear**<br>`appearance.streaming` | Whether answers show as they are written or all at once. Choices: Word by word, In chunks, All at once. (saved, not used yet) | Word by word | owner settings |
+| **How answers appear**<br>`appearance.streaming` | Whether answers show as they are written or all at once. Choices: Word by word, In chunks, All at once. (applies right away) | Word by word | owner settings |
 | **Sounds**<br>`appearance.sounds` | Plays a short sound when an answer is done or something needs you. (saved, not used yet) | off | owner settings |
 | **Sound volume**<br>`appearance.volume` | How loud Conker's sounds are. 0 to 100 %. (saved, not used yet) | `60` % | owner settings |
 
@@ -99,7 +99,7 @@ How Conker looks on your screens.
 |---|---|---|---|
 | **Under each answer**<br>`appearance.answer_details` | What shows under Conker's answers. Choices: Model, Time, Cost, Tokens, Why this model, Tools used. (saved, not used yet) | Model, Time | owner settings |
 | **Times**<br>`appearance.timestamps` | How times are shown in lists and chats. Choices: 5 min ago, Exact time, Hidden. (saved, not used yet) | 5 min ago | owner settings |
-| **Rich text in answers**<br>`appearance.rich_text` | Shows headings, lists and tables instead of plain text. (saved, not used yet) | on | owner settings |
+| **Rich text in answers**<br>`appearance.rich_text` | Shows headings, lists and tables instead of plain text. (applies right away) | on | owner settings |
 | **Technical IDs**<br>`appearance.technical_ids` | Shows ids and revisions next to things, for fixing problems. (saved, not used yet) | off | owner settings |
 
 ## Home
@@ -145,7 +145,7 @@ Ways to make Conker easier to see, hear and use.
 | Setting | What it does | Default | Home |
 |---|---|---|---|
 | **Bigger focus outlines**<br>`accessibility.focus` | Makes the keyboard focus easier to see. (applies right away) | off | owner settings |
-| **Larger buttons**<br>`accessibility.large_targets` | Makes every button and link easier to tap. (saved, not used yet) | off | owner settings |
+| **Larger buttons**<br>`accessibility.large_targets` | Makes every button and link easier to tap. (applies right away) | off | owner settings |
 | **Captions for voice**<br>`accessibility.captions` | Shows the words while Conker speaks. (saved, not used yet) | on | owner settings |
 | **Simpler wording**<br>`accessibility.simple_words` | Asks Conker to answer in short sentences and plain words. (applies from the next message) | off | owner settings |
 
@@ -268,9 +268,9 @@ How new chats start and how chats look and behave.
 | **Interactive answers**<br>`chats.interactive_answers` | Answers can hold tables, charts, choices to tap and short forms; Auto uses them only with hosted models. Choices: Auto, On, Off. (applies from the next message) | Auto | owner settings |
 | **Language level**<br>`chats.language_level` | How short and simple answers are, from Strict short sentences to Deep full detail; each chat can change it. Choices: Strict, Plain, Normal, Deep. (applies from the next message) | Normal | owner settings |
 | **Tool calls**<br>`chats.tool_calls` | How tool calls show in a chat. Choices: Folded, Open, Hidden. (applies right away) | Folded | owner settings |
-| **Thinking**<br>`chats.thinking` | How Conker's thinking shows in a chat. Choices: Folded, Open, Hidden. (saved, not used yet) | Folded | owner settings |
+| **Thinking**<br>`chats.thinking` | How Conker's thinking shows in a chat. Choices: Folded, Open, Hidden. (applies right away) | Folded | owner settings |
 | **Sources**<br>`chats.citations` | How sources show in answers. Choices: Numbers in the text, At the end, Hidden. (saved, not used yet) | Numbers in the text | owner settings |
-| **Follow new text**<br>`chats.autoscroll` | Scrolls down as an answer is written. (saved, not used yet) | on | owner settings |
+| **Follow new text**<br>`chats.autoscroll` | Scrolls down as an answer is written. (applies right away) | on | owner settings |
 | **Wrap long code lines**<br>`chats.code_wrap` | Breaks long code lines instead of scrolling sideways. (applies right away) | off | owner settings |
 | **Line numbers in code**<br>`chats.code_numbers` | Numbers the lines of code blocks. (saved, not used yet) | off | owner settings |
 | **Fold long answers after**<br>`chats.fold_after` | Folds answers longer than this; 0 never folds. 0 to 500 lines. (saved, not used yet) | `0` lines | owner settings |
@@ -479,7 +479,7 @@ Which AI answers, thinks and helps, and how.
 
 | Setting | What it does | Default | Home |
 |---|---|---|---|
-| **Show Auto's reasons**<br>`models.auto_reasons` | Shows why Auto chose each setting before you send. (saved, not used yet) | on | owner settings |
+| **Show Auto's reasons**<br>`models.auto_reasons` | Shows why Auto chose each setting before you send. (applies right away) | on | owner settings |
 | **Fast mode models**<br>`models.mode_fast` | Models Fast mode uses, first choice first. (saved, not used yet) | none | owner settings |
 | **Balanced mode models**<br>`models.mode_balanced` | Models Balanced mode uses, first choice first. (saved, not used yet) | none | owner settings |
 | **Deep mode models**<br>`models.mode_deep` | Models Deep mode uses, first choice first. (saved, not used yet) | none | owner settings |

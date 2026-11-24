@@ -197,7 +197,7 @@
           "default": "100",
           "tier": "basic",
           "scope": "global",
-          "effect": "stored",
+          "effect": "live",
           "options": [
             {
               "value": "90",
@@ -365,7 +365,7 @@
           "default": "medium",
           "tier": "basic",
           "scope": "global",
-          "effect": "stored",
+          "effect": "live",
           "options": [
             {
               "value": "narrow",
@@ -417,7 +417,7 @@
           "default": true,
           "tier": "basic",
           "scope": "global",
-          "effect": "stored"
+          "effect": "live"
         },
         {
           "id": "appearance.sidebar",
@@ -574,7 +574,7 @@
           "default": "words",
           "tier": "basic",
           "scope": "global",
-          "effect": "stored",
+          "effect": "live",
           "options": [
             {
               "value": "words",
@@ -691,7 +691,7 @@
           "default": true,
           "tier": "advanced",
           "scope": "global",
-          "effect": "stored"
+          "effect": "live"
         },
         {
           "id": "appearance.technical_ids",

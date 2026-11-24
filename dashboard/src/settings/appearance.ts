@@ -7,7 +7,7 @@ import { publishServerSettings, serverSetting, subscribeServerSettings } from '.
 
 /**
  * The appearance settings that work today, applied to the page: accent color, corners, bigger
- * focus outlines and how times and dates are written (everywhere, from the server), text size and
+ * focus outlines, larger buttons, chat width and how times and dates are written (everywhere, from the server), text size and
  * animations (this device). Theme stays
  * with the theme provider. Accent colors keep 4.5:1 contrast with their text in both themes
  * (rationale ledger, Accent hue). Kept apart from the registry so the app's first load stays small.
@@ -31,6 +31,12 @@ function applyShell() {
   else root.dataset.corners = corners
   if (serverSetting('accessibility.focus', false)) root.dataset.focus = 'large'
   else delete root.dataset.focus
+  if (serverSetting('accessibility.large_targets', false)) root.dataset.targets = 'large'
+  else delete root.dataset.targets
+  // Chat width: Medium is the column's own width (styles/design-system.css).
+  const chatWidth = serverSetting<'narrow' | 'medium' | 'wide' | 'full'>('appearance.chat_width', 'medium')
+  if (chatWidth === 'medium') delete root.dataset.chatWidth
+  else root.dataset.chatWidth = chatWidth
   applyDateFormat()
 }
 

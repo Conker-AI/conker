@@ -11,7 +11,8 @@ import { useServerSetting } from '@/settings/server-setting'
 import type { ChatContract } from '@/lib/chat/contract'
 import { ComposerItemContext, FOLD_BELOW, itemSummary, splitComposerItems, withItemValue, type ComposerItemId, type ComposerItemValues } from './composer-items'
 
-export const conversationColumn = 'mx-auto w-full max-w-[816px] px-4 sm:px-6'
+/** The chat column; its width follows Chat width (Settings, Appearance) through --chat-width (styles/design-system.css). */
+export const conversationColumn = 'mx-auto w-full max-w-(--chat-width) px-4 sm:px-6'
 
 type ComposerFrameProps = {
   id: string; label: string; placeholder: string; value: string

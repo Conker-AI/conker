@@ -18,22 +18,28 @@ import type { Action, ChatContract, ChatMessage, MessageAction } from '@/lib/cha
 import { foldToolRequests } from '@/lib/chat/tool-requests'
 import { cn } from '@/lib/utils'
 import { formatDateTime, formatTime } from '@/lib/date-format'
+import { useServerSetting } from '@/settings/server-setting'
 
 const labels: Record<MessageAction, string> = { copy: 'Copy message', link: 'Copy message link', edit: 'Edit', retry: 'Retry', fork: 'Fork', pin: 'Pin', rateUp: 'Good response', rateDown: 'Poor response', redact: 'Redact', saveArtifact: 'Save artifact' }
 const RichAnswer = lazy(() => import('@/components/rich-answer').then(module => ({ default: module.RichAnswer })))
 
+/** Rich text in answers (Settings, Appearance): off shows the answer's own words as plain text, like a sent message. */
 function Answer({ text, streaming }: { text: string; streaming?: boolean }) {
+  if (!useServerSetting('appearance.rich_text', true)) return <p dir="auto" className="whitespace-pre-wrap text-base leading-7 [overflow-wrap:anywhere]">{text}</p>
   return <Suspense fallback={<p role="status" className="text-sm leading-7 text-muted-foreground">Formatting response…</p>}><RichAnswer text={text} streaming={streaming} /></Suspense>
 }
 
+/** How answers appear (Settings, Appearance): word by word (smoothed), in chunks as the server sends them, or all at once when saved ("is writing" shows meanwhile). */
 function StreamingAnswer({ text, resetKey }: { text: string; resetKey: unknown }) {
-  const shown = useSmoothText(text, { streaming: true, resetKey })
-  return shown ? <Answer text={shown} streaming /> : null
+  const appear = useServerSetting<'words' | 'chunks' | 'whole'>('appearance.streaming', 'words')
+  const shown = useSmoothText(text, { streaming: appear === 'words', resetKey })
+  return shown && appear !== 'whole' ? <Answer text={shown} streaming /> : null
 }
 
 export function ChatMessageRecord({ message }: { message: ChatMessage }) {
   const [notice, setNotice] = useState(''), [exported, setExported] = useState<ExportStatus | null>(null)
   const hasRule = useHasContextRule(message)
+  const portraits = useServerSetting('appearance.portraits', true)
   const moreActions = (Object.keys(labels) as MessageAction[]).filter(kind => kind !== 'copy' && kind !== 'link' && message.actions[kind].availability !== 'unsupported')
   const createdAt = new Date(message.createdAt)
   const shortTime = formatTime(createdAt, { hour: 'numeric', minute: '2-digit' }), fullTime = formatDateTime(createdAt)
@@ -48,7 +54,7 @@ export function ChatMessageRecord({ message }: { message: ChatMessage }) {
   if (message.role === 'tool' && message.content.kind === 'text') return <ToolRecord text={message.content.text} sequence={message.sequence} />
   if (message.role === 'system' || message.role === 'tool') return <details className="min-w-0 rounded-lg border p-3"><summary className="cursor-pointer rounded-sm text-xs font-medium focus-visible:outline-2 focus-visible:outline-ring">{message.role === 'tool' ? 'Tool' : 'System'} record · {message.sequence}</summary><div className="mt-3 min-w-0">{body}</div></details>
   return <article aria-label={`${message.role} message ${message.sequence}`} className={cn('group/message relative min-w-0', message.role === 'user' ? 'ml-auto flex max-w-[92%] flex-col items-end sm:max-w-[85%]' : 'w-full')}>
-    {message.role === 'assistant' && <div className="mb-3 flex items-center gap-2 min-w-0"><CompanionPortrait portrait={message.agentId === 'companion' || !message.agentId ? "/conker.png" : undefined} name={message.agentName ?? 'Conker'} tone="graphite" className="size-7 rounded-md" /><span className="shrink-0 text-sm font-medium">{message.agentName ?? 'Conker'}</span><span className="truncate text-xs text-muted-foreground"><time dateTime={message.createdAt} title={fullTime} aria-label={fullTime}>{shortTime}</time>{message.details && ` · ${message.details}`}</span></div>}
+    {message.role === 'assistant' && <div className="mb-3 flex items-center gap-2 min-w-0">{portraits && <CompanionPortrait portrait={message.agentId === 'companion' || !message.agentId ? "/conker.png" : undefined} name={message.agentName ?? 'Conker'} tone="graphite" className="size-7 rounded-md" />}<span className="shrink-0 text-sm font-medium">{message.agentName ?? 'Conker'}</span><span className="truncate text-xs text-muted-foreground"><time dateTime={message.createdAt} title={fullTime} aria-label={fullTime}>{shortTime}</time>{message.details && ` · ${message.details}`}</span></div>}
     <div className={cn('min-w-0 max-w-full', message.role === 'user' && 'rounded-2xl bg-muted px-4 py-2.5')}>{body}</div>
     {message.memory && isMemoryNote(message.memory) && <MemoryNote memory={message.memory} />}
     {message.memory && !isMemoryNote(message.memory) && <details className="mt-1.5 max-w-full text-xs text-muted-foreground"><summary className="cursor-pointer rounded-sm text-right focus-visible:outline-2 focus-visible:outline-ring">{message.memory.label}</summary><div className="mt-2 max-w-sm space-y-2 text-left"><p className="leading-5">{message.memory.description}</p><Button type="button" variant="ghost" size="sm" disabled={message.memory.checking || message.memory.refresh.availability !== 'enabled'} onClick={() => { if (message.memory?.refresh.availability === 'enabled') void message.memory.refresh.run() }}>{message.memory.checking ? 'Checking…' : 'Check memory status'}</Button></div></details>}
@@ -79,8 +85,10 @@ export function ChatMessageRecord({ message }: { message: ChatMessage }) {
 
 /** The wrapper owns scroll regions and gateway-only evidence and recovery panels. */
 export function ChatTranscript({ chat }: { chat: ChatContract }) {
+  // Chat text size (Settings, Appearance): the messages scale as a whole, apart from the rest of the screen.
+  const textSize = Number(useServerSetting<'90' | '100' | '110' | '125'>('appearance.chat_text_size', '100')) / 100
   const pendingInput = chat.submission.kind === 'sending' && !chat.submission.inputSaved && chat.submission.attempt.input.kind === 'text' ? chat.submission.attempt.input.text : null
-  return <ChatAnswerReplies chat={chat}><MessageRulesProvider sessionId={chat.sessionId} reloadKey={`${chat.messages.length}:${chat.messages.at(-1)?.id ?? ''}`}><div className="flex min-w-0 flex-col gap-8" data-source={chat.source}>
+  return <ChatAnswerReplies chat={chat}><MessageRulesProvider sessionId={chat.sessionId} reloadKey={`${chat.messages.length}:${chat.messages.at(-1)?.id ?? ''}`}><div className="flex min-w-0 flex-col gap-8" data-source={chat.source} style={textSize !== 1 ? { zoom: textSize } : undefined}>
     {chat.notice && <p role="status" className="text-sm text-muted-foreground">{chat.notice}</p>}
     {chat.error && <p role="alert" className="text-sm text-destructive-foreground">{chat.error}</p>}
     {chat.history === 'loading' && <p role="status" className="text-sm text-muted-foreground">Loading saved history…</p>}

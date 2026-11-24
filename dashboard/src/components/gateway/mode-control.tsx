@@ -113,6 +113,8 @@ export function ComposerModeProvider({ text, think, research, thinkAvailable, ha
 /** The modes: each one is a bias for Conker's own decision; changing a setting afterwards shows Custom. */
 export function ModePresetControl() {
   const state = useComposerMode()
+  // Show Auto's reasons (Settings, Models): off keeps what Auto chose and leaves out why.
+  const showReasons = useServerSetting('models.auto_reasons', true)
   if (!state) return null
   const { current, auto, status, disabled, choose } = state
   // What Auto chose, shown on the bar itself so it is never a mystery; the reasons are one tap away.
@@ -151,7 +153,7 @@ export function ModePresetControl() {
             </Label>
           ))}
         </RadioGroup>
-        {auto && (
+        {auto && showReasons && (
           <ul className="space-y-1 border-t pt-3 text-xs leading-5 text-muted-foreground">
             {reasons.map(([label, field]) => (
               <li key={field}>
