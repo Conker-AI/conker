@@ -6,6 +6,12 @@ which module versions a release pins.
 
 ## Unreleased
 
+## 0.6.42
+
+Beta build from main. Changes since the last tag:
+
+- feat: share text or a link from any phone app to Conker and save it to memory (#454)
+
 ## 0.6.0
 
 - **The folded update card says "Updating to X.Y.Z...".** While an update runs, the card in the Inbox no longer loses its button in silence. (#391)
