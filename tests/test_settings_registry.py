@@ -313,6 +313,7 @@ TOOL_SETTINGS = {
     "web_safe_search": "moderate",
     "web_region": "",
     "web_skip_sites": [],
+    "web_engines": [],
     "web_page_characters": None,
     "run_window_minutes": None,
 }
@@ -512,6 +513,8 @@ def test_tool_settings_live_in_toolgate_and_lockdown_is_a_switch(capsys):
         "example.com",
         "spam.test",
     ]
+    run(fake, capsys, "set", id="tools.web.engines", value="duckduckgo, wikipedia")
+    assert fake.calls[-1][2]["settings"]["web_engines"] == ["duckduckgo", "wikipedia"]
     with pytest.raises(ValueError, match="expected form"):
         run(fake, capsys, "set", id="tools.web.region", value="u5")
     on = run(fake, capsys, "set", id="access.lockdown", value="on")

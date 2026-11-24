@@ -123,7 +123,7 @@ function createFakeOwnerSettings() {
     dailyBudget: { suggestions: 4, researchMinutes: 30, costCents: 0 }, idleTimeoutMinutes: 15, planAlerts: { enabled: true, percent: 80 }, newChatAccess: 'default' } as Json }
   // ToolGate's document as it answers before the first save: numbers null keep today's limits.
   const tools = { revision: 0, settings: { tool_seconds: null, terminal_seconds: null, terminal_memory_mb: null, terminal_cpus: null, terminal_workspace_mb: null,
-    web_safe_search: 'moderate', web_region: '', web_skip_sites: [], web_page_characters: null, run_window_minutes: null } as Json }
+    web_safe_search: 'moderate', web_region: '', web_skip_sites: [], web_engines: [], web_page_characters: null, run_window_minutes: null } as Json }
   const lockdown = { lockdown: false, reason: '', changed_by: null as string | null }
   return function handle(path: string, method: string, body: Json | undefined, fail: (status: number) => never): Json {
     if (path === '/api/owner/lockdown') {
