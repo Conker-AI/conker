@@ -24,6 +24,10 @@ export default defineConfig({
         'src/lib/api/{model-catalogue,model-roles,context-policy,character,character-defaults}.ts',
         'src/lib/gateway/{claude-models,job-run-words,auto-settings,chatgpt,native-claude,asks,browser-sessions,memory-beliefs,open-loops,plans,search,memory-uses,memory-care,codex-sessions,native-sessions,prompt-enhance,prompt-errors,chat-feature-errors,mcp,skills,proposals,recall-notices,live-preview,turn-usage,filesystem}.ts',
         'src/lib/voice/draft.ts',
+        'src/lib/gateway/{access,host-inventory,owner-settings,password-alerts,provider-control,session-policy,tomorrow,updates,workflow-access}.ts',
+        'src/lib/gateway/{exports,memory-forget-state,prompt-templates,chat-names,chat-forget,chat-answers,chat-reviews,chat-summary,chat-context,memory-delivery}.ts',
+        'src/lib/gateway/{terminal,projects,characters,teams,team-runs}.ts',
+        'src/lib/chat/memory-undo.ts',
         'src/components/answer-ui/{fence,format,links}.ts',
         'src/components/brand/service.ts',
         'src/components/gateway/{access-labels,composer-mode,setup-presentation,plain-status,subscription-rules,new-chat-effort}.ts',
@@ -48,7 +52,7 @@ export default defineConfig({
       ],
       reporter: ['text', 'json-summary'],
       // The rendered components have their own floor, measured over the .tsx files above (99.40 / 99.54 /
-      // 100 / 100); the floor for everything else is unchanged.
+      // 100 / 100); the floor for everything else is unchanged (measured over the other 120 files: 99.95 / 98.61 / 100 / 100).
       thresholds: { statements: 99, branches: 98, functions: 100, lines: 100, 'src/components/**/*.tsx': { statements: 99, branches: 99, functions: 100, lines: 100 } },
     },
   },
