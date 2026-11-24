@@ -6,6 +6,12 @@ which module versions a release pins.
 
 ## Unreleased
 
+## 0.6.40
+
+Beta build from main. Changes since the last tag:
+
+- feat: ten more owner settings take effect; shots wait for formatted answers (#452)
+
 ## 0.6.0
 
 - **The folded update card says "Updating to X.Y.Z...".** While an update runs, the card in the Inbox no longer loses its button in silence. (#391)
