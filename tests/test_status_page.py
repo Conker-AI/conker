@@ -17,6 +17,7 @@ STATUS = ROOT / "docs" / "status.md"
 MANIFEST = ROOT / "versions.env"
 
 ROWS = {
+    "Conker": "CONKER_VERSION",
     "Pi and the Gateway": "PI_VERSION",
     "ToolGate": "TOOLGATE_VERSION",
     "MemoryGate": "MEMORYGATE_VERSION",
@@ -70,16 +71,23 @@ def test_the_generated_blocks_are_up_to_date():
 
 def test_a_new_pin_and_a_deferred_family_change_the_page():
     text = STATUS.read_text(encoding="utf-8")
-    pins = {**parse_env(MANIFEST), "PI_VERSION": "9.9.9"}
+    pins = {**parse_env(MANIFEST), "PI_VERSION": "9.9.9", "CONKER_VERSION": "8.8.8"}
     items = [*capabilities(), {**capabilities()[0], "name": "Shelved thing", "state": "deferred"}]
     page = status_page.render(text, items, pins)
     assert "| Pi and the Gateway | 9.9.9 |" in page
+    assert "| Conker | 8.8.8 |" in page
     assert (
         f"**{len(items)} tracked\ncapability families: {len(items) - 2} active and 2 deferred**"
         in page
     )
     assert "| Shelved thing | No gap recorded in capabilities.json. |" in page
     assert page.count("<!-- /generated:") == 4  # hand-written text around the blocks is kept
+
+
+def test_a_manifest_without_a_conker_version_shows_an_unreleased_build():
+    text = STATUS.read_text(encoding="utf-8")
+    pins = {key: value for key, value in parse_env(MANIFEST).items() if key != "CONKER_VERSION"}
+    assert "| Conker | unreleased |" in status_page.render(text, capabilities(), pins)
 
 
 def test_a_frozen_family_is_listed_with_its_reason():
