@@ -98,7 +98,7 @@ How Conker looks on your screens.
 | Setting | What it does | Default | Home |
 |---|---|---|---|
 | **Under each answer**<br>`appearance.answer_details` | What shows under Conker's answers. Choices: Model, Time, Cost, Tokens, Why this model, Tools used. (saved, not used yet) | Model, Time | owner settings |
-| **Times**<br>`appearance.timestamps` | How times are shown in lists and chats. Choices: 5 min ago, Exact time, Hidden. (saved, not used yet) | 5 min ago | owner settings |
+| **Times**<br>`appearance.timestamps` | How times are shown in lists and chats. Choices: 5 min ago, Exact time, Hidden. (applies right away) | 5 min ago | owner settings |
 | **Rich text in answers**<br>`appearance.rich_text` | Shows headings, lists and tables instead of plain text. (applies right away) | on | owner settings |
 | **Technical IDs**<br>`appearance.technical_ids` | Shows ids and revisions next to things, for fixing problems. (saved, not used yet) | off | owner settings |
 
@@ -124,9 +124,9 @@ Calmer screens for tired days and focused ones.
 
 | Setting | What it does | Default | Home |
 |---|---|---|---|
-| **Easy mode**<br>`day.easy_mode` | Bigger buttons, fewer cards and one thing at a time. (saved, not used yet) | off | owner settings |
-| **Focus mode**<br>`day.focus_mode` | Hides everything that is not urgent until you turn it off. (saved, not used yet) | off | owner settings |
-| **Cards at once**<br>`day.max_cards` | The most Inbox cards shown together. 1 to 20. (saved, not used yet) | `5` | owner settings |
+| **Easy mode**<br>`day.easy_mode` | Bigger buttons, fewer cards and one thing at a time. (applies right away) | off | owner settings |
+| **Focus mode**<br>`day.focus_mode` | Home and Inbox show only what needs you until you turn it off. (applies right away) | off | owner settings |
+| **Cards at once**<br>`day.max_cards` | The most Inbox cards shown together. 1 to 20. (applies right away) | `5` | owner settings |
 | **Late-night mode**<br>`day.late_night` | Calmer colors and shorter answers in the evening. (saved, not used yet) | off | owner settings |
 
 ### Settings profiles

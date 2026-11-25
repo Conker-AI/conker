@@ -16,13 +16,14 @@ const WHEN: Record<RecallNotice['change'], string> = { corrected: 'Memory correc
  * "A memory you corrected was used" (R-U3): earlier answers leaned on a memory he has since changed.
  * The chats are listed so he can look; nothing in them is rewritten. Dismiss hides this card only.
  */
-export function RecallNoticeCard({ notice, busy, error, onDismiss }: { notice: RecallNotice; busy: boolean; error: string | null; onDismiss: () => void }) {
+export function RecallNoticeCard({ notice, now, busy, error, onDismiss }: { notice: RecallNotice; now: number; busy: boolean; error: string | null; onDismiss: () => void }) {
   const more = notice.chats - notice.sessions.length
   return (
     <InboxCard
       icon={<History />}
       title={notice.title}
-      source={`${WHEN[notice.change]} · ${new Date(notice.since * 1000).toLocaleDateString()}`}
+      source={WHEN[notice.change]}
+      came={{ at: notice.since * 1000, now }}
       openLabel="See the chats"
       onLater={busy ? undefined : onDismiss}
       laterLabel="Dismiss"

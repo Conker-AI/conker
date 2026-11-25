@@ -2,7 +2,7 @@
 // gateway. A violation fails the test and names the rule and the elements it found.
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page } from '@playwright/test'
-import { allPlaces, card, open } from './pages'
+import { allPlaces, card, open, showAllWaiting } from './pages'
 
 const PLACES = [
   '/overview',
@@ -98,6 +98,7 @@ for (const theme of ['light', 'dark'] as const)
 
     test('axe: "are you sure" before a send', async ({ page }) => {
       await open(page, '/inbox')
+      await showAllWaiting(page)
       await card(page, 'Send an email to coach').getByRole('button', { name: 'Send it', exact: true }).click()
       await expect(page.getByRole('alertdialog')).toBeVisible()
       expect(await violations(page, '[role="alertdialog"]')).toEqual([])

@@ -9,14 +9,12 @@ import type { OwnerDecision, OwnerRequest } from '@/lib/gateway/owner'
 import { canReleaseExpiredOwnerDecision, ownerDecisionEligibility, ownerUnavailableText, type RetainedOwnerDecision } from '@/components/gateway/owner-state'
 import { InboxCard, type InboxFact } from './inbox-card'
 import { ReplyBox } from './reply-box'
+import { factTime, fullTime } from '@/lib/shown-time'
+import { useTimeStyle } from '@/components/use-time-style'
 import { ApprovalConfirm } from './approval-confirm'
 import { deleteConfirmName, friendlyValue, humanize, payLine } from './approval-words'
 
-const timestamp = (value: string) => new Date(value).toLocaleString()
-function relativeTime(value: string, now: number) {
-  const minutes = Math.max(0, Math.floor((now - Date.parse(value)) / 60000))
-  return minutes < 1 ? 'Just now' : minutes < 60 ? `${minutes} min ago` : minutes < 1440 ? `${Math.floor(minutes / 60)} hr ago` : `${Math.floor(minutes / 1440)} days ago`
-}
+const timestamp = (value: string) => fullTime(Date.parse(value))
 function ArgumentValue({ value }: { value: unknown }) {
   const [expanded, setExpanded] = useState(false)
   const text = friendlyValue(value)
@@ -136,9 +134,10 @@ export function ApprovalCard({
       {request.actor || 'Conker'} · <span className={attempt ? 'text-warning-foreground' : undefined}>{state}</span>
     </>
   )
+  const style = useTimeStyle()
   const facts: InboxFact[] = [
     ['Asked by', request.actor || 'Conker'],
-    ['Came', `${relativeTime(request.createdAt, now)} · ${timestamp(request.createdAt)}`],
+    ['Came', factTime(Date.parse(request.createdAt), now, style)],
     ...(request.approval.expiresAt ? [['Expires', timestamp(request.approval.expiresAt)] as InboxFact] : []),
     ['Status', humanize(request.status)],
     ['Type', request.action.subjectType ?? 'Unavailable'],
@@ -156,6 +155,7 @@ export function ApprovalCard({
       icon={attempt ? <TriangleAlert className="text-warning-foreground" /> : <ShieldCheck />}
       title={title}
       source={source}
+      came={{ at: Date.parse(request.createdAt), now }}
       summary={request.details || undefined}
       primary={primary}
       openLabel={open && risky && !attempt ? 'Review' : undefined}

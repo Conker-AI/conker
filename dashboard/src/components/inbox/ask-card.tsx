@@ -3,13 +3,10 @@ import { Link } from 'react-router-dom'
 import { MessageCircleQuestion } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import type { ConkerAsk } from '@/lib/gateway/asks'
+import { factTime } from '@/lib/shown-time'
+import { useTimeStyle } from '@/components/use-time-style'
 import { InboxCard } from './inbox-card'
 import { ReplyBox } from './reply-box'
-
-function age(seconds: number, now: number) {
-  const minutes = Math.max(1, Math.floor((now - seconds * 1000) / 60_000))
-  return minutes < 60 ? `${minutes} min ago` : minutes < 1440 ? `${Math.floor(minutes / 60)} hr ago` : `${Math.floor(minutes / 1440)} days ago`
-}
 
 /**
  * One of Conker's questions: its options (Conker wrote them) and Reply for his own words. Either
@@ -34,6 +31,7 @@ export function AskCard({
 }) {
   const [replying, setReplying] = useState(false),
     [words, setWords] = useState('')
+  const style = useTimeStyle()
   const answers = replying ? (
     <ReplyBox label="Your answer" placeholder="Goes to Conker in that chat." value={words} busy={busy} onChange={setWords} onSend={() => onAnswer(words.trim(), false)} onCancel={() => setReplying(false)} />
   ) : (
@@ -53,6 +51,7 @@ export function AskCard({
       icon={<MessageCircleQuestion />}
       title={ask.question}
       source={<>Conker asks · {ask.chatTitle || 'a chat'}</>}
+      came={{ at: ask.createdAt * 1000, now }}
       openLabel="Answer"
       actions={answers}
       onLater={onLater}
@@ -65,7 +64,7 @@ export function AskCard({
       }
       facts={[
         ['Chat', ask.chatTitle || 'Untitled chat'],
-        ['Asked', `${age(ask.createdAt, now)} · ${new Date(ask.createdAt * 1000).toLocaleString()}`],
+        ['Asked', factTime(ask.createdAt * 1000, now, style)],
         ['Your answer', 'Goes to that chat as if you typed it there; anything Conker then does follows your access settings'],
       ]}
       advanced={

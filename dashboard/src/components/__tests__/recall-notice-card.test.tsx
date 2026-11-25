@@ -3,10 +3,12 @@ import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { RecallNoticeCard } from '@/components/inbox/recall-notice-card'
 import type { RecallNotice } from '@/lib/gateway/recall-notices'
+import { timeAgo } from '@/lib/shown-time'
 
 afterEach(() => cleanup())
 
 const since = 1_700_000_000
+const NOW = since * 1000 + 3 * 86_400_000
 const notice = (over: Partial<RecallNotice> = {}): RecallNotice => ({
   kind: 'memory-recall',
   id: `mrn_${'a'.repeat(32)}`,
@@ -29,17 +31,17 @@ function show(over: Partial<RecallNotice> = {}, props: { busy?: boolean; error?:
   const onDismiss = props.onDismiss ?? vi.fn()
   render(
     <MemoryRouter>
-      <RecallNoticeCard notice={notice(over)} busy={props.busy ?? false} error={props.error ?? null} onDismiss={onDismiss} />
+      <RecallNoticeCard notice={notice(over)} now={NOW} busy={props.busy ?? false} error={props.error ?? null} onDismiss={onDismiss} />
     </MemoryRouter>,
   )
   return onDismiss
 }
 
 describe('RecallNoticeCard', () => {
-  it('is one folded card: title, what changed with the date, and the one answer to open it', () => {
+  it('is one folded card: title, what changed and when, and the one answer to open it', () => {
     show()
     const card = screen.getByRole('article', { name: 'A memory you corrected was used' })
-    expect(within(card).getByText(`Memory corrected · ${new Date(since * 1000).toLocaleDateString()}`)).not.toBeNull()
+    expect(within(card).getByText(`Memory corrected · ${timeAgo(since * 1000, NOW)}`)).not.toBeNull()
     expect(within(card).getByRole('button', { name: 'See the chats' })).not.toBeNull()
     expect(
       within(card)
