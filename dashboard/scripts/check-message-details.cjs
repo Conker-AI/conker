@@ -33,5 +33,5 @@ assert.match(runtime, /const turnId = row\.turn_id === undefined \|\| row\.turn_
 const adapter = fs.readFileSync(path.join(root, 'src/lib/chat/gateway-adapter.ts'), 'utf8')
 assert.match(adapter, /message\.role === 'assistant' && message\.turnId && !isForgotten\(state\) \? turnDetails/, 'Only saved replies of visible chats show turn facts')
 const transcript = fs.readFileSync(path.join(root, 'src/components/chat/transcript.tsx'), 'utf8')
-assert.ok(transcript.includes('<span className="truncate text-xs text-muted-foreground"><time dateTime={message.createdAt} title={fullTime} aria-label={fullTime}>{shortTime}</time>{message.details && ` · ${message.details}`}</span>'), 'The header shows the time always and the turn facts when saved')
+assert.ok(transcript.includes('<span className="truncate text-xs text-muted-foreground"><ShownTime at={message.createdAt} />{message.details && `${times === \'hidden\' ? \'\' : \' · \'}${message.details}`}</span>'), 'The header shows the time as Settings > Times says and the turn facts when saved')
 console.log('Message details: saved model, duration and cost only; running and forgotten turns show nothing.')

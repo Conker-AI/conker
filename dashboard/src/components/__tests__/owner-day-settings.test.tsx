@@ -145,7 +145,7 @@ describe('day.focus_mode', () => {
     bar({
       read: vi.fn(async () => document({ 'day.focus_mode': true }, 2_000_000)),
       save: vi.fn(async () => {
-        throw new GatewayError('unavailable', 409)
+        throw new GatewayError('http', 409)
       }),
     })
     fireEvent.click(screen.getByRole('button', { name: 'Turn off focus' }))
