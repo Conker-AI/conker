@@ -34,6 +34,8 @@ import { useRefreshState, useRefreshWiring } from './use-refresh'
 
 // Chat-only header controls: they render inside the chat's Suspense, so the entry need not carry them.
 const GatewayPrivacyControl = lazy(() => import('./privacy-control').then(module => ({ default: module.GatewayPrivacyControl })))
+// The ? shortcut list arrives a moment after the first screen, so the entry need not carry it.
+const ShortcutList = lazy(() => import('./shortcut-list').then(module => ({ default: module.ShortcutList })))
 const GatewaySessionAccessControl = lazy(() => import('./session-access-control').then(module => ({ default: module.GatewaySessionAccessControl })))
 const GatewayToolDrafts = lazy(() => import('./tool-drafts').then(module => ({ default: module.GatewayToolDrafts })))
 const GatewayToolsInventory = lazy(() => import('./tools-inventory').then(module => ({ default: module.GatewayToolsInventory })))
@@ -136,5 +138,6 @@ export function GatewayWorkspace({ runtime, activity, authStore, conversationSta
       conversationState.setState({ selected: intent.sessionId, taskIntent: intent })
       selectSession(intent.sessionId)
     }} /></div></Suspense></ErrorBoundary>}
+    <Suspense fallback={null}><ShortcutList /></Suspense>
   </ConnectedWorkspaceShell></InboxAttentionProvider></WorkspaceChromeProvider></UniversalSearchProvider></SessionDiscoveryProvider>
 }
