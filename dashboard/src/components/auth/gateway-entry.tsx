@@ -1,7 +1,7 @@
 import { createGatewayOwnerClient } from '@/lib/gateway/owner'
 import { createGatewayProposalClient } from '@/lib/gateway/proposals'
 import { createGatewayOwnerState } from '@/components/gateway/owner-state'
-import { createGatewayControlClient } from '@/lib/gateway/control'
+import { createLazyGatewayControlClient } from '@/lib/gateway/control-lazy'
 import { GatewayBoundary } from './gateway-boundary'
 import { GatewayOperationVerification } from './gateway-verification'
 import { createGatewayServices } from '@/lib/gateway/services'
@@ -15,6 +15,11 @@ import { bindGatewayWorkspaceReset } from '@/components/gateway/auth-workspace-r
 import { createGatewayActivityClient } from '@/lib/gateway/activity'
 import { createGatewaySourcePrivacyState } from '@/components/gateway/source-privacy'
 
+function preloadWhenIdle(preload: () => void) {
+  if (typeof window.requestIdleCallback === 'function') window.requestIdleCallback(preload, { timeout: 2000 })
+  else window.setTimeout(preload, 200)
+}
+
 // Create once per document, including React StrictMode mounts. Configuration failures stay visible.
 const services = (() => {
   try {
@@ -24,13 +29,16 @@ const services = (() => {
     const ownerState = createGatewayOwnerState()
     const sourcePrivacy = createGatewaySourcePrivacyState()
     bindGatewayWorkspaceReset(value.store, [workspace, activityState, sourcePrivacy, ownerState])
+    const control = createLazyGatewayControlClient(value.auth, () => value.store.getState().confirmSessionRevoked())
+    // The shell and most screens read it soon after the first screen shows: fetch it while idle.
+    preloadWhenIdle(control.preload)
     return {
       value: {
         ...value,
         ownerState,
         owner: createGatewayOwnerClient(value.auth, () => value.store.getState().confirmSessionRevoked()),
         proposals: createGatewayProposalClient(value.auth),
-        control: createGatewayControlClient(value.auth, () => value.store.getState().confirmSessionRevoked()),
+        control: control.control,
         workspace,
         activityState,
         sourcePrivacy,

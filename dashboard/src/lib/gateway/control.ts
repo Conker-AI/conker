@@ -77,8 +77,7 @@ export function createMemoryForgetRequest(preview: Pick<MemoryForgetPreview, 'me
 }
 
 /** Owner UI capability only. Conversation retrieval remains separately scoped by Pi. */
-export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'request' | 'audio' | 'getSession' | 'download' | 'upload'>, onCurrentSessionRevoked: () => void) {
-  const modelListeners = new Set<() => void>()
+export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'request' | 'audio' | 'getSession' | 'download' | 'upload'>, onCurrentSessionRevoked: () => void, modelListeners = new Set<() => void>()) {
   const modelsChanged = () => { for (const listener of modelListeners) listener() }
   const pi = createPiClient(auth)
   return {
