@@ -6,6 +6,7 @@ import { AnswerExportMenu, type ExportStatus } from '@/components/export-menu'
 import { ChatAnswerReplies } from '@/components/answer-ui/reply'
 import { InlineError } from '@/components/resilience/inline-error'
 import { ToolRecord } from '@/components/chat/tool-record'
+import { AnswerFold } from '@/components/chat/answer-fold'
 import { AnswerTools } from '@/components/chat/answer-tools'
 import { MessageContextRule, MessageContextRuleError, MessageRulesProvider } from '@/components/chat/message-context-rule'
 import { MemoryNote } from '@/components/chat/memory-note'
@@ -25,10 +26,12 @@ import { useServerSetting } from '@/settings/server-setting'
 const labels: Record<MessageAction, string> = { copy: 'Copy message', link: 'Copy message link', edit: 'Edit', retry: 'Retry', fork: 'Fork', pin: 'Pin', rateUp: 'Good response', rateDown: 'Poor response', redact: 'Redact', saveArtifact: 'Save artifact' }
 const RichAnswer = lazy(() => import('@/components/rich-answer').then(module => ({ default: module.RichAnswer })))
 
-/** Rich text in answers (Settings, Appearance): off shows the answer's own words as plain text, like a sent message. */
+/** Rich text in answers (Settings, Appearance): off shows the answer's own words as plain text, like a sent message. Sources show as Settings > Chats says. */
 function Answer({ text, streaming }: { text: string; streaming?: boolean }) {
-  if (!useServerSetting('appearance.rich_text', true)) return <p dir="auto" className="whitespace-pre-wrap text-base leading-7 [overflow-wrap:anywhere]">{text}</p>
-  return <Suspense fallback={<p role="status" className="text-sm leading-7 text-muted-foreground">Formatting response…</p>}><RichAnswer text={text} streaming={streaming} /></Suspense>
+  const rich = useServerSetting('appearance.rich_text', true)
+  const sources = useServerSetting<'inline' | 'footnotes' | 'hidden'>('chats.citations', 'inline')
+  if (!rich) return <p dir="auto" className="whitespace-pre-wrap text-base leading-7 [overflow-wrap:anywhere]">{text}</p>
+  return <Suspense fallback={<p role="status" className="text-sm leading-7 text-muted-foreground">Formatting response…</p>}><RichAnswer text={text} streaming={streaming} sources={sources} /></Suspense>
 }
 
 /** How answers appear (Settings, Appearance): word by word (smoothed), in chunks as the server sends them, or all at once when saved ("is writing" shows meanwhile). */
@@ -51,7 +54,7 @@ export function ChatMessageRecord({ message }: { message: ChatMessage }) {
   }
   const body = message.content.kind === 'unavailable'
     ? <p className="text-sm italic text-muted-foreground">{message.content.reason === 'forgotten' ? 'This message was forgotten. Its content is unavailable.' : 'This record cannot be displayed as text.'}</p>
-    : message.role === 'assistant' ? <Answer text={message.content.text} /> : <p dir="auto" className="whitespace-pre-wrap text-base leading-7 [overflow-wrap:anywhere]">{message.content.text}</p>
+    : message.role === 'assistant' ? <AnswerFold><Answer text={message.content.text} /></AnswerFold> : <p dir="auto" className="whitespace-pre-wrap text-base leading-7 [overflow-wrap:anywhere]">{message.content.text}</p>
   if (message.role === 'tool' && message.content.kind === 'text') return <ToolRecord text={message.content.text} sequence={message.sequence} />
   if (message.role === 'system' || message.role === 'tool') return <details className="min-w-0 rounded-lg border p-3"><summary className="cursor-pointer rounded-sm text-xs font-medium focus-visible:outline-2 focus-visible:outline-ring">{message.role === 'tool' ? 'Tool' : 'System'} record · {message.sequence}</summary><div className="mt-3 min-w-0">{body}</div></details>
   return <article aria-label={`${message.role} message ${message.sequence}`} className={cn('group/message relative min-w-0', message.role === 'user' ? 'ml-auto flex max-w-[92%] flex-col items-end sm:max-w-[85%]' : 'w-full')}>
