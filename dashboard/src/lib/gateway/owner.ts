@@ -1,8 +1,9 @@
 import type { GatewayAuthClient } from './auth'
 import { isCardTemplate, type CardTemplate } from '../inbox-buttons'
 import { GatewayError, gatewayError } from './transport'
-import { createBrowserSessionsClient } from './browser-sessions'
-import { createPasswordAlertsClient } from './password-alerts'
+import type { createBrowserSessionsClient } from './browser-sessions'
+import type { createPasswordAlertsClient } from './password-alerts'
+import { lazyClient } from './lazy-client'
 
 export type OwnerDecision = 'approved' | 'rejected' | 'dismissed'
 export type OwnerRequestStatus = 'pending' | OwnerDecision | 'cancelled'
@@ -149,10 +150,11 @@ export class OwnerDecisionError extends Error {
 }
 
 export function createGatewayOwnerClient(auth: Pick<GatewayAuthClient, 'request' | 'getSession'>, onCurrentSessionRevoked: () => void = () => {}) {
-  const sessions = createBrowserSessionsClient(auth, onCurrentSessionRevoked)
+  // Both parse with zod; they load on first use, out of the first bundle.
+  const sessions = lazyClient<ReturnType<typeof createBrowserSessionsClient>>(() => import('./browser-sessions').then(module => module.createBrowserSessionsClient(auth, onCurrentSessionRevoked))).client
   return {
     /** Wrong-password alerts for the Inbox card. */
-    alerts: createPasswordAlertsClient(auth),
+    alerts: lazyClient<ReturnType<typeof createPasswordAlertsClient>>(() => import('./password-alerts').then(module => module.createPasswordAlertsClient(auth))).client,
     /** "Sign out everywhere": the sessions client's own revoke, so this tab learns it signed out. */
     revokeAll: (signal?: AbortSignal) => sessions.revoke(null, signal),
     async listRequests(options: { limit?: number; cursor?: string; signal?: AbortSignal } = {}): Promise<OwnerRequestPage> {

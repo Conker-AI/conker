@@ -14,7 +14,7 @@ import { createGatewayRuntimeClient } from '@/lib/gateway/runtime'
 import { createGatewayActivityClient } from '@/lib/gateway/activity'
 import { createGatewayOwnerClient } from '@/lib/gateway/owner'
 import { createGatewayProposalClient } from '@/lib/gateway/proposals'
-import { createGatewayControlClient } from '@/lib/gateway/control'
+import { createLazyGatewayControlClient } from '@/lib/gateway/control-lazy'
 import type { GatewayAuthState } from '@/lib/gateway/auth-store'
 import type { GatewayAuthClient } from '@/lib/gateway/auth'
 import { createGatewayVerificationStore } from '@/lib/gateway/verification'
@@ -119,7 +119,8 @@ function services() {
       activity: createGatewayActivityClient(auth),
       owner: createGatewayOwnerClient(auth),
       proposals: createGatewayProposalClient(auth),
-      control: createGatewayControlClient(auth, () => undefined),
+      // The same lazily loaded client as the connected app, so the previews and e2e run it.
+      control: createLazyGatewayControlClient(auth, () => undefined).control,
       conversationState: createGatewayRuntimeWorkspaceState(),
       activityState: createGatewayActivityWorkspaceState(),
       ownerState: createGatewayOwnerState(),
