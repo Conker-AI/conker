@@ -19,17 +19,17 @@
           "default": false,
           "tier": "basic",
           "scope": "global",
-          "effect": "stored"
+          "effect": "live"
         },
         {
           "id": "day.focus_mode",
           "title": "Focus mode",
-          "description": "Hides everything that is not urgent until you turn it off.",
+          "description": "Home and Inbox show only what needs you until you turn it off.",
           "type": "toggle",
           "default": false,
           "tier": "basic",
           "scope": "global",
-          "effect": "stored"
+          "effect": "live"
         },
         {
           "id": "day.max_cards",
@@ -39,7 +39,7 @@
           "default": 5,
           "tier": "basic",
           "scope": "global",
-          "effect": "stored",
+          "effect": "live",
           "min": 1,
           "max": 20,
           "step": 1

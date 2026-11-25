@@ -13,6 +13,8 @@ import { toolDraftStatus, type ChangeRequest, type ToolDraftRequest } from '@/li
 import { AgentDetails, TeamDetails } from './agent-request-details'
 import { InboxCard, type InboxFact } from './inbox-card'
 import { ReplyBox } from './reply-box'
+import { factTime } from '@/lib/shown-time'
+import { useTimeStyle } from '@/components/use-time-style'
 
 // What approving does, and what kind of thing it is, per request kind.
 const LABELS: Record<ChangeRequest['kind'], { action: string; kind: string }> = {
@@ -24,11 +26,6 @@ const ICONS: Record<ChangeRequest['kind'], ReactNode> = {
 }
 const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 const effects = { read: 'Only reads', prepare: 'Prepares things, sends nothing', write: 'Changes or sends things' } as const
-
-function age(seconds: number, now: number) {
-  const minutes = Math.max(1, Math.floor((now - seconds * 1000) / 60_000))
-  return minutes < 60 ? `${minutes} min ago` : minutes < 1440 ? `${Math.floor(minutes / 60)} hr ago` : `${Math.floor(minutes / 1440)} days ago`
-}
 
 function when(request: Extract<ChangeRequest, { kind: 'ai_job' }>) {
   const { timing, clock } = request.payload
@@ -143,11 +140,12 @@ export function ChangeRequestCard({ request, now, busy, error, onApprove, onDecl
   onApprove: () => void; onDecline: (reply?: string) => void; onRetry?: (description?: string) => void; onAnswer?: (text: string) => Promise<boolean>; onLater?: () => void
 }) {
   const [changing, setChanging] = useState(false), [words, setWords] = useState('')
+  const style = useTimeStyle(), came = { at: request.createdAt * 1000, now }
   const status = request.kind === 'tool_draft' ? toolDraftStatus(request) : null
   const { action, kind } = LABELS[request.kind]
   // Who asked, when and in which chat: the record, one "Advanced" tap away.
   const facts: InboxFact[] = [['From', request.kind === 'tool_draft' && !request.sessionId ? 'Your tool request' : 'Conker’s request'],
-    ['Came', `${age(request.createdAt, now)} · ${new Date(request.createdAt * 1000).toLocaleString()}`], ...(request.sessionId ? [['Chat', chatLink(request.sessionId)] as InboxFact] : [])]
+    ['Came', factTime(came.at, now, style)], ...(request.sessionId ? [['Chat', chatLink(request.sessionId)] as InboxFact] : [])]
   const footer = error ? <p role="alert" className="text-sm text-destructive-foreground">{error}</p> : undefined
   // An agent says what it does (its role); a team its objective; the details show the rest exactly as filed.
   const text = request.kind === 'memory' || request.kind === 'promise' ? request.payload.text : request.kind === 'agent' ? request.payload.role : request.kind === 'team' ? request.payload.objective
@@ -161,7 +159,7 @@ export function ChangeRequestCard({ request, now, busy, error, onApprove, onDecl
   const turns = conversationOf(request), talk = turns.length ? <Conversation turns={turns} /> : undefined
   if (request.kind === 'other') {
     // A kind this dashboard does not know yet: shown plainly, never approved from here.
-    return <InboxCard icon={icon} title={title} source={`${kind} · Conker’s request`} summary={summary} facts={[...facts, ['Kind', request.filedKind]]} onLater={onLater} footer={footer} actions={<>
+    return <InboxCard icon={icon} title={title} came={came} source={`${kind} · Conker’s request`} summary={summary} facts={[...facts, ['Kind', request.filedKind]]} onLater={onLater} footer={footer} actions={<>
       <p className="text-xs text-muted-foreground">This version of the dashboard can’t show what approving would make. Update Conker to review it, or decline it.</p>
       <div className="flex flex-wrap gap-2">
         <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => onDecline()}>{busy ? 'Working…' : 'Don’t'}</Button>
@@ -171,7 +169,7 @@ export function ChangeRequestCard({ request, now, busy, error, onApprove, onDecl
   }
   if (request.kind === 'tool_draft' && status === 'drafting') {
     // Working: nothing to decide yet, so no answers and no Later; only the chat it came from.
-    return <InboxCard icon={icon} title={title} source={`${kind} · Drafting…`} summary={summary} facts={facts} advanced={talk} footer={footer} actions={<>
+    return <InboxCard icon={icon} title={title} came={came} source={`${kind} · Drafting…`} summary={summary} facts={facts} advanced={talk} footer={footer} actions={<>
       <p role="status" className="flex items-center gap-2 text-sm"><Spinner aria-hidden="true" className="size-4 text-muted-foreground motion-reduce:animate-none" />Conker is drafting this tool…</p>
       <p className="text-xs text-muted-foreground">You can leave this page. The draft shows up here when it’s ready.</p>
       {request.sessionId && <div className="flex flex-wrap gap-2">{chatLink(request.sessionId)}</div>}
@@ -180,7 +178,7 @@ export function ChangeRequestCard({ request, now, busy, error, onApprove, onDecl
   if (request.kind === 'tool_draft' && request.payload.status === 'needs_detail') {
     // Waiting for him: the question, a box and Answer. The chat it was asked in is one tap away.
     const { question, askedIn } = request.payload
-    return <InboxCard icon={icon} title={title} source={`${kind} · Needs one detail`} openLabel="Answer" summary={summary} facts={facts} advanced={talk} onLater={onLater}
+    return <InboxCard icon={icon} title={title} came={came} source={`${kind} · Needs one detail`} openLabel="Answer" summary={summary} facts={facts} advanced={talk} onLater={onLater}
       footer={error ? <p role="alert" className="text-sm text-destructive-foreground">{error} Your answer is kept.</p> : undefined}
       actions={<AnswerForm question={question} askedIn={askedIn} busy={busy || !onAnswer} onAnswer={text => onAnswer?.(text) ?? Promise.resolve(false)} />} />
   }
@@ -195,7 +193,7 @@ export function ChangeRequestCard({ request, now, busy, error, onApprove, onDecl
         <Button type="button" size="sm" variant="ghost" disabled={busy || !onRetry} onClick={() => { setWords(words.trim() ? words : request.payload.description); setChanging(true) }}>Change</Button>
         {request.sessionId && chatLink(request.sessionId)}
       </div>
-    return <InboxCard icon={icon} title={title} source={`${kind} · Couldn’t draft it`} summary={summary} facts={facts} advanced={talk} onLater={onLater} footer={footer}
+    return <InboxCard icon={icon} title={title} came={came} source={`${kind} · Couldn’t draft it`} summary={summary} facts={facts} advanced={talk} onLater={onLater} footer={footer}
       primary={<Button type="button" size="sm" disabled={busy || !onRetry} onClick={() => onRetry?.()}>{busy ? 'Working…' : 'Try again'}</Button>} actions={<>
       <p className="text-sm text-destructive-foreground"><span className="font-medium">Couldn’t draft it:</span> {reason}</p>
       {answers}
@@ -209,7 +207,7 @@ export function ChangeRequestCard({ request, now, busy, error, onApprove, onDecl
       <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => onDecline()}>Don’t</Button>
       {request.sessionId && <Button type="button" size="sm" variant="ghost" disabled={busy} onClick={() => setChanging(true)}>Change</Button>}
     </div>
-  return <InboxCard icon={icon} title={title} source={request.kind === 'memory' ? 'Memory · To remember' : `${kind} · ${request.sessionId ? 'Conker’s request' : 'Your request'}`} summary={summary}
+  return <InboxCard icon={icon} title={title} came={came} source={request.kind === 'memory' ? 'Memory · To remember' : `${kind} · ${request.sessionId ? 'Conker’s request' : 'Your request'}`} summary={summary}
     primary={!changing && <Button type="button" size="sm" disabled={busy} onClick={onApprove}>{busy ? 'Working…' : action}</Button>}
     actions={<>{request.kind === 'tool_draft' && <Steps request={request} />}{answers}</>} facts={facts} advanced={talk} onLater={onLater} footer={footer}>
     <Details request={request} />

@@ -5,7 +5,7 @@
 //  - Keyboard focus is visible on every control the Tab key reaches, in both themes, and the ring colour has 3:1
 //    contrast against the page (WCAG 1.4.11).
 import { devices, expect, test, type Page } from '@playwright/test'
-import { card, open } from './pages'
+import { card, open, showAllWaiting } from './pages'
 
 const TOUCH = 44
 const PHONE = { viewport: { width: 390, height: 844 }, userAgent: devices['Pixel 7'].userAgent, deviceScaleFactor: 2, isMobile: true, hasTouch: true }
@@ -190,6 +190,7 @@ test.describe('dialogs by keyboard', () => {
 
   test('"are you sure" before a send: opens by keyboard, Escape sends nothing and focus returns', async ({ page }) => {
     await open(page, '/inbox')
+    await showAllWaiting(page)
     const send = card(page, 'Send an email to coach').getByRole('button', { name: 'Send it', exact: true })
     await send.focus()
     await page.keyboard.press('Enter')

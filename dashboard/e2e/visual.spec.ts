@@ -4,7 +4,7 @@
 // To refresh them after an intended look change: run the Dashboard workflow, download the
 // `playwright-report-N` artifacts (they hold e2e/visual.spec.ts-snapshots), commit the new PNGs.
 import { expect, test, type Page } from '@playwright/test'
-import { open } from './pages'
+import { open, showAllWaiting } from './pages'
 
 type Viewport = { width: number; height: number }
 type Place = {
@@ -16,6 +16,8 @@ type Place = {
   widths?: readonly Viewport[]
   /** Photograph one element instead of the screen. */
   target?: (page: Page) => ReturnType<Page['locator']>
+  /** Run once the page is open, before the photograph (opening a fold). */
+  prepare?: (page: Page) => Promise<void>
   /** Saved in the browser before the page opens (view choices such as "Planned"). */
   storage?: Record<string, string>
 }
@@ -45,6 +47,8 @@ const PLACES: Place[] = [
     path: '/inbox',
     name: 'inbox-recall-card',
     frozen: true,
+    // The card waits below the first five (Settings > Your day > Cards at once).
+    prepare: showAllWaiting,
     target: page => page.getByRole('article', { name: RECALL_CARD }),
   },
 ]
@@ -79,6 +83,7 @@ for (const theme of THEMES)
           }, place.storage)
         const errors = await open(page, place.path)
         await page.waitForFunction(() => !document.querySelector('[aria-busy="true"]'), null, { timeout: 15_000 }).catch(() => {})
+        await place.prepare?.(page)
         const target = place.target?.(page)
         if (target) {
           await expect(target).toBeVisible()

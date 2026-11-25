@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useStore } from 'zustand'
 import { ArrowLeft, Check, CheckCheck, CircleAlert, RefreshCw, TriangleAlert } from 'lucide-react'
@@ -43,9 +43,13 @@ import { QuietMeter, type QuietMeterReader } from '@/components/inbox/quiet-mete
 import type { UpdatesClient } from '@/lib/gateway/updates'
 import type { GatewayHostOpsClient } from '@/lib/gateway/host-ops'
 import { ownerDecisionEligibility, type GatewayOwnerState } from './owner-state'
+import type { GatewayControlClient } from '@/lib/gateway/control'
+import { useServerSetting } from '@/settings/server-setting'
+import { useCardLimit } from '@/components/inbox/card-limit'
+import { FocusBar } from './focus-bar'
 
 const label = (value: string) => value.replaceAll('_', ' ')
-export function GatewayOwnerWorkspace({ client, proposals, checks, changes, asks, recall, drafts, access, updates, quiet, shared, state, active }: { client: GatewayOwnerClient; updates?: { client: UpdatesClient; hostOps: GatewayHostOpsClient }; quiet?: QuietMeterReader; proposals?: GatewayProposalClient; checks?: AgentNotesClient; shared?: SharedNotesInboxClient; changes?: ChangeRequestsClient; asks?: AsksClient; recall?: RecallNoticesClient; drafts?: GatewayEditorDrafts; access?: AccessClient; state: GatewayOwnerState; active: boolean }) {
+export function GatewayOwnerWorkspace({ client, proposals, checks, changes, asks, recall, drafts, access, updates, quiet, shared, settings, state, active }: { client: GatewayOwnerClient; settings?: Pick<GatewayControlClient['settings'], 'read' | 'save'>; updates?: { client: UpdatesClient; hostOps: GatewayHostOpsClient }; quiet?: QuietMeterReader; proposals?: GatewayProposalClient; checks?: AgentNotesClient; shared?: SharedNotesInboxClient; changes?: ChangeRequestsClient; asks?: AsksClient; recall?: RecallNoticesClient; drafts?: GatewayEditorDrafts; access?: AccessClient; state: GatewayOwnerState; active: boolean }) {
   const [params] = useSearchParams(), requestId = params.get('request')
   const retained = useStore(state)
   const [rows, setRows] = useState<OwnerRequest[]>([]), [cursor, setCursor] = useState<string | null>(null)
@@ -68,6 +72,8 @@ export function GatewayOwnerWorkspace({ client, proposals, checks, changes, asks
   const memories = useRecallNotices(recall, active && !requestId)
   const approvals = useApprovalFollow(client, active)
   const { isLater, later, restore } = useLater()
+  // Settings > Your day: Focus mode shows only decisions; Cards at once (Easy mode: one) caps the waiting cards.
+  const focus = useServerSetting('day.focus_mode', false), easy = useServerSetting('day.easy_mode', false), maxCards = useServerSetting('day.max_cards', 5)
   const [now, setNow] = useState(Date.now)
   const mounted = useRef(false), generation = useRef(0), controllers = useRef(new Set<AbortController>())
   const selectedId = useRef(requestId)
@@ -191,7 +197,7 @@ export function GatewayOwnerWorkspace({ client, proposals, checks, changes, asks
     { answered: memories.answered, failed: memories.error !== null },
   ], needsCount, decidedToday)
   // Filters only once everything loaded: a count for a source that didn't load would be a guess.
-  const view = summary.state === 'ready' ? filter : 'all'
+  const view = focus ? 'decisions' : summary.state === 'ready' ? filter : 'all'
   const showDecisions = view === 'all' || view === 'decisions', showIdeas = view === 'all' || view === 'ideas', showNotes = view === 'all' || view === 'checks', showMemories = view === 'all'
   const moveLater = (key: string, title: string) => { later(key); setUndo({ key, title }) }
   const card = (row: OwnerRequest, detail = false) => <ApprovalCard key={row.id} request={row} now={now} detail={detail}
@@ -200,6 +206,25 @@ export function GatewayOwnerWorkspace({ client, proposals, checks, changes, asks
     onDecide={(status, retry, note) => void decide(row, status, retry, note)} onCheck={() => void load(false, undefined, row.id)}
     onRelease={() => { state.setState(value => { const attempts = { ...value.attempts }; delete attempts[row.id]; return { attempts } }); setError(null); setNotice('The approval attempt was declined and this request has expired. Nothing was done.') }}
     onLater={() => moveLater(decisionKey(row.id), row.title || 'Review this action')} />
+  // Every waiting card in order (decisions whose outcome is unknown first), capped by Cards at once with a count and Show all.
+  const attemptFirst = (a: OwnerRequest, b: OwnerRequest) => Number(!!retained.attempts[b.id]) - Number(!!retained.attempts[a.id])
+  const waiting: [string, ReactNode][] = [
+    ...(showDecisions ? [...nowDecisions].sort(attemptFirst).map(row => [decisionKey(row.id), card(row)] as [string, ReactNode]) : []),
+    ...(showDecisions ? nowChanges.map(request => [changeKey(request.id), <ChangeRequestCard key={request.id} request={request} now={now} busy={requests.pending === request.id} error={requests.failure?.id === request.id ? requests.failure.message : null}
+      onApprove={() => void requests.approve(request)} onDecline={reply => void requests.decline(request, reply)} onRetry={request.kind === 'tool_draft' ? description => void requests.retry(request, description) : undefined} onAnswer={request.kind === 'tool_draft' ? text => requests.answer(request, text) : undefined} onLater={() => moveLater(changeKey(request.id), request.title)} />] as [string, ReactNode]) : []),
+    ...(showDecisions ? nowAsks.map(ask => [askKey(ask.id), <AskCard key={ask.id} ask={ask} now={now} busy={questions.pending === ask.id} error={questions.failure?.id === ask.id ? questions.failure.message : null}
+      onAnswer={(text, chosen) => questions.answer(ask, text, chosen)} onDismiss={() => questions.dismiss(ask)} onLater={() => moveLater(askKey(ask.id), ask.question)} />] as [string, ReactNode]) : []),
+    ...(showNotes ? nowNotes.map(note => [checkKey(note.id), <AgentNoteCard key={note.id} note={note} now={now} onOpen={() => notes.open(note)} onLater={() => moveLater(checkKey(note.id), note.title)} />] as [string, ReactNode]) : []),
+    ...(showMemories ? memories.items.map(notice => [`memory:${notice.id}`, <RecallNoticeCard key={notice.id} notice={notice} now={now} busy={memories.pending === notice.id} error={memories.failure?.id === notice.id ? memories.failure.message : null} onDismiss={() => void memories.dismiss(notice)} />] as [string, ReactNode]) : []),
+    ...(showIdeas ? nowIdeas.map(item => [ideaKey(item.id), <IdeaCard key={item.id} item={item} now={now} pending={ideas.pending !== null} failure={ideas.failure?.id === item.id ? ideas.failure.message : null}
+      onDecide={decision => void ideas.decide(item, decision)} onLater={() => moveLater(ideaKey(item.id), item.title)} />] as [string, ReactNode]) : []),
+  ]
+  const limited = useCardLimit(waiting.map(([key]) => key), easy ? 1 : maxCards)
+  // What Focus mode hides here, counted only once those sources answered; a source that failed is said, never counted as none.
+  const otherCount = nowIdeas.length + nowNotes.length + memories.items.length
+  const othersFailed = ideas.error !== null || notes.error !== null || memories.error !== null
+  const focusHidden = summary.state === 'loading' ? 'Only decisions show here.' : othersFailed ? 'Only decisions show here. Some ideas or notes didn’t load.'
+    : `Only decisions show here. ${otherCount ? `${otherCount} other ${otherCount === 1 ? 'item is' : 'items are'} hidden.` : 'Nothing else is waiting.'}`
   const refresh = () => { void load(); if (!requestId) { void ideas.load(); void notes.load(); void requests.load(); void questions.load(); void memories.load() } }
   const refreshButton = <WorkspaceAction iconOnly aria-label={requestId ? 'Check saved request' : 'Refresh Inbox'} title={requestId ? 'Check saved request' : 'Refresh Inbox'} disabled={loading || busy} onClick={refresh}><RefreshCw /></WorkspaceAction>
   const chip = (value: typeof filter, text: string, count: number) => <FilterChip key={value} active={filter === value} count={count} onClick={() => setFilter(value)}>{text}</FilterChip>
@@ -211,7 +236,8 @@ export function GatewayOwnerWorkspace({ client, proposals, checks, changes, asks
         <div className="flex flex-col gap-3">
           {/* Never "All clear" while loading or when part of the Inbox failed to load. */}
           <p className="text-sm text-muted-foreground"><span className={summary.state === 'loading' ? 'conker-reveal' : undefined}>{summary.text}</span></p>
-          {summary.state === 'ready' && <div role="group" aria-label="Show" className="flex flex-wrap gap-1 pointer-coarse:gap-3">
+          {focus && <FocusBar client={settings} hidden={focusHidden} />}
+          {summary.state === 'ready' && !focus && <div role="group" aria-label="Show" className="flex flex-wrap gap-1 pointer-coarse:gap-3">
             {chip('all', 'All', needsCount)}{chip('decisions', 'Decisions', nowDecisions.length + waitingChanges.length + nowAsks.length)}{chip('ideas', 'Ideas', nowIdeas.length)}{notes.items.length > 0 && chip('checks', 'From AI jobs', nowNotes.length)}
           </div>}
         </div>
@@ -241,16 +267,12 @@ export function GatewayOwnerWorkspace({ client, proposals, checks, changes, asks
         {showDecisions && questions.error !== null && <InlineError error={questions.error} title="Conker’s questions didn’t load" onRetry={() => questions.load()} />}
         {showMemories && memories.error !== null && <InlineError error={memories.error} title="Memory notices didn’t load" onRetry={() => memories.load()} />}
         {showNotes && notes.error !== null && <InlineError error={notes.error} title="Notes from your AI jobs didn’t load" onRetry={() => notes.load()} />}
-        {(showDecisions && (nowDecisions.length > 0 || nowChanges.length > 0 || nowAsks.length > 0)) || (showIdeas && nowIdeas.length > 0) || (showNotes && nowNotes.length > 0) || (showMemories && memories.items.length > 0) ? <section aria-label="Needs you" className="flex flex-col gap-3">
-          {showDecisions && nowDecisions.map(row => card(row))}
-          {showDecisions && nowChanges.map(request => <ChangeRequestCard key={request.id} request={request} now={now} busy={requests.pending === request.id} error={requests.failure?.id === request.id ? requests.failure.message : null}
-            onApprove={() => void requests.approve(request)} onDecline={reply => void requests.decline(request, reply)} onRetry={request.kind === 'tool_draft' ? description => void requests.retry(request, description) : undefined} onAnswer={request.kind === 'tool_draft' ? text => requests.answer(request, text) : undefined} onLater={() => moveLater(changeKey(request.id), request.title)} />)}
-          {showDecisions && nowAsks.map(ask => <AskCard key={ask.id} ask={ask} now={now} busy={questions.pending === ask.id} error={questions.failure?.id === ask.id ? questions.failure.message : null}
-            onAnswer={(text, chosen) => questions.answer(ask, text, chosen)} onDismiss={() => questions.dismiss(ask)} onLater={() => moveLater(askKey(ask.id), ask.question)} />)}
-          {showNotes && nowNotes.map(note => <AgentNoteCard key={note.id} note={note} now={now} onOpen={() => notes.open(note)} onLater={() => moveLater(checkKey(note.id), note.title)} />)}
-          {showMemories && memories.items.map(notice => <RecallNoticeCard key={notice.id} notice={notice} busy={memories.pending === notice.id} error={memories.failure?.id === notice.id ? memories.failure.message : null} onDismiss={() => void memories.dismiss(notice)} />)}
-          {showIdeas && nowIdeas.map(item => <IdeaCard key={item.id} item={item} pending={ideas.pending !== null} failure={ideas.failure?.id === item.id ? ideas.failure.message : null}
-            onDecide={decision => void ideas.decide(item, decision)} onLater={() => moveLater(ideaKey(item.id), item.title)} />)}
+        {waiting.length > 0 ? <section aria-label="Needs you" className="flex flex-col gap-3">
+          {waiting.filter(([key]) => limited.shown.has(key)).map(([, node]) => node)}
+          {limited.hidden > 0 && <div className="flex flex-wrap items-center gap-3">
+            <p className="text-sm text-muted-foreground"><span className="tabular-nums">{limited.hidden}</span> more {limited.hidden === 1 ? 'card' : 'cards'}</p>
+            <Button type="button" size="sm" variant="outline" onClick={limited.showAll}>Show all</Button>
+          </div>}
         </section> : summary.state === 'ready' && <Empty className="py-10 md:py-14">
           <EmptyHeader>
             <EmptyMedia variant="icon"><CheckCheck className="text-success-foreground" /></EmptyMedia>
@@ -260,7 +282,7 @@ export function GatewayOwnerWorkspace({ client, proposals, checks, changes, asks
         </Empty>}
         </>}
         {/* The owner's own captures: below what needs the owner, never counted in it. */}
-        {shared && showMemories && summary.state !== 'loading' && <SharedNotes client={shared} active={active} />}
+        {shared && showMemories && summary.state !== 'loading' && <SharedNotes client={shared} active={active} now={now} />}
         {summary.state !== 'loading' && laterCount > 0 && <section aria-labelledby="inbox-later" className="flex flex-col gap-2">
           <h2 id="inbox-later" className="text-sm font-medium text-muted-foreground">Later <span className="tabular-nums">{laterCount}</span></h2>
           <ul className="flex flex-col divide-y rounded-xl border">
