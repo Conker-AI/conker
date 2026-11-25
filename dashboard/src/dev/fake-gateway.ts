@@ -59,6 +59,35 @@ const replies = [
   "I can do that. I'll draft it first so you can check it before anything is sent.",
 ]
 
+const backupReply = [
+  'Here is a small script that copies your notes folder to a dated backup and keeps the last 14 [1](citation:rsync-manual).',
+  '',
+  '```bash',
+  '#!/usr/bin/env bash',
+  'set -euo pipefail',
+  'source="$HOME/notes"',
+  'target="$HOME/backups/notes-$(date +%F)"',
+  'mkdir -p "$target"',
+  'rsync -a --delete "$source/" "$target/"',
+  '# Keep the newest 14 backups and remove the rest.',
+  'ls -1dt "$HOME"/backups/notes-* | tail -n +15 | xargs -r rm -rf',
+  '```',
+  '',
+  'To run it every night at two, add this line with `crontab -e`:',
+  '',
+  '```',
+  '0 2 * * * $HOME/bin/backup-notes.sh',
+  '```',
+  '',
+  'A few things to check before you rely on it:',
+  '',
+  '- Run it once by hand and open the backup folder to see your files are there.',
+  '- Make sure the backups folder is on a different disk if you can.',
+  '- If a backup fails, cron sends its output to your local mail.',
+  '',
+  'Want me to add a weekly copy to your other drive as well?',
+].join('\n')
+
 function seed(): Session[] {
   const start = now() - 86400
   const session = (id: string, title: string, turns: [string, string][], offset: number): Session => ({
@@ -82,6 +111,8 @@ function seed(): Session[] {
   return [withAgentTools(week, start),
     session(previewSessions.sky, 'Why is the sky blue?', [['Why is the sky blue? Two sentences.', replies[1]]], 30000),
     session(previewSessions.coach, 'Email to coach', [['Ask coach if Friday open mat is still on.', replies[2]]], 1000),
+    // Preview: a long answer with code and a source, for the chat display settings (sessionStorage conker-fake-chat=long).
+    ...(globalThis.sessionStorage?.getItem('conker-fake-chat') === 'long' ? [session(`ses_${'4'.repeat(16)}`, 'Back up my notes', [['Write me a script that backs up my notes folder every night.', backupReply]], 90000)] : []),
   ]
 }
 

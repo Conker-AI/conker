@@ -231,7 +231,7 @@ How new chats start and how chats look and behave.
 | **Mode**<br>`chats.default_mode` | How hard Conker works in a new chat. Choices: Auto, Fast, Balanced, Deep. (applies right away) | Auto | owner settings |
 | **Access**<br>`chats.default_access` | What Conker may do without asking in a new chat. Choices: Agent's setting, Ask me, AI decides, Full access. (applies right away) | Agent's setting | pi `/owner/preferences` `newChatAccess` |
 | **Private by default**<br>`chats.default_incognito` | New chats remember nothing and stay out of search. (applies right away) | off | owner settings |
-| **A new chat starts with**<br>`chats.start` | What you see in an empty chat. Choices: Nothing, A greeting, Today's summary, A suggested request. (saved, not used yet) | Nothing | owner settings |
+| **A new chat starts with**<br>`chats.start` | What you see in an empty chat. Choices: Nothing, A greeting, Today's summary, A suggested request. (applies right away) | Nothing | owner settings |
 
 ### Chat names
 
@@ -269,11 +269,11 @@ How new chats start and how chats look and behave.
 | **Language level**<br>`chats.language_level` | How short and simple answers are, from Strict short sentences to Deep full detail; each chat can change it. Choices: Strict, Plain, Normal, Deep. (applies from the next message) | Normal | owner settings |
 | **Tool calls**<br>`chats.tool_calls` | How tool calls show in a chat. Choices: Folded, Open, Hidden. (applies right away) | Folded | owner settings |
 | **Thinking**<br>`chats.thinking` | How Conker's thinking shows in a chat. Choices: Folded, Open, Hidden. (applies right away) | Folded | owner settings |
-| **Sources**<br>`chats.citations` | How sources show in answers. Choices: Numbers in the text, At the end, Hidden. (saved, not used yet) | Numbers in the text | owner settings |
+| **Sources**<br>`chats.citations` | How sources show in answers. Choices: Numbers in the text, At the end, Hidden. (applies right away) | Numbers in the text | owner settings |
 | **Follow new text**<br>`chats.autoscroll` | Scrolls down as an answer is written. (applies right away) | on | owner settings |
 | **Wrap long code lines**<br>`chats.code_wrap` | Breaks long code lines instead of scrolling sideways. (applies right away) | off | owner settings |
-| **Line numbers in code**<br>`chats.code_numbers` | Numbers the lines of code blocks. (saved, not used yet) | off | owner settings |
-| **Fold long answers after**<br>`chats.fold_after` | Folds answers longer than this; 0 never folds. 0 to 500 lines. (saved, not used yet) | `0` lines | owner settings |
+| **Line numbers in code**<br>`chats.code_numbers` | Numbers the lines of code blocks. (applies right away) | off | owner settings |
+| **Fold long answers after**<br>`chats.fold_after` | Folds answers longer than this; 0 never folds. 0 to 500 lines. (applies right away) | `0` lines | owner settings |
 | **Read aloud**<br>`chats.read_aloud` | Whether answers are read aloud. Choices: When you ask, Always. (saved, not used yet) | When you ask | owner settings |
 
 ### Keeping chats

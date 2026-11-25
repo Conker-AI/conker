@@ -1,10 +1,10 @@
-import { createContext, createElement, lazy, Suspense, useContext, useMemo, useState, type ReactNode } from 'react'
+import { createContext, createElement, lazy, Suspense, useContext, useMemo, useState, type CSSProperties, type ReactNode } from 'react'
 import Markdown, { type Components } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
 import { common, createLowlight } from 'lowlight'
-import type { Element, RootContent } from 'hast'
+import type { Element, ElementContent, RootContent } from 'hast'
 import { ChevronDown, ChevronUp, Download, ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -13,21 +13,25 @@ import { AnswerTable, CopyAction } from '@/components/answer-ui/table'
 import type { ConversationCitation } from '@/lib/api/conversation-types'
 import { useServerSetting } from '@/settings/server-setting'
 import { citationId, codeFilename, downloadAnswerFile, safeAnswerUrl, tableRowsFromMarkdown } from '@/lib/rich-answer'
+import { codeLines } from './code-lines'
 import 'katex/dist/katex.min.css'
 import './rich-answer.css'
 
 const lowlight = createLowlight(common)
 // OpenUI loads only when an answer has an interactive part, so plain answers stay light.
 const AnswerUiBlock = lazy(() => import('@/components/answer-ui/block'))
-/** `streaming`: the text is a reply still being written, so an unclosed interactive part is still arriving. */
-type RichAnswerProps = { text: string; citations?: ConversationCitation[]; onOpenSource?: (sourceId: string) => void; streaming?: boolean }
+/**
+ * `streaming`: the text is a reply still being written, so an unclosed interactive part is still arriving.
+ * `sources` (chat answers, Settings > Chats > Sources): numbers in the text (the default), a list at the end, or neither.
+ */
+type RichAnswerProps = { text: string; citations?: ConversationCitation[]; onOpenSource?: (sourceId: string) => void; streaming?: boolean; sources?: 'inline' | 'footnotes' | 'hidden' }
 const AnswerContext = createContext<RichAnswerProps>({ text: '' })
 
 function nodeText(node: RootContent | Element): string {
   return node.type === 'text' ? node.value : 'children' in node ? node.children.map(nodeText).join('') : ''
 }
 
-function highlightedNode(node: RootContent, index: number): ReactNode {
+function highlightedNode(node: RootContent | ElementContent, index: number): ReactNode {
   if (node.type === 'text') return node.value
   if (node.type !== 'element') return null
   return createElement('span', { key: index, className: (node.properties.className as string[] | undefined)?.join(' ') }, node.children.map(highlightedNode))
@@ -36,15 +40,29 @@ function highlightedNode(node: RootContent, index: number): ReactNode {
 function CodeBlock({ code, language }: { code: string; language: string }) {
   const [collapsed, setCollapsed] = useState(false)
   const wrap = useServerSetting('chats.code_wrap', false)
+  const numbers = useServerSetting('chats.code_numbers', false)
   const highlighted = useMemo(() => {
+    const plain: RootContent[] = [{ type: 'text', value: code }]
     // Keep exceptionally large or unknown blocks cheap and readable during streaming.
-    if (code.length > 40_000 || !lowlight.registered(language)) return code
-    try {
-      return lowlight.highlight(language, code).children.map(highlightedNode)
-    } catch {
-      return code
+    let tree = plain
+    if (code.length <= 40_000 && lowlight.registered(language))
+      try {
+        tree = lowlight.highlight(language, code).children
+      } catch {
+        tree = plain
+      }
+    if (!numbers) return { lines: 0, nodes: tree.map(highlightedNode) }
+    // Line numbers (Settings > Chats) are drawn by the stylesheet, so copying the code never takes them.
+    const lines = codeLines(tree)
+    return {
+      lines: lines.length,
+      nodes: lines.map((line, index) => (
+        <span key={index} className="answer-code-line">
+          {line.map(highlightedNode)}
+        </span>
+      )),
     }
-  }, [code, language])
+  }, [code, language, numbers])
   return (
     <section className="answer-block" aria-label={`${language || 'Plain text'} code block`}>
       <div className="answer-block-toolbar">
@@ -60,8 +78,14 @@ function CodeBlock({ code, language }: { code: string; language: string }) {
         </div>
       </div>
       {!collapsed && (
-        <pre tabIndex={0} aria-label={`${language || 'Plain text'} code`} data-wrap={wrap || undefined}>
-          <code>{highlighted}</code>
+        <pre
+          tabIndex={0}
+          aria-label={`${language || 'Plain text'} code`}
+          data-wrap={wrap || undefined}
+          data-numbers={numbers || undefined}
+          style={highlighted.lines ? ({ '--code-gutter': `${String(highlighted.lines).length}ch` } as CSSProperties) : undefined}
+        >
+          <code>{highlighted.nodes}</code>
         </pre>
       )}
     </section>
@@ -105,6 +129,26 @@ function Citation({ id, children, citations, onOpenSource }: { id: string; child
   )
 }
 
+/** Sources at the end (Settings > Chats > Sources): each source the answer cites, once, in the order it cites them. */
+function SourceList({ text, citations, onOpenSource }: { text: string; citations: ConversationCitation[]; onOpenSource?: (id: string) => void }) {
+  const ids = [...new Set([...text.matchAll(/\]\((citation:[^)\s]+)\)/g)].map(match => citationId(match[1])).filter((id): id is string => !!id))]
+  if (!ids.length) return null
+  return (
+    <section aria-label="Sources" className="answer-sources">
+      <p className="text-sm font-medium">Sources</p>
+      <ol>
+        {ids.map(id => (
+          <li key={id}>
+            <Citation id={id} citations={citations} onOpenSource={onOpenSource}>
+              {citations.find(item => item.id === id)?.label || 'Source unavailable'}
+            </Citation>
+          </li>
+        ))}
+      </ol>
+    </section>
+  )
+}
+
 // Stable component identities keep a block's collapsed state and focus while tokens arrive.
 const markdownComponents: Components = {
   h1: ({ children }) => <h2>{children}</h2>,
@@ -142,8 +186,10 @@ const markdownComponents: Components = {
     )
   },
   a: function AnswerLink({ href, children }) {
-    const { citations = [], onOpenSource } = useContext(AnswerContext)
+    const { citations = [], onOpenSource, sources = 'inline' } = useContext(AnswerContext)
     const id = citationId(href)
+    // At the end, or hidden: the number leaves the text (the list after the answer carries it).
+    if (id && sources !== 'inline') return null
     if (id)
       return (
         <Citation id={id} citations={citations} onOpenSource={onOpenSource}>
@@ -191,6 +237,7 @@ export function RichAnswer(props: RichAnswerProps) {
         >
           {props.text}
         </Markdown>
+        {props.sources === 'footnotes' && <SourceList text={props.text} citations={props.citations ?? []} onOpenSource={props.onOpenSource} />}
       </div>
     </AnswerContext.Provider>
   )
