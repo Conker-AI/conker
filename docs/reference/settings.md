@@ -338,8 +338,8 @@ What the AI sees when it answers.
 
 | Setting | What it does | Default | Home |
 |---|---|---|---|
-| **Chat history**<br>`context.history` | How much of the chat the model sees. Choices: Auto, Recent messages, Everything, Summary only. (saved, not used yet) | Auto | owner settings |
-| **Recent messages**<br>`context.recent_messages` | How many recent messages count as recent. 5 to 200. (saved, not used yet) | `30` | owner settings |
+| **Chat history**<br>`context.history` | How much of the chat the model sees. Choices: Auto, Recent messages, Everything, Summary only. (applies from the next message) | Auto | owner settings |
+| **Recent messages**<br>`context.recent_messages` | How many recent messages count as recent. 5 to 200. (applies from the next message) | `30` | owner settings |
 | **Project sources**<br>`context.project_sources` | Whether a chat's project files are offered to the model. Choices: Auto, None. (applies from the next message) | Auto | owner settings |
 
 ### Budget
@@ -348,7 +348,7 @@ What the AI sees when it answers.
 |---|---|---|---|
 | **Context meter**<br>`context.meter` | Shows how full the context is in the message box. (saved, not used yet) | on | owner settings |
 | **Web page size**<br>`context.web_page_limit` | The most text taken from one web page. 1000 to 12000 characters. (applies from the next message) | `12000` characters | owner settings |
-| **Keep web pages**<br>`context.web_keep` | How long a fetched page stays in context. Choices: For one answer, For the whole chat. (saved, not used yet) | For one answer | owner settings |
+| **Keep web pages**<br>`context.web_keep` | How long a fetched page stays in context. Choices: For one answer, For the whole chat. (applies from the next message) | For one answer | owner settings |
 | **Decisions list**<br>`context.decisions` | Who can add to a chat's list of decisions. Choices: Only you, You and Conker, marked. (applies right away) | You and Conker, marked | owner settings |
 | **Open threads**<br>`context.threads` | Tracks questions that are still open in a chat. (saved, not used yet) | off | owner settings |
 
@@ -534,7 +534,7 @@ What Conker remembers about you and for how long.
 |---|---|---|---|
 | **Memory**<br>`memory.mode` | Whether Conker reads and adds memories. Choices: On, Read only, Off. (saved, not used yet) | On | owner settings |
 | **What to remember**<br>`memory.kinds` | Kinds of things Conker may remember. Choices: Facts, Preferences, People, Places, Events, Decisions, Tasks, How-tos. (saved, not used yet) | Facts, Preferences, People, Places, Events, Decisions, Tasks, How-tos | owner settings |
-| **Never remember**<br>`memory.never` | Topics Conker never saves to memory. (saved, not used yet) | Health, Money, Passwords, Other people's secrets | owner settings |
+| **Never remember**<br>`memory.never` | Topics Conker never saves to memory on its own. (applies right away) | Health, Money, Passwords, Other people's secrets | owner settings |
 
 ### Recall
 
@@ -605,7 +605,7 @@ How Conker's tools, Terminal, browser and web search behave.
 | **Tools that change your things**<br>`tools.defaults.change` | What new tools that change your things start with. Choices: Ask me, AI decides, Full access. (saved, not used yet) | AI decides | owner settings |
 | **Tools that send or post**<br>`tools.defaults.outward` | What new tools that reach other people start with. Choices: Ask me, AI decides. (saved, not used yet) | Ask me | owner settings |
 | **Tool time limit**<br>`tools.timeout` | The most one tool call may take; tools with a shorter limit keep theirs. 5 to 180 seconds. (applies right away) | `180` seconds | toolgate `/v2/owner/settings` `tool_seconds` |
-| **Largest tool result**<br>`tools.result_limit` | The most a tool result may hold. 1 to 1024 KB. (saved, not used yet) | `64` KB | owner settings |
+| **Largest tool result**<br>`tools.result_limit` | The most of one tool result the model sees. 1 to 1024 KB. (applies from the next message) | `64` KB | owner settings |
 | **Tool screens**<br>`tools.apps` | Whether tools may show their own small screens in a chat. Choices: Auto, Off. (saved, not used yet) | Auto | owner settings |
 | **Tools Conker drafts**<br>`tools.drafts` | What happens to a tool Conker drafts for you. Choices: Ask you, Save as a draft. (saved, not used yet) | Ask you | owner settings |
 
