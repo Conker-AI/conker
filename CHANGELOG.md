@@ -6,6 +6,12 @@ which module versions a release pins.
 
 ## Unreleased
 
+## 0.6.43
+
+Beta build from main. Changes since the last tag:
+
+- feat: conker quiet, asks per week and how many helped (R-M11, R-E13) (#455)
+
 ## 0.6.0
 
 - **The folded update card says "Updating to X.Y.Z...".** While an update runs, the card in the Inbox no longer loses its button in silence. (#391)
