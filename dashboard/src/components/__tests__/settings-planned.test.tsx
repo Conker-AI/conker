@@ -92,12 +92,12 @@ describe('planned settings on the Settings screen', { timeout: 60_000 }, () => {
   })
 
   it('a topic where everything is planned shows a calm empty state, not a blank page', async () => {
-    openSettings('/settings?group=prompts')
+    openSettings('/settings?group=integrations')
     expect(await screen.findByText('Nothing here works yet', {}, SLOW)).not.toBeNull()
-    const prompts = ALL_SETTINGS.filter(setting => setting.group === 'prompts').length
-    fireEvent.click(button(`Show planned (${prompts})`))
+    const integrations = ALL_SETTINGS.filter(setting => setting.group === 'integrations').length
+    fireEvent.click(button(`Show planned (${integrations})`))
     expect(screen.queryByText('Nothing here works yet')).toBeNull()
-    expect(screen.getByText(SETTINGS_BY_ID.get('prompts.builtin')!.title)).not.toBeNull()
+    expect(screen.getByText(SETTINGS_BY_ID.get('integrations.calendar')!.title)).not.toBeNull()
   })
 
   it('stay hidden, and the switch still works for this page, when the browser blocks storage', async () => {
