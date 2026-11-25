@@ -14,7 +14,10 @@ export async function open(page: Page, address: string) {
 
 /** The Inbox shows five waiting cards at first (Settings > Your day > Cards at once); this shows the rest. */
 export async function showAllWaiting(page: Page) {
-  await page.getByRole('button', { name: 'Show all', exact: true }).click()
+  // The summary and the cards draw together once every source answered.
+  await page.getByText(/(need|needs) you ·|^All clear ·|didn’t load/).first().waitFor()
+  const all = page.getByRole('button', { name: 'Show all', exact: true })
+  if (await all.isVisible()) await all.click()
 }
 
 /** An Inbox card's answer buttons sit next to its "Later" button. */
