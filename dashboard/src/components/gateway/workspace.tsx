@@ -16,6 +16,7 @@ import { InboxAttentionProvider } from './inbox-attention'
 import { GatewayHeader } from './header'
 import { WorkspaceChromeProvider } from '@/components/design-system/workspace-chrome'
 import { UniversalSearchProvider } from './universal-search'
+import { ShortcutList } from './shortcut-list'
 import type { GatewayControlClient } from '@/lib/gateway/control'
 import type { GatewayAuthStore } from '@/lib/gateway/auth-store'
 import type { GatewayActivityClient } from '@/lib/gateway/activity'
@@ -136,5 +137,6 @@ export function GatewayWorkspace({ runtime, activity, authStore, conversationSta
       conversationState.setState({ selected: intent.sessionId, taskIntent: intent })
       selectSession(intent.sessionId)
     }} /></div></Suspense></ErrorBoundary>}
+    <ShortcutList />
   </ConnectedWorkspaceShell></InboxAttentionProvider></WorkspaceChromeProvider></UniversalSearchProvider></SessionDiscoveryProvider>
 }

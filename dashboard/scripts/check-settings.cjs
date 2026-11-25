@@ -93,6 +93,15 @@ async function main() {
     else assert.ok(setting.home.path === '/v2/owner/settings' && setting.home.key === 'settings' && toolFields.includes(setting.home.field), setting.id)
     assert.equal(setting.home.verify, true, `${setting.id}: ToolGate saves ask for the password`)
   }
+  // Page-wide appearance choices (round six): every option other than the theme's own look has a CSS rule.
+  const looks = read('src/styles/appearance-settings.css')
+  const pageMarks = { 'appearance.contrast': ['contrast', { true: 'more' }], 'appearance.ligatures': ['ligatures', { true: 'on' }], 'appearance.color_vision': ['color-vision'], 'appearance.font': ['font'], 'appearance.code_font': ['code-font'], 'appearance.line_spacing': ['line-spacing'], 'appearance.density': ['density'] }
+  for (const [id, [attribute, toggle]] of Object.entries(pageMarks)) {
+    const setting = settings.find(item => item.id === id)
+    assert.equal(setting.effect, 'live', id)
+    const marked = toggle ? Object.values(toggle) : setting.options.map(option => option.value).filter(value => value !== setting.default)
+    for (const value of marked) assert.ok(looks.includes(`[data-${attribute}='${value}']`), `${id}: ${value} has a rule in appearance-settings.css`)
+  }
   console.log(`Settings passed: ${groups.length} topics, ${settings.length} settings, one row template, every block and control present, password only where it guards something.`)
 }
 main().catch(error => { console.error(error); process.exitCode = 1 })

@@ -1,0 +1,122 @@
+/*
+ * Appearance settings (Settings, Appearance) that src/settings/appearance.ts marks on <html>. Each
+ * default leaves the page exactly as the theme draws it; only a choice the owner made adds a rule.
+ */
+
+/* Fonts are fetched only when a chosen font is first used: an @font-face rule costs a few bytes of
+   CSS until text asks for that family (the browser loads only the subsets the text needs). */
+@import '@fontsource-variable/atkinson-hyperlegible-next';
+@import '@fontsource/opendyslexic/400.css';
+@import '@fontsource/opendyslexic/700.css';
+@import '@fontsource-variable/jetbrains-mono';
+@import '@fontsource-variable/fira-code';
+
+/* High contrast (ledger: Text contrast, Non-text contrast). Light: text neutral-950 on white 19.8:1,
+   secondary text neutral-700 10.4:1 (AAA); lines and field edges neutral-500 4.7:1. Dark: text
+   neutral-50 17.3:1, secondary neutral-300 12.2:1; lines neutral-500 3.8:1 (3:1 needed). */
+:root[data-contrast='more'] {
+  --foreground: var(--color-neutral-950);
+  --card-foreground: var(--foreground);
+  --popover-foreground: var(--foreground);
+  --accent-foreground: var(--foreground);
+  --secondary-foreground: var(--foreground);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-accent-foreground: var(--foreground);
+  --muted-foreground: var(--color-neutral-700);
+  --border: var(--color-neutral-500);
+  --input: var(--color-neutral-500);
+  --sidebar-border: var(--color-neutral-500);
+}
+:root.dark[data-contrast='more'] {
+  --foreground: var(--color-neutral-50);
+  --muted-foreground: var(--color-neutral-300);
+}
+
+/* Color-blind friendly status colors (ledger: Color meaning; color is always paired with words).
+   Chosen by simulating each status color for the color vision named (Machado, Oliveira and
+   Fernandes 2009, full severity) and keeping the four apart, with every status text at least 4.5:1
+   in both themes. Smallest color difference between two statuses (CIELAB, simulated), theme's own
+   colors -> these: red and green, light 6 -> 31 (warning and danger looked alike), dark 20 -> 47;
+   blue and yellow, light 25 -> 43 (success and info looked alike), dark 21 -> 43.
+   Red and green: danger turns magenta in light; success turns cyan in dark. Blue and yellow: info
+   turns violet, and warning darkens in light. */
+:root[data-color-vision='red_green']:not(.dark) {
+  --destructive: var(--color-fuchsia-700);
+  --destructive-foreground: var(--color-fuchsia-800);
+}
+:root.dark[data-color-vision='red_green'] {
+  --success: var(--color-cyan-500);
+  --success-foreground: var(--color-cyan-300);
+  --info-foreground: var(--color-blue-500);
+}
+:root[data-color-vision='blue_yellow'] {
+  --info: var(--color-violet-500);
+  --info-foreground: var(--color-violet-700);
+}
+:root[data-color-vision='blue_yellow']:not(.dark) {
+  --warning: var(--color-yellow-500);
+  --warning-foreground: var(--color-yellow-800);
+}
+:root.dark[data-color-vision='blue_yellow'] {
+  --info-foreground: var(--color-violet-400);
+}
+
+/* Fonts. Inter is the theme's own font (index.css); System uses this device's interface font. */
+:root[data-font='system'] {
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+:root[data-font='atkinson'] {
+  --font-sans: 'Atkinson Hyperlegible Next Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+}
+:root[data-font='dyslexic'] {
+  --font-sans: 'OpenDyslexic', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+}
+:root[data-code-font='jetbrains'] {
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+:root[data-code-font='fira'] {
+  --font-mono: 'Fira Code Variable', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+/* Code ligatures: off by default, so => and != stay two signs even in a font that joins them. */
+code,
+kbd,
+samp,
+pre,
+.font-mono {
+  font-variant-ligatures: none;
+}
+:root[data-ligatures='on'] :is(code, kbd, samp, pre, .font-mono) {
+  font-variant-ligatures: normal;
+}
+
+/* Line spacing (ledger: Base type size, line height 1.4-1.6). Compact and Relaxed put screen text at
+   the ends of that range; answers keep the 0.2 they sit above screen text at Normal (1.5 and 1.7). */
+:root[data-line-spacing='compact'] {
+  line-height: 1.4;
+  --text-sm--line-height: 1.4;
+  --text-base--line-height: 1.4;
+  --text-lg--line-height: 1.4;
+  --answer-line-height: 1.6;
+}
+:root[data-line-spacing='relaxed'] {
+  line-height: 1.6;
+  --text-xs--line-height: 1.6;
+  --text-sm--line-height: 1.6;
+  --text-base--line-height: 1.6;
+  --text-lg--line-height: 1.6;
+  --answer-line-height: 1.8;
+}
+
+/* Density (ledger: Density, Spacing 4 px grid, Targets). Rows, list gaps and page gaps change;
+   buttons and fields keep their size, and a compact row is still 48 px, above the 44 px target. */
+:root[data-density='compact'] {
+  --collection-row-height: 3rem;
+  --page-section-gap: 1rem;
+  --collection-section-gap: 0.75rem;
+}
+:root[data-density='spacious'] {
+  --collection-row-height: 4.5rem;
+  --page-section-gap: 2rem;
+  --collection-section-gap: 1.5rem;
+}
