@@ -23,6 +23,7 @@ import { HomeJumpBackIn } from './home-resume'
 import { summarizeSetup } from './setup-presentation'
 import { useGatewaySetupStatus } from './setup-status-hook'
 import { GatewayPageFrame } from './page-frame'
+import { FocusBar } from './focus-bar'
 import { useInboxAttention } from '@/lib/workspace-chrome'
 import './home-bento.css'
 import { formatDateTime } from '@/lib/date-format'
@@ -140,11 +141,13 @@ export function GatewayTodayWorkspace({ runtime, activity, owner, proposals, con
   const setupSummary = setupStatus && setupStatus.state !== 'complete' ? summarizeSetup(setupStatus) : null
   // Settings > Home and Projects: how many waiting items, the greeting, and which tiles show.
   const needsLimit = useServerSetting('home.needs_count', HOME_NEEDS_LIMIT)
+  // Settings > Your day: Easy mode shows one waiting item; Focus mode keeps only "Needs you".
+  const easy = useServerSetting('day.easy_mode', false), focus = useServerSetting('day.focus_mode', false)
   const greetingStyle = useServerSetting<'none' | 'short' | 'encouraging'>('home.greeting', 'short')
   const planRing = useServerSetting<'home' | 'composer' | 'both' | 'off'>('home.plan_ring', 'both')
   const showPlan = planRing === 'home' || planRing === 'both', showTasks = useServerSetting('projects.tasks_home', true)
 
-  const home = buildHome(data, undefined, needsLimit)
+  const home = buildHome(data, undefined, easy ? 1 : needsLimit)
   const missing = (source: Source) => !!failed?.sources.has(source) && !loaded.has(source)
   const waiting = (source: Source) => loading && !loaded.has(source)
   const retry = () => { void load(); void reloadPlan(); setRefreshed(value => value + 1) }
@@ -155,7 +158,7 @@ export function GatewayTodayWorkspace({ runtime, activity, owner, proposals, con
   const name = profile.name && profile.name !== 'You' ? `, ${profile.name}` : ''
   const counted = (source: Source) => !waiting(source) && !missing(source)
   const earned = greetingStyle === 'encouraging' && counted('requests') && counted('proposals') ? earnedLine(home.decidedToday, counted('runs') ? home.runsToday : 0) : null
-  const layout = !showPlan && !showTasks ? 'no-plan-done' : !showPlan ? 'no-plan' : !showTasks ? 'no-done' : undefined
+  const layout = focus ? 'focus' : !showPlan && !showTasks ? 'no-plan-done' : !showPlan ? 'no-plan' : !showTasks ? 'no-done' : undefined
 
   return <GatewayPageFrame>
     <div className="home-overview mx-auto flex w-full max-w-6xl min-w-0 flex-col gap-5">
@@ -163,7 +166,7 @@ export function GatewayTodayWorkspace({ runtime, activity, owner, proposals, con
       <div className="min-w-0 space-y-1">
         {greetingStyle !== 'none' && <p className="text-xl font-semibold leading-7">{greeting()}{name}</p>}
         <p className="text-sm text-muted-foreground">{formatDateTime(new Date(), { weekday: 'long', day: 'numeric', month: 'long' })}</p>
-        {earned && <p className="text-sm">{earned}</p>}
+        {earned && !focus && <p className="text-sm">{earned}</p>}
       </div>
       {(setupSummary || setupError) && <Link to="/setup" className="flex min-w-0 items-center gap-3 rounded-xl border px-4 py-3 text-sm outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring">
         <CircleDashed className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
@@ -171,7 +174,8 @@ export function GatewayTodayWorkspace({ runtime, activity, owner, proposals, con
           <span className="block truncate text-muted-foreground">{setupError ? 'Status unavailable' : setupSummary && setupStatus ? `${setupSummary.resolved} of ${setupStatus.steps.length} steps resolved` : 'Checking setup…'}</span></span>
         <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
       </Link>}
-      <HomeJumpBackIn runtime={runtime} editor={control.editorDrafts} tasks={data.tasks} refresh={refreshed} />
+      {focus && <FocusBar client={control.settings} hidden="Home shows only what needs you. The rest of Home comes back when focus is off." />}
+      {!focus && <HomeJumpBackIn runtime={runtime} editor={control.editorDrafts} tasks={data.tasks} refresh={refreshed} />}
       {allFailed && <InlineError error={failed.error} onRetry={() => Promise.all([load(), reloadPlan()])} />}
 
       <div className="home-bento" data-layout={layout}>
@@ -183,7 +187,7 @@ export function GatewayTodayWorkspace({ runtime, activity, owner, proposals, con
           {missing('proposals') && !missing('requests') && <p className="text-xs text-muted-foreground">Ideas didn’t load; decisions above are current.</p>}
         </Tile>
 
-        {showPlan && <Tile area="plan" label="Plan allowance" icon={<Gauge />}>
+        {showPlan && !focus && <Tile area="plan" label="Plan allowance" icon={<Gauge />}>
           {plan.status === 'loading' ? <TileLoading rows={3} /> : plan.status === 'failed' ? <TileFailed onRetry={() => void reloadPlan()} />
             : plan.status === 'unsupported' ? <><p className="text-sm font-medium">Not connected yet</p><p className="text-sm text-muted-foreground">Your server doesn’t report plan limits yet. They show here after the next Conker update.</p></>
               : !plan.rows.length ? <><p className="text-sm font-medium">No readings yet</p><p className="text-sm text-muted-foreground">Limits show here once Conker reads a connected Claude or ChatGPT plan.</p></>
@@ -193,6 +197,7 @@ export function GatewayTodayWorkspace({ runtime, activity, owner, proposals, con
                 </>}
         </Tile>}
 
+        {!focus && <>
         <Tile area="coming" label="Coming up" icon={<CalendarClock />} link={<TileLink to="/jobs">Jobs</TileLink>}>
           {waiting('jobs') ? <TileLoading /> : missing('jobs') ? <TileFailed onRetry={retry} />
             : home.coming.length ? <ul className="flex flex-col gap-2">{home.coming.map(job => <li key={job.id} className="flex min-w-0 items-baseline gap-3 text-sm">
@@ -214,7 +219,7 @@ export function GatewayTodayWorkspace({ runtime, activity, owner, proposals, con
           </>}
         </Tile>
 
-        {showTasks && <Tile area="done" label="Completed" icon={<ListChecks />} count={missing('tasks') ? null : home.completed.filter(item => item.today).length || null} link={<TileLink to="/activity">Tasks</TileLink>}>
+        {showTasks && !focus && <Tile area="done" label="Completed" icon={<ListChecks />} count={missing('tasks') ? null : home.completed.filter(item => item.today).length || null} link={<TileLink to="/activity">Tasks</TileLink>}>
           {waiting('tasks') ? <TileLoading rows={4} /> : missing('tasks') ? <TileFailed onRetry={retry} />
             : home.completed.length ? <ul className="flex flex-col divide-y">{home.completed.map(task => <li key={task.id}>
               <Link to={`/activity?tab=tasks&task=${encodeURIComponent(task.id)}`} className="flex min-h-6 pointer-coarse:min-h-11 min-w-0 items-start gap-3 py-2.5 text-sm outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring">
@@ -240,6 +245,7 @@ export function GatewayTodayWorkspace({ runtime, activity, owner, proposals, con
             <Button variant="outline" size="sm" render={<Link to="/system?tab=terminal" />}><SquareTerminal />Terminal</Button>
           </div>
         </Tile>
+        </>}
       </div>
     </div>
   </GatewayPageFrame>

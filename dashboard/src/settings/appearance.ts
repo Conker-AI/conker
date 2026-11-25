@@ -47,6 +47,8 @@ function applyShell() {
     const value = serverSetting(id, standard as never) as unknown
     mark(name, value === standard ? null : value === true ? on : String(value))
   }
+  // Easy mode (Settings > Your day) brings Larger buttons with it: the same 44 px reach, the same rule.
+  if (serverSetting('day.easy_mode', false)) mark('targets', 'large')
   applyDateFormat()
 }
 

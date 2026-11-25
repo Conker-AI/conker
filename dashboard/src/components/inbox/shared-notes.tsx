@@ -4,6 +4,7 @@ import { Share2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { gatewayConversationLink } from '@/components/gateway/navigation'
 import type { SharedNote, SharedNotesClient } from '@/lib/gateway/shared-notes'
+import { fullTime } from '@/lib/shown-time'
 import { InboxCard } from './inbox-card'
 
 /** Loads the client on first use (`control.shared`). */
@@ -15,7 +16,7 @@ export type SharedNotesInboxClient = () => Promise<Pick<SharedNotesClient, 'list
  * text; Got it clears the line (the chat keeps the text until the owner forgets the chat). A failed
  * read shows nothing new.
  */
-export function SharedNotes({ client, active }: { client: SharedNotesInboxClient; active: boolean }) {
+export function SharedNotes({ client, active, now }: { client: SharedNotesInboxClient; active: boolean; now: number }) {
   const navigate = useNavigate()
   const [items, setItems] = useState<SharedNote[]>([])
   const generation = useRef(0)
@@ -60,7 +61,8 @@ export function SharedNotes({ client, active }: { client: SharedNotesInboxClient
             key={note.id}
             icon={<Share2 />}
             title={note.title}
-            source={`Shared from another app · ${new Date(note.createdAt * 1000).toLocaleDateString()}`}
+            source="Shared from another app"
+            came={{ at: note.createdAt * 1000, now }}
             summary="Kept in a chat of its own as someone else’s words. Open it to ask Conker about it."
             primary={
               <Button type="button" size="sm" onClick={open}>
@@ -79,7 +81,7 @@ export function SharedNotes({ client, active }: { client: SharedNotesInboxClient
             }
             facts={[
               ['From', 'You, from another app'],
-              ['Saved', new Date(note.createdAt * 1000).toLocaleString()],
+              ['Saved', fullTime(note.createdAt * 1000)],
             ]}
             onLater={() => clear(note)}
             laterLabel="Got it"

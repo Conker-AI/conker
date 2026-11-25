@@ -116,7 +116,7 @@ describe('AgentNoteCard', () => {
   it('is folded to the finding’s title, marked as from an AI job, with the one answer beside it', () => {
     inRouter(<AgentNoteCard note={note()} now={NOW} onOpen={() => undefined} />)
     const card = screen.getByRole('article', { name: 'Your invoices are overdue' })
-    expect(within(card).getByText('AI job')).not.toBeNull()
+    expect(within(card).getByText(/^AI job · \d+ (min|hr) ago$/)).not.toBeNull()
     expect(within(card).getByRole('button', { name: 'Open chat' })).not.toBeNull()
     expect(screen.queryByText('Three invoices passed their due date.')).toBeNull()
   })
@@ -164,7 +164,7 @@ describe('AgentNoteCard', () => {
   })
 
   it.each([
-    ['a few seconds', 20, '1 min ago'],
+    ['a few seconds', 20, 'Just now'],
     ['minutes', 59 * 60, '59 min ago'],
     ['hours', 3 * 3600 + 120, '3 hr ago'],
     ['days', 2 * 86_400 + 3600, '2 days ago'],
@@ -208,14 +208,14 @@ describe('AskCard', () => {
   it('is folded to the question, who asks and in which chat, with an Answer button', () => {
     show()
     const card = screen.getByRole('article', { name: 'Should I book the cheaper flight?' })
-    expect(within(card).getByText('Conker asks · Trip planning')).not.toBeNull()
+    expect(within(card).getByText(/^Conker asks · Trip planning · /)).not.toBeNull()
     expect(within(card).getByRole('button', { name: 'Answer' })).not.toBeNull()
     expect(screen.queryByRole('button', { name: 'Yes, book it' })).toBeNull()
   })
 
   it('says "a chat" for a chat with no title, and "Untitled chat" in the record', () => {
     show({}, ask({ chatTitle: '' }))
-    expect(screen.getByText('Conker asks · a chat')).not.toBeNull()
+    expect(screen.getByText(/^Conker asks · a chat · /)).not.toBeNull()
     open()
     fireEvent.click(screen.getByRole('button', { name: 'Advanced' }))
     expect(screen.getByText('Chat').nextElementSibling!.textContent).toBe('Untitled chat')
@@ -288,7 +288,7 @@ describe('AskCard', () => {
   })
 
   it.each([
-    ['a moment', 10, '1 min ago'],
+    ['a moment', 10, 'Just now'],
     ['hours', 5 * 3600, '5 hr ago'],
     ['days', 3 * 86_400, '3 days ago'],
   ])('says how long ago it was asked, %s', (_label, seconds, words) => {

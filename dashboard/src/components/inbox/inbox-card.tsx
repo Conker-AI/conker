@@ -3,6 +3,8 @@ import { ChevronRight, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
+import { shownTime } from '@/lib/shown-time'
+import { useTimeStyle } from '@/components/use-time-style'
 
 /** One line under "Advanced": a label and its value (when it came, from whom, which chat). */
 export type InboxFact = readonly [label: string, value: ReactNode]
@@ -12,12 +14,14 @@ export type InboxFact = readonly [label: string, value: ReactNode]
  * title, a muted "source · subject" line, the one answer that settles it (`primary`) and an X for
  * "not now". Tapping it opens the item in place: the main thing first (`summary`, then `children`),
  * every answer (`actions`), and last an "Advanced ›" fold with the record (`facts`, `advanced`) that
- * nobody needs to decide. Every kind of item uses this one layout, never a side window.
+ * nobody needs to decide. Every kind of item uses this one layout, never a side window. `came` adds
+ * when it arrived to the source line, as Settings > Appearance > Times shows times (or not at all).
  */
 export function InboxCard({
   icon,
   title,
   source,
+  came,
   primary,
   openLabel,
   summary,
@@ -34,6 +38,7 @@ export function InboxCard({
   icon: ReactNode
   title: string
   source: ReactNode
+  came?: { at: number; now: number }
   primary?: ReactNode
   openLabel?: string
   summary?: ReactNode
@@ -51,6 +56,8 @@ export function InboxCard({
     [more, setMore] = useState(false)
   const body = useId(),
     record = useId()
+  const style = useTimeStyle()
+  const arrived = came ? shownTime(came.at, came.now, style) : null
   // Folded, the one answer sits beside the title; `openLabel` is an answer that needs the card open (typing a reply).
   const answer =
     primary ??
@@ -74,7 +81,9 @@ export function InboxCard({
           </span>
           <span className="min-w-0 flex-1">
             <h3 className={cn('font-medium leading-5 [overflow-wrap:anywhere]', !expanded && 'line-clamp-2')}>{title}</h3>
-            <span className="mt-0.5 block truncate text-xs leading-5 text-muted-foreground">{source}</span>
+            <span className="mt-0.5 block truncate text-xs leading-5 text-muted-foreground">{source}
+              {arrived && <> · {arrived}</>}
+            </span>
           </span>
         </button>
         {!expanded && answer && <div className="order-last flex w-full shrink-0 justify-end pl-12 sm:order-none sm:w-auto sm:pl-0">{answer}</div>}

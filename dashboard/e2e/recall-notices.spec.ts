@@ -1,12 +1,13 @@
 // "A memory you corrected was used", on the preview gateway: the card lists the chats and opens them,
 // Dismiss hides it, a failed read is named without hiding the rest of the Inbox.
 import { expect, test } from '@playwright/test'
-import { open } from './pages'
+import { open, showAllWaiting } from './pages'
 
 const TITLE = 'A memory you corrected was used in 3 answers in 2 chats'
 
 test('the card lists the chats that used the memory and opens one', async ({ page }) => {
   const errors = await open(page, '/inbox')
+  await showAllWaiting(page)
   const card = page.getByRole('article', { name: TITLE })
   await expect(card).toBeVisible()
   await card.getByRole('button', { name: /See the chats/ }).click()
@@ -21,16 +22,19 @@ test('the card lists the chats that used the memory and opens one', async ({ pag
 test('Dismiss hides the card and the count follows', async ({ page }) => {
   const errors = await open(page, '/inbox')
   await expect(page.getByText(/\d+ needs? you/).first()).toBeVisible()
+  await showAllWaiting(page)
   await page.getByRole('button', { name: `Dismiss: ${TITLE}` }).click()
   await expect(page.getByRole('article', { name: TITLE })).toBeHidden()
   await page.reload()
   await page.locator('main:not([role="status"])').first().waitFor()
+  await showAllWaiting(page)
   await expect(page.getByRole('article', { name: TITLE })).toBeVisible() // the preview forgets the tab's own dismissal on reload
   expect(errors).toEqual([])
 })
 
 test('a forgotten memory says so and a chat without a name is still openable', async ({ page }) => {
   const errors = await open(page, '/inbox?preview-recall=forgotten')
+  await showAllWaiting(page)
   const card = page.getByRole('article', { name: 'A memory you forgot was used in 1 answer in 1 chat' })
   await card.getByRole('button', { name: /See the chats/ }).click()
   await expect(card.getByText(/You told Conker to forget a memory/)).toBeVisible()

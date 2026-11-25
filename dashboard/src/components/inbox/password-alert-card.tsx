@@ -2,11 +2,9 @@ import { ShieldAlert } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import type { PasswordAlerts } from '@/lib/gateway/password-alerts'
 import { InboxCard, type InboxFact } from './inbox-card'
+import { factTime, shownTime } from '@/lib/shown-time'
+import { useTimeStyle } from '@/components/use-time-style'
 
-function relative(seconds: number, now: number) {
-  const minutes = Math.max(0, Math.floor((now - seconds * 1000) / 60000))
-  return minutes < 1 ? 'Just now' : minutes < 60 ? `${minutes} min ago` : minutes < 1440 ? `${Math.floor(minutes / 60)} hr ago` : `${Math.floor(minutes / 1440)} days ago`
-}
 /** Where a wrong password came from, in plain words. */
 const passwordAlertOrigin: Record<PasswordAlerts['results'][number]['origin'], string> = {
   new_device: 'A new browser',
@@ -22,7 +20,8 @@ const passwordAlertOrigin: Record<PasswordAlerts['results'][number]['origin'], s
 export function PasswordAlertCard({ alerts, now, busy, error, onSeen, onRevokeAll }: { alerts: PasswordAlerts; now: number; busy: boolean; error: string | null; onSeen: () => void; onRevokeAll: () => void }) {
   const unseen = alerts.results.filter(alert => !alert.seen)
   const last = unseen[0]?.at ?? alerts.results[0]?.at ?? 0
-  const source = `${alerts.unseen} ${alerts.unseen === 1 ? 'time' : 'times'} · last ${relative(last, now)}`
+  const style = useTimeStyle(), lastShown = shownTime(last * 1000, now, style)
+  const source = `${alerts.unseen} ${alerts.unseen === 1 ? 'time' : 'times'}${lastShown ? ` · last ${lastShown}` : ''}`
   return (
     <InboxCard
       icon={<ShieldAlert className="text-warning-foreground" />}
@@ -44,7 +43,7 @@ export function PasswordAlertCard({ alerts, now, busy, error, onSeen, onRevokeAl
             {unseen.map((alert, index) => (
               <p key={`${alert.at}-${index}`} className="flex flex-wrap items-baseline gap-x-2">
                 <span className="text-foreground">
-                  {relative(alert.at, now)} · {new Date(alert.at * 1000).toLocaleString()}
+                  {factTime(alert.at * 1000, now, style)}
                 </span>
                 <span className="text-muted-foreground">{passwordAlertOrigin[alert.origin]}</span>
               </p>

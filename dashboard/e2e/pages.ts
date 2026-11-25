@@ -12,6 +12,11 @@ export async function open(page: Page, address: string) {
   return errors
 }
 
+/** The Inbox shows five waiting cards at first (Settings > Your day > Cards at once); this shows the rest. */
+export async function showAllWaiting(page: Page) {
+  await page.getByRole('button', { name: 'Show all', exact: true }).click()
+}
+
 /** An Inbox card's answer buttons sit next to its "Later" button. */
 export function card(page: Page, title: string) {
   return page.getByRole('button', { name: `Later: ${title}` }).locator('xpath=..')

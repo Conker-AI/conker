@@ -22,7 +22,7 @@ import type { GatewayAuthStore } from '@/lib/gateway/auth-store'
 import type { GatewayRuntimeWorkspaceState } from './runtime-state'
 import type { GatewaySourcePrivacyState } from './source-privacy'
 import { useChatDirectory } from './use-chat-directory'
-import { formatDateTime } from '@/lib/date-format'
+import { ShownTime } from '@/components/shown-time'
 
 const sorts = [
   { value: 'newest', label: 'Newest' },
@@ -35,7 +35,6 @@ const shows = [
   { value: 'include', label: 'All' },
   { value: 'trash', label: 'Trash' },
 ] as const satisfies readonly { value: HistoryArchived; label: string }[]
-const when = (value: string) => formatDateTime(value, { month: 'short', day: 'numeric' })
 
 export function GatewayChatsWorkspace({
   runtime,
@@ -324,7 +323,7 @@ export function GatewayChatsWorkspace({
               icon={<MessageSquare />}
               title={session.title ? `${session.title}${session.titleTruncated ? '…' : ''}` : 'Untitled chat'}
               sub={session.summaryPreview ? `${session.summaryPreview}${session.summaryTruncated ? '…' : ''}` : 'Continue this conversation'}
-              meta={when(session.createdAt)}
+              meta={<ShownTime at={session.createdAt} />}
             />
           ))}
         </ListCard>
