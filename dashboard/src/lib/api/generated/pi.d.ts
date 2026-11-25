@@ -470,6 +470,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/push/claim": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Claim Push
+         * @description Claim the Inbox items that may wake the owner's devices now; each is claimed once.
+         */
+        post: operations["claim_push_push_claim_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/plans/usage": {
         parameters: {
             query?: never;
@@ -2173,6 +2193,26 @@ export interface paths {
          * @description The last `days` days against the `days` before: what asked for the owner, what did not.
          */
         get: operations["quiet_insights_quiet_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/insights/quiet/weeks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Weeks
+         * @description The last `weeks` ISO weeks in the owner's zone: what Conker raised, what became of it.
+         */
+        get: operations["weeks_insights_quiet_weeks_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -7253,6 +7293,16 @@ export interface components {
             /** Excerpt */
             excerpt?: string | null;
         };
+        /** Claim */
+        Claim: {
+            /** After */
+            after: number;
+            /**
+             * Limit
+             * @default 5
+             */
+            limit: number;
+        };
         /** Code */
         Code: {
             /**
@@ -9064,6 +9114,17 @@ export interface components {
             /** Candidates */
             candidates: components["schemas"]["Candidate"][];
         };
+        /** Outcomes */
+        Outcomes: {
+            /** Raised */
+            raised: number;
+            /** Actedon */
+            actedOn: number;
+            /** Dismissed */
+            dismissed: number;
+            /** Unanswered */
+            unanswered: number;
+        };
         /** Output */
         Output: {
             /**
@@ -9538,6 +9599,47 @@ export interface components {
             days: number;
             current: components["schemas"]["QuietWindow"];
             previous: components["schemas"]["QuietWindow"];
+        };
+        /** QuietWeek */
+        QuietWeek: {
+            /** Week */
+            week: string;
+            /** Startsat */
+            startsAt: number;
+            /** Endsat */
+            endsAt: number;
+            /** Asks */
+            asks: number;
+            /** Raised */
+            raised: number;
+            /** Approvalsasked */
+            approvalsAsked: number;
+            /** Pushed */
+            pushed: number;
+            /** Actedon */
+            actedOn: number;
+            /** Dismissed */
+            dismissed: number;
+            /** Unanswered */
+            unanswered: number;
+            /** Usefulshare */
+            usefulShare: number | null;
+            suggestions: components["schemas"]["Outcomes"];
+            questions: components["schemas"]["Outcomes"];
+            changeRequests: components["schemas"]["Outcomes"];
+            notices: components["schemas"]["Outcomes"];
+        };
+        /** QuietWeeks */
+        QuietWeeks: {
+            /**
+             * Schemaversion
+             * @constant
+             */
+            schemaVersion: 1;
+            /** Timezone */
+            timeZone: string;
+            /** Weeks */
+            weeks: components["schemas"]["QuietWeek"][];
         };
         /** QuietWindow */
         QuietWindow: {
@@ -12636,6 +12738,42 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    claim_push_push_claim_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Pi-Owner-Key"?: string | null;
+                "X-Pi-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Claim"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -16333,6 +16471,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["QuietInsights"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    weeks_insights_quiet_weeks_get: {
+        parameters: {
+            query?: {
+                weeks?: number;
+            };
+            header?: {
+                "X-Pi-Owner-Key"?: string | null;
+                "X-Pi-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuietWeeks"];
                 };
             };
             /** @description Validation Error */

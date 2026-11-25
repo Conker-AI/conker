@@ -142,6 +142,8 @@ routes.GET.unshift(/^\/api\/control\/pi\/memory\/[A-Za-z0-9][A-Za-z0-9_.:-]{0,19
 routes.GET.unshift(/^\/api\/control\/pi\/open-loops$/)
 // What Conker will start on its own soon, and what would hold each start back (R-U10): read only.
 routes.GET.unshift(/^\/api\/control\/pi\/insights\/tomorrow$/)
+// How often Conker reached for the owner, per week, and how many of those asks he acted on: read only, counts only.
+routes.GET.unshift(/^\/api\/control\/pi\/insights\/quiet\/weeks$/)
 routes.POST.unshift(/^\/api\/control\/pi\/prompts\/enhance$/)
 // Prompt templates: the owner's forms for a request. Saving one grants nothing, so the signed-in session is enough.
 const templateIdPattern = '(?:tpl_[0-9a-f]{32}|starter-[a-z0-9]+(?:-[a-z0-9]+)*)'

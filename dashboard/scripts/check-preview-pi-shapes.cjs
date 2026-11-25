@@ -48,6 +48,7 @@ export async function run() {
     recallNotices: () => control.recallNotices.list(),
     openLoops: () => control.openLoops.list('open'),
     tomorrow: () => control.tomorrow.read(),
+    quietWeeks: () => control.quietWeeks.read(8),
     chatOutput: () => control.chatNames.output('ses_' + '1'.repeat(16)),
     memoryBeliefs: () => control.memoryBeliefs.list({ origin: 'all', state: 'all' }),
     promptEnhance: () => control.promptEnhance.enhance('Plan my week'),
