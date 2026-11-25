@@ -8,7 +8,6 @@ import { useTimeStyle } from '@/components/use-time-style'
 import { InboxCard } from './inbox-card'
 import { ReplyBox } from './reply-box'
 
-
 /**
  * One of Conker's questions: its options (Conker wrote them) and Reply for his own words. Either
  * goes to that chat as his next message; nothing runs from here.

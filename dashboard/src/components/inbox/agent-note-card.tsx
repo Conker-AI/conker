@@ -6,7 +6,6 @@ import { factTime } from '@/lib/shown-time'
 import { useTimeStyle } from '@/components/use-time-style'
 import { InboxCard } from './inbox-card'
 
-
 /**
  * One finding from an AI job: what needs the owner, in one line. Open chat goes to the full reply;
  * Got it clears the line (the chat keeps the reply either way).

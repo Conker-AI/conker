@@ -20,7 +20,8 @@ const passwordAlertOrigin: Record<PasswordAlerts['results'][number]['origin'], s
 export function PasswordAlertCard({ alerts, now, busy, error, onSeen, onRevokeAll }: { alerts: PasswordAlerts; now: number; busy: boolean; error: string | null; onSeen: () => void; onRevokeAll: () => void }) {
   const unseen = alerts.results.filter(alert => !alert.seen)
   const last = unseen[0]?.at ?? alerts.results[0]?.at ?? 0
-  const style = useTimeStyle(), lastShown = shownTime(last * 1000, now, style)
+  const style = useTimeStyle(),
+    lastShown = shownTime(last * 1000, now, style)
   const source = `${alerts.unseen} ${alerts.unseen === 1 ? 'time' : 'times'}${lastShown ? ` · last ${lastShown}` : ''}`
   return (
     <InboxCard
@@ -42,9 +43,7 @@ export function PasswordAlertCard({ alerts, now, busy, error, onSeen, onRevokeAl
           <div className="flex flex-col gap-1">
             {unseen.map((alert, index) => (
               <p key={`${alert.at}-${index}`} className="flex flex-wrap items-baseline gap-x-2">
-                <span className="text-foreground">
-                  {factTime(alert.at * 1000, now, style)}
-                </span>
+                <span className="text-foreground">{factTime(alert.at * 1000, now, style)}</span>
                 <span className="text-muted-foreground">{passwordAlertOrigin[alert.origin]}</span>
               </p>
             ))}

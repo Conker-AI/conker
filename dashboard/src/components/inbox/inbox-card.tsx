@@ -81,7 +81,8 @@ export function InboxCard({
           </span>
           <span className="min-w-0 flex-1">
             <h3 className={cn('font-medium leading-5 [overflow-wrap:anywhere]', !expanded && 'line-clamp-2')}>{title}</h3>
-            <span className="mt-0.5 block truncate text-xs leading-5 text-muted-foreground">{source}
+            <span className="mt-0.5 block truncate text-xs leading-5 text-muted-foreground">
+              {source}
               {arrived && <> · {arrived}</>}
             </span>
           </span>

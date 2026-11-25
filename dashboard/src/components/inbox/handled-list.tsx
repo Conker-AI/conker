@@ -27,7 +27,6 @@ const UNDO: Record<string, { to: string; label: string }> = {
   'conker.create_team': { to: '/agents?tab=teams', label: 'Archive it in Teams' },
 }
 
-
 /** Inbox, Handled: what ran in the last week without asking you, and who decided. */
 export function HandledList({ client, now }: { client: AccessClient; now: number }) {
   const style = useTimeStyle()
