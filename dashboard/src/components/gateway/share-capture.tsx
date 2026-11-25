@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { connectionStore } from '@/lib/connection-store'
 import { gatewayError } from '@/lib/gateway/transport'
 import type { SharedSaved } from '@/lib/gateway/shared-notes'
-import { clearShared, loadShared, readShared, SHARE_LIMIT, sharedText, type ShareStorage } from '@/lib/share-capture'
+import { clearShared, keepShared, loadShared, readShared, SHARE_LIMIT, sharedText, type ShareStorage } from '@/lib/share-capture'
 import { shareStorage } from '@/pwa/share-target'
 import { gatewayConversationLink } from './navigation'
 import { GatewayPageFrame } from './page-frame'
@@ -32,12 +32,11 @@ export function GatewayShareCapture({ client, storage = shareStorage() }: Props)
   const location = useLocation(),
     navigate = useNavigate()
   const online = useStore(connectionStore, state => state.online)
-  const [shared] = useState(() => {
-    const item = loadShared(storage) ?? readShared(location.search)
-    return item ? sharedText(item) : ''
-  })
+  const [start] = useState(() => loadShared(storage) ?? readShared(location.search))
+  const shared = start ? sharedText(start) : ''
   const [text, setText] = useState(shared)
-  const [identity, setIdentity] = useState(requestId)
+  // A save tried before a reload keeps its id with the text, so it is never saved twice.
+  const [identity, setIdentity] = useState(() => start?.requestId ?? requestId())
   const [pending, setPending] = useState(false)
   const [failure, setFailure] = useState<Failure | null>(null)
   const [saved, setSaved] = useState<SharedSaved | null>(null)
@@ -49,7 +48,8 @@ export function GatewayShareCapture({ client, storage = shareStorage() }: Props)
     if (pending || blank || over > 0 || !online) return
     setPending(true)
     setFailure(null)
-    // A retry of the same text keeps its id, so Pi saves it at most once.
+    // A retry of the same text keeps its id, so Pi saves it at most once; kept in this tab too.
+    keepShared(storage, text, identity)
     try {
       const result = await (await client()).save(identity, text)
       clearShared(storage)

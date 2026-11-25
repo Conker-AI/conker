@@ -33,7 +33,7 @@ export function createSharedNotesClient(auth: Pick<GatewayAuthClient, 'request'>
       return piData(pi.POST('/inbox/shared', { body: { request_id: requestId, text }, signal }), saved)
     },
     list: async (signal?: AbortSignal): Promise<SharedNote[]> => (await piData(pi.GET('/inbox/shared', { signal }), page)).results,
-    /** Hides the note; the chat keeps the text until he forgets the chat. */
+    /** Hides the note; the chat keeps the text until the owner forgets the chat. */
     async dismiss(id: string, signal?: AbortSignal): Promise<void> {
       if (!noteId.safeParse(id).success) throw new GatewayError('validation')
       await piData(pi.POST('/inbox/shared/{identity}/dismiss', { params: { path: { identity: id } }, signal }), z.object({ id: z.literal(id), dismissed: z.literal(true), changed: z.boolean() }).strict())

@@ -10,9 +10,10 @@ import { InboxCard } from './inbox-card'
 export type SharedNotesInboxClient = () => Promise<Pick<SharedNotesClient, 'list' | 'dismiss'>>
 
 /**
- * What the owner shared from another app, each in a chat of its own. They are his own captures, so
- * they sit below what needs him and never count toward it. Open chat goes to the text; Got it clears
- * the line (the chat keeps the text until he forgets the chat). A failed read shows nothing new.
+ * What the owner shared from another app, each in a chat of its own. These are the owner's own
+ * captures, so they sit below what needs the owner and never count toward it. Open chat goes to the
+ * text; Got it clears the line (the chat keeps the text until the owner forgets the chat). A failed
+ * read shows nothing new.
  */
 export function SharedNotes({ client, active }: { client: SharedNotesInboxClient; active: boolean }) {
   const navigate = useNavigate()

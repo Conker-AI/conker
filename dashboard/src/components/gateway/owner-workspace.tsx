@@ -259,7 +259,7 @@ export function GatewayOwnerWorkspace({ client, proposals, checks, changes, asks
           </EmptyHeader>
         </Empty>}
         </>}
-        {/* His own captures: below what needs him, never counted in it. */}
+        {/* The owner's own captures: below what needs the owner, never counted in it. */}
         {shared && showMemories && summary.state !== 'loading' && <SharedNotes client={shared} active={active} />}
         {summary.state !== 'loading' && laterCount > 0 && <section aria-labelledby="inbox-later" className="flex flex-col gap-2">
           <h2 id="inbox-later" className="text-sm font-medium text-muted-foreground">Later <span className="tabular-nums">{laterCount}</span></h2>

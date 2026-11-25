@@ -152,6 +152,22 @@ describe('Shared text', () => {
     expect(screen.getByRole('status').textContent).toBe('Saved to your Inbox.')
   })
 
+  it('a reload after an unknown outcome retries the same request, so it is never saved twice', async () => {
+    const storage = stored('Keep me'),
+      first = client(new GatewayError('network'))
+    show(<GatewayShareCapture client={loaded(first)} storage={storage} />)
+    await save()
+    expect(screen.getByRole('alert').textContent).toContain('couldn’t confirm')
+    cleanup()
+    const again = client()
+    show(<GatewayShareCapture client={loaded(again)} storage={storage} />)
+    expect(box().value).toBe('Keep me')
+    await save()
+    expect(again.calls[0]).toEqual(first.calls[0])
+    expect(screen.getByRole('status').textContent).toBe('Saved to your Inbox.')
+    expect(storage.items).toEqual({})
+  })
+
   it('starts a new request after the text changes following a failure', async () => {
     const api = client(new Error('boom'))
     show(<GatewayShareCapture client={loaded(api)} storage={stored('One')} />)

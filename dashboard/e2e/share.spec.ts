@@ -23,7 +23,10 @@ test('a share opens prefilled, leaves the address, is saved to the Inbox once th
   await page.getByRole('button', { name: 'Done' }).click()
   await expect(page).toHaveURL(/\/overview$/)
   // In the app, not a reload: the preview server keeps what was saved in this page only.
-  await page.getByRole('link', { name: /^Inbox/ }).first().click()
+  await page
+    .getByRole('link', { name: /^Inbox/ })
+    .first()
+    .click()
   const section = page.getByRole('region', { name: 'Shared by you' })
   await expect(section.getByText('Shared: Soup recipe Try this one https://example.com/soup')).toBeVisible()
   expect(errors).toEqual([])
