@@ -91,7 +91,7 @@
         {
           "id": "memory.never",
           "title": "Never remember",
-          "description": "Topics Conker never saves to memory.",
+          "description": "Topics Conker never saves to memory on its own.",
           "type": "tags",
           "default": [
             "Health",
@@ -101,7 +101,7 @@
           ],
           "tier": "basic",
           "scope": "global",
-          "effect": "stored",
+          "effect": "live",
           "max_items": 50
         }
       ]
