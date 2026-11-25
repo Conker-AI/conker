@@ -709,7 +709,7 @@ What is kept, for how long, and what leaves your server.
 | Setting | What it does | Default | Home |
 |---|---|---|---|
 | **Helper models in new chats**<br>`privacy.helpers` | Lets helper models (naming, summaries) see new chats. (applies right away) | on | owner settings |
-| **Hide secrets from online models**<br>`privacy.redact` | Removes passwords, keys and card numbers before anything goes to an online model. (saved, not used yet) | off | owner settings |
+| **Hide secrets from online models**<br>`privacy.redact` | Removes passwords, keys and card numbers before anything goes to an online model. (applies right away) | off | owner settings |
 
 ### How long things are kept
 
