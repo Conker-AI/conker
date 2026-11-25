@@ -2,26 +2,23 @@ import { useEffect } from 'react'
 import { refreshState } from '@/lib/refresh-state'
 import type { GatewayControlClient } from '@/lib/gateway/control'
 import { setDateFormatChoice } from '@/lib/date-format'
-import { cachedServerSetting, cacheServerSetting, DEVICE_EVENT, readDeviceValue } from './device'
+import { DEVICE_EVENT, readDeviceValue } from './device'
 import { publishServerSettings, serverSetting, subscribeServerSettings } from './server-setting'
 
 /**
  * The appearance settings that work today, applied to the page: accent color, corners, bigger
  * focus outlines, larger buttons, chat width, contrast, status colors, fonts, line spacing, density and
  * how times and dates are written (everywhere, from the server), text size and
- * animations (this device). Theme stays
- * with the theme provider. Accent colors keep 4.5:1 contrast with their text in both themes
- * (rationale ledger, Accent hue). Kept apart from the registry so the app's first load stays small.
+ * animations (this device). Theme stays with the theme provider. Accent colors keep 4.5:1 contrast
+ * with their text in both themes (rationale ledger, Accent hue). Server settings paint with the last
+ * value this device saw until the server answers (server-setting.ts). Kept apart from the registry
+ * so the app's first load stays small.
  */
-const ACCENTS = new Set(['neutral', 'blue', 'indigo', 'purple', 'magenta'])
-
 function applyDevice() {
-  const root = document.documentElement
   const percent = Number(readDeviceValue('appearance.text_size', '100'))
-  root.style.fontSize = Number.isFinite(percent) && percent !== 100 ? `${percent}%` : ''
+  document.documentElement.style.fontSize = Number.isFinite(percent) && percent !== 100 ? `${percent}%` : ''
   const motion = readDeviceValue('appearance.motion', 'device')
-  if (motion === 'device') delete root.dataset.motion
-  else root.dataset.motion = String(motion)
+  mark('motion', motion === 'device' ? null : String(motion))
 }
 
 /**
@@ -31,6 +28,7 @@ function applyDevice() {
  * corners, normal outlines, Medium chat width...) is unmarked; any other choice is marked with its value.
  */
 const PAGE_MARKS: [string, string | boolean, string?, string?][] = [
+  ['accent', 'neutral'],
   ['corners', 'soft'],
   ['focus', false, 'large', 'accessibility.focus'],
   ['targets', false, 'large', 'accessibility.large_targets'],
@@ -45,11 +43,9 @@ const PAGE_MARKS: [string, string | boolean, string?, string?][] = [
 ]
 
 function applyShell() {
-  const root = document.documentElement
   for (const [name, standard, on = 'on', id = `appearance.${name.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`)}`] of PAGE_MARKS) {
     const value = serverSetting(id, standard as never) as unknown
-    if (value === standard) delete root.dataset[name]
-    else root.dataset[name] = value === true ? on : String(value)
+    mark(name, value === standard ? null : value === true ? on : String(value))
   }
   applyDateFormat()
 }
@@ -60,11 +56,9 @@ function applyDateFormat() {
 }
 applyDateFormat()
 
-export function applyAccent(value: unknown) {
-  const accent = typeof value === 'string' && ACCENTS.has(value) ? value : 'neutral'
-  if (accent === 'neutral') delete document.documentElement.dataset.accent
-  else document.documentElement.dataset.accent = accent
-  cacheServerSetting('appearance.accent', accent)
+function mark(name: string, value: string | null) {
+  if (value === null) delete document.documentElement.dataset[name]
+  else document.documentElement.dataset[name] = value
 }
 
 /**
@@ -75,8 +69,6 @@ export function useAppearanceSync(client: GatewayControlClient) {
   useEffect(() => {
     applyDevice()
     applyShell()
-    const cached = cachedServerSetting('appearance.accent')
-    if (cached !== undefined) applyAccent(cached)
     window.addEventListener(DEVICE_EVENT, applyDevice)
     const unsubscribe = subscribeServerSettings(applyShell)
     let controller = new AbortController()
@@ -85,10 +77,7 @@ export function useAppearanceSync(client: GatewayControlClient) {
       controller = new AbortController()
       client.settings
         .read(controller.signal)
-        .then(settings => {
-          publishServerSettings(settings)
-          applyAccent(settings.values['appearance.accent'] ?? 'neutral')
-        })
+        .then(publishServerSettings)
         .catch(() => {
           /* keep the cached look */
         })
@@ -114,6 +103,6 @@ export function useAppearanceSync(client: GatewayControlClient) {
 /** For the Settings screen: follows the accent as it changes there. */
 export function useAppearance(accent: unknown) {
   useEffect(() => {
-    if (accent !== undefined) applyAccent(accent)
+    if (typeof accent === 'string') mark('accent', accent === 'neutral' ? null : accent)
   }, [accent])
 }
