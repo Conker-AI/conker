@@ -47,6 +47,10 @@ within 15 minutes; a changed argument needs a new approval. Answering a card con
 the work in its chat by itself. Which actions ask you at all depends on the chat, the
 agent and the tool; the defaults are in **Settings > Access and safety**.
 
+Under the cards, one line says whether Conker is getting quieter: how many times it asked
+for you last full week, and how many of those asks you acted on, against the week before.
+Tap it for the last 8 weeks (also `conker quiet`).
+
 ## Change a setting
 
 **Settings** lists every topic on the left (on a phone, tap a topic to open it). Each

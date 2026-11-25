@@ -57,6 +57,10 @@ async function main() {
   await transport.request('/api/control/pi/insights/tomorrow')
   assert.ok(urls.at(-1).endsWith('/api/control/pi/insights/tomorrow'))
   await assert.rejects(transport.request('/api/control/pi/insights/tomorrow', { method: 'POST', csrfToken, body: {} }), error => error.kind === 'validation')
+  // Asks per week (conker quiet): a read with a whole number of weeks, never a write.
+  await transport.request('/api/control/pi/insights/quiet/weeks', { query: { weeks: 8 } })
+  assert.ok(urls.at(-1).endsWith('/api/control/pi/insights/quiet/weeks?weeks=8'))
+  await assert.rejects(transport.request('/api/control/pi/insights/quiet/weeks', { method: 'POST', csrfToken, body: {} }), error => error.kind === 'validation')
   console.log('Pi routes: memory care, beliefs, recall notices, team runs, prompt enhance and prompt templates pass the transport; unknown routes are refused')
 }
 main().catch(error => { console.error(error); process.exit(1) })
