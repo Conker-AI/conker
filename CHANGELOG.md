@@ -6,6 +6,12 @@ which module versions a release pins.
 
 ## Unreleased
 
+## 0.6.51
+
+Beta build from main. Changes since the last tag:
+
+- feat: settings round 10 - day and time settings take effect (#464)
+
 ## 0.6.0
 
 - **The folded update card says "Updating to X.Y.Z...".** While an update runs, the card in the Inbox no longer loses its button in silence. (#391)
