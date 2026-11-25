@@ -56,7 +56,7 @@
           "default": "auto",
           "tier": "basic",
           "scope": "global",
-          "effect": "stored",
+          "effect": "next-turn",
           "options": [
             {
               "value": "auto",
@@ -84,7 +84,7 @@
           "default": 30,
           "tier": "advanced",
           "scope": "global",
-          "effect": "stored",
+          "effect": "next-turn",
           "min": 5,
           "max": 200,
           "step": 1
@@ -147,7 +147,7 @@
           "default": "answer",
           "tier": "advanced",
           "scope": "global",
-          "effect": "stored",
+          "effect": "next-turn",
           "options": [
             {
               "value": "answer",

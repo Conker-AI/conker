@@ -5,7 +5,7 @@
  */
 export const SHARE_PATH = '/share'
 export const SHARE_KEY = 'conker.share'
-/** Pi's `POST /memory/remember` keeps at most this many characters (pi/memory/stated.py). */
+/** Pi's `POST /inbox/shared` keeps at most this many characters (pi/agents/shared_notes.py). */
 export const SHARE_LIMIT = 2000
 /** Far past the limit, so a long share is still shown as too long, but never stored without bound. */
 const FIELD_LIMIT = 20_000
