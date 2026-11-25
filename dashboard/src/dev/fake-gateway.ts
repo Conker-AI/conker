@@ -5,6 +5,7 @@
  */
 import { GatewayError } from '@/lib/gateway/transport'
 import { createFakeRecallNotices } from './fake-gateway-recall'
+import { fakeQuietWeeks } from './fake-gateway-quiet'
 import { continueAfterDecision, createFakeAgentJobs, createFakeHostOps, createFakeProviderCredentials, fakePlanUsage, withFakeAgentJobs } from './fake-gateway-providers'
 import { createFakeMemory } from './fake-gateway-memory'
 import { createFakeCalls } from './fake-gateway-calls'
@@ -396,7 +397,7 @@ export function createFakeGateway(preview: { setupStep?: 'model' | 'memory' | 'c
     if (path === '/api/pi/tools') return { status: 'ok', results: [...tools, ...agentJobs(path, method, undefined, fail).results as Json[]] }
     const setupHandled = setupHandle(path, method, options)
     if (setupHandled !== undefined) return setupHandled
-    return memoryHandle(path, method, options) ?? recallNotices(path, method) ?? fail(404)
+    return memoryHandle(path, method, options) ?? recallNotices(path, method) ?? fakeQuietWeeks(path, method, options.query, fail) ?? fail(404)
   }
 
   /** Server-sent preview stream, answered for the live chat's fetch. */

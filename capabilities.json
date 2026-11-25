@@ -45,8 +45,8 @@
     },
     {
       "id": "proposals", "name": "Proactive proposals and decisions", "authority": "pi", "state": "active",
-      "gatewayRoutes": ["/api/pi/proposals", "/api/pi/proposals/{id}/decision"], "uiRoutes": ["/inbox"], "cliCommands": ["conker inspect proposals", "conker apply proposals FILE", "conker quiet"], "deploymentRequirements": ["PI_PROPOSALS_ENABLED", "pi_data"],
-      "evidence": [{"path": "dashboard/src/lib/gateway/proposals.ts", "contains": "/api/pi/proposals/${proposalId}/decision"}, {"path": "scripts/cli/conker_quiet.py", "contains": "/insights/quiet/weeks"}, {"path": "docker-compose.yml", "contains": "PI_PROPOSALS_ENABLED: \"true\""}, {"path": "conker", "contains": "cmd_inspect"}]
+      "gatewayRoutes": ["/api/pi/proposals", "/api/pi/proposals/{id}/decision", "/api/control/pi/insights/quiet/weeks"], "uiRoutes": ["/inbox"], "cliCommands": ["conker inspect proposals", "conker apply proposals FILE", "conker quiet"], "deploymentRequirements": ["PI_PROPOSALS_ENABLED", "pi_data"],
+      "evidence": [{"path": "dashboard/src/lib/gateway/proposals.ts", "contains": "/api/pi/proposals/${proposalId}/decision"}, {"path": "scripts/cli/conker_quiet.py", "contains": "/insights/quiet/weeks"}, {"path": "dashboard/src/lib/gateway/quiet-weeks.ts", "contains": "/insights/quiet/weeks"}, {"path": "docker-compose.yml", "contains": "PI_PROPOSALS_ENABLED: \"true\""}, {"path": "conker", "contains": "cmd_inspect"}]
     },
     {
       "id": "owner-approvals", "name": "Tool effect approval inbox", "authority": "toolgate", "state": "active",

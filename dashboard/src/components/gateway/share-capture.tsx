@@ -14,7 +14,8 @@ import { shareStorage } from '@/pwa/share-target'
 import { gatewayConversationLink } from './navigation'
 import { GatewayPageFrame } from './page-frame'
 
-type Client = { save(requestId: string, text: string): Promise<SharedSaved> }
+/** Loads the client on first use (`control.shared`). */
+type Client = () => Promise<{ save(requestId: string, text: string): Promise<SharedSaved> }>
 type Failure = { unknown: boolean; message: string }
 /** `storage` defaults to this tab's session storage. */
 type Props = { client: Client; storage?: ShareStorage | null }
@@ -50,7 +51,7 @@ export function GatewayShareCapture({ client, storage = shareStorage() }: Props)
     setFailure(null)
     // A retry of the same text keeps its id, so Pi saves it at most once.
     try {
-      const result = await client.save(identity, text)
+      const result = await (await client()).save(identity, text)
       clearShared(storage)
       setSaved(result)
     } catch (cause) {

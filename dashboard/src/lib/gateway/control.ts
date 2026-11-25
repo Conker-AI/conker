@@ -12,7 +12,8 @@ import { createMemoryBeliefsClient } from './memory-beliefs'
 import { createMemoryUsesClient } from './memory-uses'
 import { createOpenLoopsClient } from './open-loops'
 import type { Tomorrow } from './tomorrow'
-import type { SharedNote, SharedSaved } from './shared-notes'
+import type { SharedNotesClient } from './shared-notes'
+import type { QuietWeeks } from './quiet-weeks'
 import { createMemoryCareClient } from './memory-care'
 import { createPromptEnhanceClient } from './prompt-enhance'
 import { createPromptTemplatesClient } from './prompt-templates'
@@ -78,7 +79,6 @@ export function createMemoryForgetRequest(preview: Pick<MemoryForgetPreview, 'me
 
 /** Owner UI capability only. Conversation retrieval remains separately scoped by Pi. */
 export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'request' | 'audio' | 'getSession' | 'download' | 'upload'>, onCurrentSessionRevoked: () => void) {
-  const shared = () => import('./shared-notes').then(module => module.createSharedNotesClient(auth))
   const modelListeners = new Set<() => void>()
   const modelsChanged = () => { for (const listener of modelListeners) listener() }
   const pi = createPiClient(auth)
@@ -116,12 +116,10 @@ export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'reques
     openLoops: createOpenLoopsClient(auth),
     /** What Conker will do on its own in the next 24 hours (R-U10). Read only; loaded with the Jobs screen, out of the first bundle. */
     tomorrow: { read: (signal?: AbortSignal): Promise<Tomorrow> => import('./tomorrow').then(module => module.createTomorrowClient(auth).read(signal)) },
-    /** Text shared from another app: a chat of its own and an Inbox note (loaded on first use). */
-    shared: {
-      save: (requestId: string, text: string): Promise<SharedSaved> => shared().then(client => client.save(requestId, text)),
-      list: (): Promise<SharedNote[]> => shared().then(client => client.list()),
-      dismiss: (id: string): Promise<void> => shared().then(client => client.dismiss(id)),
-    },
+    /** Text shared from another app: a chat of its own and an Inbox note. Loads the client on first use, out of the first bundle. */
+    shared: (): Promise<SharedNotesClient> => import('./shared-notes').then(module => module.createSharedNotesClient(auth)),
+    /** Asks per week and how many helped (conker quiet). Read only; loaded with the Inbox, out of the first bundle. */
+    quietWeeks: { read: (weeks?: number, signal?: AbortSignal): Promise<QuietWeeks> => import('./quiet-weeks').then(module => module.createQuietWeeksClient(auth).read(weeks, signal)) },
     promptEnhance: createPromptEnhanceClient(auth),
     promptTemplates: createPromptTemplatesClient(auth),
     /** Chat features: answer versions and reviews, names and output settings, context editing. */

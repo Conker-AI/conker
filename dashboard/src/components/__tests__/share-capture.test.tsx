@@ -42,6 +42,11 @@ function client(...results: (Saved | Error)[]) {
     }),
   }
 }
+/** What `control.shared` hands the screen: a loader for the client. */
+const loaded =
+  <T,>(api: T) =>
+  async () =>
+    api
 function show(element: ReactNode, entry = '/share') {
   return render(
     <MemoryRouter initialEntries={[entry]}>
@@ -64,7 +69,7 @@ describe('Shared text', () => {
   it('prefills the title, text and link as plain text and saves it once the server confirms', async () => {
     const storage = stored('Read this', { title: 'Article', url: 'https://example.com/a' }),
       api = client()
-    show(<GatewayShareCapture client={api} storage={storage} />)
+    show(<GatewayShareCapture client={loaded(api)} storage={storage} />)
     expect(box().value).toBe('Article\nRead this\nhttps://example.com/a')
     expect(screen.queryByRole('link', { name: /example\.com/ })).toBeNull()
     expect(screen.getByText(/of 2,000 characters/)).toBeTruthy()
@@ -80,7 +85,7 @@ describe('Shared text', () => {
   })
 
   it('says when it was already in the Inbox, and Done goes Home', async () => {
-    show(<GatewayShareCapture client={client({ ...done, status: 'already_saved' })} storage={stored('Same')} />)
+    show(<GatewayShareCapture client={loaded(client({ ...done, status: 'already_saved' }))} storage={stored('Same')} />)
     await save()
     expect(screen.getByRole('status').textContent).toBe('That was already in your Inbox.')
     fireEvent.click(screen.getByRole('button', { name: 'Done' }))
@@ -88,27 +93,27 @@ describe('Shared text', () => {
   })
 
   it('reads the address when this tab could not keep the share', () => {
-    show(<GatewayShareCapture client={client()} storage={null} />, '/share?text=From%20the%20address')
+    show(<GatewayShareCapture client={loaded(client())} storage={null} />, '/share?text=From%20the%20address')
     expect(box().value).toBe('From the address')
   })
 
   it('uses this tab’s session storage by default and clears it after saving', async () => {
     sessionStorage.setItem(SHARE_KEY, JSON.stringify({ title: '', text: 'From the tab', url: '' }))
-    show(<GatewayShareCapture client={client()} />)
+    show(<GatewayShareCapture client={loaded(client())} />)
     expect(box().value).toBe('From the tab')
     await save()
     expect(sessionStorage.getItem(SHARE_KEY)).toBeNull()
   })
 
   it('shows a plain empty state when nothing was shared', () => {
-    show(<GatewayShareCapture client={client()} storage={memory()} />)
+    show(<GatewayShareCapture client={loaded(client())} storage={memory()} />)
     expect(screen.getByText('Nothing was shared')).toBeTruthy()
     fireEvent.click(screen.getByRole('link', { name: 'Go to Home' }))
     expect(screen.getByText('Home page')).toBeTruthy()
   })
 
   it('blocks a share that is too long or blank, with a clear reason', () => {
-    show(<GatewayShareCapture client={client()} storage={stored('a'.repeat(2340))} />)
+    show(<GatewayShareCapture client={loaded(client())} storage={stored('a'.repeat(2340))} />)
     expect(screen.getByText('Too long to save: the Inbox keeps up to 2,000 characters. Shorten it by 340.')).toBeTruthy()
     expect(saveButton().disabled).toBe(true)
     fireEvent.change(box(), { target: { value: '   ' } })
@@ -119,8 +124,9 @@ describe('Shared text', () => {
   it('shows Saving while the request is open and sends it only once', async () => {
     let finish: (value: Saved) => void = () => {}
     const api = { save: vi.fn(() => new Promise<Saved>(resolve => (finish = resolve))) }
-    show(<GatewayShareCapture client={api} storage={stored('Note')} />)
+    show(<GatewayShareCapture client={loaded(api)} storage={stored('Note')} />)
     fireEvent.click(saveButton())
+    await act(async () => {})
     expect(screen.getByRole<HTMLButtonElement>('button', { name: 'Saving…' }).disabled).toBe(true)
     expect(box().readOnly).toBe(true)
     fireEvent.submit(box().closest('form')!)
@@ -132,7 +138,7 @@ describe('Shared text', () => {
   it('keeps the text after a refusal, and an unknown outcome retries with the same id', async () => {
     const storage = stored('Keep me'),
       api = client(new GatewayError('dependency', 503), new GatewayError('network'), done)
-    show(<GatewayShareCapture client={api} storage={storage} />)
+    show(<GatewayShareCapture client={loaded(api)} storage={storage} />)
     await save()
     expect(screen.getByRole('alert').textContent).toBe('Part of Conker isn’t running right now. Nothing was retried; check Server. Nothing was saved.')
     expect(box().value).toBe('Keep me')
@@ -148,7 +154,7 @@ describe('Shared text', () => {
 
   it('starts a new request after the text changes following a failure', async () => {
     const api = client(new Error('boom'))
-    show(<GatewayShareCapture client={api} storage={stored('One')} />)
+    show(<GatewayShareCapture client={loaded(api)} storage={stored('One')} />)
     await save()
     expect(screen.getByRole('alert').textContent).toContain('couldn’t confirm')
     fireEvent.change(box(), { target: { value: 'Two' } })
@@ -162,7 +168,7 @@ describe('Shared text', () => {
   it('waits while offline and keeps the text', () => {
     connectionStore.setState({ online: false })
     const api = client()
-    show(<GatewayShareCapture client={api} storage={stored('Later')} />)
+    show(<GatewayShareCapture client={loaded(api)} storage={stored('Later')} />)
     expect(screen.getByRole('status').textContent).toBe('You’re offline. Your text stays here; save it when you’re back online.')
     expect(saveButton().disabled).toBe(true)
     fireEvent.submit(box().closest('form')!)
@@ -171,7 +177,7 @@ describe('Shared text', () => {
 
   it('Cancel drops the share and goes Home', () => {
     const storage = stored('Drop me')
-    show(<GatewayShareCapture client={client()} storage={storage} />)
+    show(<GatewayShareCapture client={loaded(client())} storage={storage} />)
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
     expect(storage.items).toEqual({})
     expect(screen.getByText('Home page')).toBeTruthy()
@@ -196,7 +202,7 @@ describe('Shared text', () => {
     const store = createGatewayAuthStore({ client: auth })
     show(
       <GatewayBoundary store={store}>
-        <GatewayShareCapture client={client()} storage={storage} />
+        <GatewayShareCapture client={loaded(client())} storage={storage} />
       </GatewayBoundary>,
     )
     await act(async () => {})

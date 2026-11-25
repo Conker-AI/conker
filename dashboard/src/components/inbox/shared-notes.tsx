@@ -6,7 +6,8 @@ import { gatewayConversationLink } from '@/components/gateway/navigation'
 import type { SharedNote, SharedNotesClient } from '@/lib/gateway/shared-notes'
 import { InboxCard } from './inbox-card'
 
-export type SharedNotesInboxClient = Pick<SharedNotesClient, 'list' | 'dismiss'>
+/** Loads the client on first use (`control.shared`). */
+export type SharedNotesInboxClient = () => Promise<Pick<SharedNotesClient, 'list' | 'dismiss'>>
 
 /**
  * What the owner shared from another app, each in a chat of its own. They are his own captures, so
@@ -20,7 +21,7 @@ export function SharedNotes({ client, active }: { client: SharedNotesInboxClient
   const load = useCallback(async () => {
     const current = ++generation.current
     try {
-      const notes = await client.list()
+      const notes = await (await client()).list()
       if (current === generation.current) setItems(notes)
     } catch {
       /* The rest of the Inbox still loads; the notes come back on the next read. */
@@ -38,7 +39,9 @@ export function SharedNotes({ client, active }: { client: SharedNotesInboxClient
   }, [active, load])
   const clear = (note: SharedNote) => {
     setItems(current => current.filter(item => item.id !== note.id))
-    void client.dismiss(note.id).catch(() => load())
+    void client()
+      .then(loaded => loaded.dismiss(note.id))
+      .catch(() => load())
   }
   if (!items.length) return null
   return (

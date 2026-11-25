@@ -13,7 +13,7 @@ async function show(notes: SharedNote[], dismiss = vi.fn(async () => {})) {
   render(
     <MemoryRouter initialEntries={['/inbox']}>
       <Routes>
-        <Route path="/inbox" element={<SharedNotes client={client} active />} />
+        <Route path="/inbox" element={<SharedNotes client={async () => client} active />} />
         <Route path="/chat" element={<p>Chat page</p>} />
       </Routes>
     </MemoryRouter>,
@@ -28,6 +28,7 @@ describe('Shared by you', () => {
     expect(screen.getByRole('heading', { name: 'Shared by you' })).toBeTruthy()
     expect(screen.getByText('Shared: Rates rise next week')).toBeTruthy()
     fireEvent.click(screen.getAllByRole('button', { name: 'Open chat' })[0])
+    await act(async () => {})
     expect(client.dismiss).toHaveBeenCalledWith(`note_${'a'.repeat(32)}`)
     expect(screen.getByText('Chat page')).toBeTruthy()
   })
@@ -39,7 +40,7 @@ describe('Shared by you', () => {
     const client = { list: vi.fn(async () => Promise.reject(new Error('down'))), dismiss: vi.fn() }
     render(
       <MemoryRouter>
-        <SharedNotes client={client} active />
+        <SharedNotes client={async () => client} active />
       </MemoryRouter>,
     )
     await act(async () => {})
