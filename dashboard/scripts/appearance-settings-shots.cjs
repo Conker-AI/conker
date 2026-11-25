@@ -55,7 +55,7 @@ async function steps(context, width, theme) {
 
   // Change six of them on the Settings screen.
   await toggle('appearance.contrast')
-  assert.equal(await mark('contrast'), 'more')
+  assert.equal(await mark('contrast'), 'on')
   await choose('appearance.color_vision', 'Red and green')
   await choose('appearance.font', 'Atkinson Hyperlegible')
   await choose('appearance.code_font', 'JetBrains Mono')

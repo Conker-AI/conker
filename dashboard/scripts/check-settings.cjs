@@ -95,7 +95,7 @@ async function main() {
   }
   // Page-wide appearance choices (round six): every option other than the theme's own look has a CSS rule.
   const looks = read('src/styles/appearance-settings.css')
-  const pageMarks = { 'appearance.contrast': ['contrast', { true: 'more' }], 'appearance.ligatures': ['ligatures', { true: 'on' }], 'appearance.color_vision': ['color-vision'], 'appearance.font': ['font'], 'appearance.code_font': ['code-font'], 'appearance.line_spacing': ['line-spacing'], 'appearance.density': ['density'] }
+  const pageMarks = { 'appearance.contrast': ['contrast', { true: 'on' }], 'appearance.ligatures': ['ligatures', { true: 'on' }], 'appearance.color_vision': ['color-vision'], 'appearance.font': ['font'], 'appearance.code_font': ['code-font'], 'appearance.line_spacing': ['line-spacing'], 'appearance.density': ['density'] }
   for (const [id, [attribute, toggle]] of Object.entries(pageMarks)) {
     const setting = settings.find(item => item.id === id)
     assert.equal(setting.effect, 'live', id)

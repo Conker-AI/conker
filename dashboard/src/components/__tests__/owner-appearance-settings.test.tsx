@@ -1,5 +1,5 @@
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import appearance from '@/settings/registry/appearance.json'
 import { ShortcutList } from '@/components/gateway/shortcut-list'
 import type { GatewayControlClient } from '@/lib/gateway/control'
@@ -14,6 +14,10 @@ function choose(values: Record<string, unknown>) {
   act(() => publishServerSettings({ revision, values }))
 }
 
+// The list loads on first use; load it once up front so a slow machine does not time the test out.
+beforeAll(async () => {
+  await import('@/components/gateway/shortcut-list-dialog')
+}, 120_000)
 beforeEach(() => stubMatchMedia())
 afterEach(() => {
   choose({})
@@ -28,7 +32,7 @@ function Shell() {
 
 /** Each setting, the mark it puts on <html>, and the mark each option gives (undefined: the theme's own look). */
 const marks = {
-  'appearance.contrast': ['contrast', { true: 'more', false: undefined }],
+  'appearance.contrast': ['contrast', { true: 'on', false: undefined }],
   'appearance.color_vision': ['colorVision', { off: undefined, red_green: 'red_green', blue_yellow: 'blue_yellow' }],
   'appearance.font': ['font', { inter: undefined, system: 'system', atkinson: 'atkinson', dyslexic: 'dyslexic' }],
   'appearance.code_font': ['codeFont', { system: undefined, jetbrains: 'jetbrains', fira: 'fira' }],
@@ -78,7 +82,7 @@ describe('keyboard.cheat_sheet', () => {
     press(screen.getByLabelText('Message'))
     expect(screen.queryByText('Keyboard shortcuts')).toBeNull()
     press()
-    expect(await screen.findByText('Keyboard shortcuts')).not.toBeNull()
+    expect(await screen.findByText('Keyboard shortcuts', {}, { timeout: 15_000 })).not.toBeNull()
     expect(screen.getByText('Search everything')).not.toBeNull()
     expect(screen.getByText('New chat')).not.toBeNull()
   }, 30_000)

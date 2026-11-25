@@ -24,36 +24,34 @@ function applyDevice() {
   else root.dataset.motion = String(motion)
 }
 
-/** Soft corners and normal outlines are the theme's own; the others are rules in index.css. */
+/**
+ * Choices marked on <html> for the rules in index.css, styles/design-system.css and
+ * styles/appearance-settings.css: [mark, the theme's own look, the mark a toggle that is on gets,
+ * the setting when it is not `appearance.` plus the mark in snake case]. The theme's own look (soft
+ * corners, normal outlines, Medium chat width...) is unmarked; any other choice is marked with its value.
+ */
+const PAGE_MARKS: [string, string | boolean, string?, string?][] = [
+  ['corners', 'soft'],
+  ['focus', false, 'large', 'accessibility.focus'],
+  ['targets', false, 'large', 'accessibility.large_targets'],
+  ['chatWidth', 'medium'],
+  ['contrast', false],
+  ['colorVision', 'off'],
+  ['font', 'inter'],
+  ['codeFont', 'system'],
+  ['ligatures', false],
+  ['lineSpacing', 'normal'],
+  ['density', 'comfortable'],
+]
+
 function applyShell() {
   const root = document.documentElement
-  const corners = serverSetting<'sharp' | 'soft' | 'round'>('appearance.corners', 'soft')
-  if (corners === 'soft') delete root.dataset.corners
-  else root.dataset.corners = corners
-  if (serverSetting('accessibility.focus', false)) root.dataset.focus = 'large'
-  else delete root.dataset.focus
-  if (serverSetting('accessibility.large_targets', false)) root.dataset.targets = 'large'
-  else delete root.dataset.targets
-  // Chat width: Medium is the column's own width (styles/design-system.css).
-  const chatWidth = serverSetting<'narrow' | 'medium' | 'wide' | 'full'>('appearance.chat_width', 'medium')
-  if (chatWidth === 'medium') delete root.dataset.chatWidth
-  else root.dataset.chatWidth = chatWidth
-  // Contrast, status colors, fonts, line spacing and density (styles/appearance-settings.css).
-  mark('contrast', serverSetting('appearance.contrast', false) ? 'more' : null)
-  mark('colorVision', serverSetting<'off' | 'red_green' | 'blue_yellow'>('appearance.color_vision', 'off'), 'off')
-  mark('font', serverSetting<'system' | 'inter' | 'atkinson' | 'dyslexic'>('appearance.font', 'inter'), 'inter')
-  mark('codeFont', serverSetting<'system' | 'jetbrains' | 'fira'>('appearance.code_font', 'system'), 'system')
-  mark('ligatures', serverSetting('appearance.ligatures', false) ? 'on' : null)
-  mark('lineSpacing', serverSetting<'compact' | 'normal' | 'relaxed'>('appearance.line_spacing', 'normal'), 'normal')
-  mark('density', serverSetting<'comfortable' | 'compact' | 'spacious'>('appearance.density', 'comfortable'), 'comfortable')
+  for (const [name, standard, on = 'on', id = `appearance.${name.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`)}`] of PAGE_MARKS) {
+    const value = serverSetting(id, standard as never) as unknown
+    if (value === standard) delete root.dataset[name]
+    else root.dataset[name] = value === true ? on : String(value)
+  }
   applyDateFormat()
-}
-
-/** Marks a choice on <html>, or clears the mark when it is the theme's own look. */
-function mark(name: string, value: string | null, standard?: string) {
-  const root = document.documentElement
-  if (value === null || value === standard) delete root.dataset[name]
-  else root.dataset[name] = value
 }
 
 /** Times and dates on every screen (src/lib/date-format.ts); set once at load too, so the first paint uses the last value seen. */

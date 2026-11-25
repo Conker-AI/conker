@@ -14,7 +14,7 @@
 /* High contrast (ledger: Text contrast, Non-text contrast). Light: text neutral-950 on white 19.8:1,
    secondary text neutral-700 10.4:1 (AAA); lines and field edges neutral-500 4.7:1. Dark: text
    neutral-50 17.3:1, secondary neutral-300 12.2:1; lines neutral-500 3.8:1 (3:1 needed). */
-:root[data-contrast='more'] {
+:root[data-contrast='on'] {
   --foreground: var(--color-neutral-950);
   --card-foreground: var(--foreground);
   --popover-foreground: var(--foreground);
@@ -27,7 +27,7 @@
   --input: var(--color-neutral-500);
   --sidebar-border: var(--color-neutral-500);
 }
-:root.dark[data-contrast='more'] {
+:root.dark[data-contrast='on'] {
   --foreground: var(--color-neutral-50);
   --muted-foreground: var(--color-neutral-300);
 }
