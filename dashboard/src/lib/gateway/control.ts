@@ -12,6 +12,7 @@ import { createMemoryBeliefsClient } from './memory-beliefs'
 import { createMemoryUsesClient } from './memory-uses'
 import { createOpenLoopsClient } from './open-loops'
 import type { Tomorrow } from './tomorrow'
+import type { SharedNotesClient } from './shared-notes'
 import type { QuietWeeks } from './quiet-weeks'
 import { createMemoryCareClient } from './memory-care'
 import { createPromptEnhanceClient } from './prompt-enhance'
@@ -81,6 +82,8 @@ export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'reques
   const modelListeners = new Set<() => void>()
   const modelsChanged = () => { for (const listener of modelListeners) listener() }
   const pi = createPiClient(auth)
+  // One loader for the MCP client, so the first bundle holds its import once.
+  const mcp = () => import('./mcp').then(module => module.createGatewayMcpClient(auth))
   return {
     subscribeModels(listener: () => void) { modelListeners.add(listener); return () => { modelListeners.delete(listener) } },
     editorDrafts: createGatewayEditorDrafts(auth),
@@ -88,12 +91,12 @@ export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'reques
     chatgpt: createChatGPTClient(auth),
     skills: createGatewaySkillsClient(auth),
     mcp: {
-      async list(...args: Parameters<GatewayMcpClient['list']>) { return (await import('./mcp')).createGatewayMcpClient(auth).list(...args) },
-      async discover(...args: Parameters<GatewayMcpClient['discover']>) { return (await import('./mcp')).createGatewayMcpClient(auth).discover(...args) },
-      async import(...args: Parameters<GatewayMcpClient['import']>) { return (await import('./mcp')).createGatewayMcpClient(auth).import(...args) },
-      async setEnabled(...args: Parameters<GatewayMcpClient['setEnabled']>) { return (await import('./mcp')).createGatewayMcpClient(auth).setEnabled(...args) },
-      async access(...args: Parameters<GatewayMcpClient['access']>) { return (await import('./mcp')).createGatewayMcpClient(auth).access(...args) },
-      async setAccess(...args: Parameters<GatewayMcpClient['setAccess']>) { return (await import('./mcp')).createGatewayMcpClient(auth).setAccess(...args) },
+      async list(...args: Parameters<GatewayMcpClient['list']>) { return (await mcp()).list(...args) },
+      async discover(...args: Parameters<GatewayMcpClient['discover']>) { return (await mcp()).discover(...args) },
+      async import(...args: Parameters<GatewayMcpClient['import']>) { return (await mcp()).import(...args) },
+      async setEnabled(...args: Parameters<GatewayMcpClient['setEnabled']>) { return (await mcp()).setEnabled(...args) },
+      async access(...args: Parameters<GatewayMcpClient['access']>) { return (await mcp()).access(...args) },
+      async setAccess(...args: Parameters<GatewayMcpClient['setAccess']>) { return (await mcp()).setAccess(...args) },
     },
     claude: createNativeClaudeClient(auth),
     browserSessions: createBrowserSessionsClient(auth, onCurrentSessionRevoked),
@@ -115,6 +118,8 @@ export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'reques
     openLoops: createOpenLoopsClient(auth),
     /** What Conker will do on its own in the next 24 hours (R-U10). Read only; loaded with the Jobs screen, out of the first bundle. */
     tomorrow: { read: (signal?: AbortSignal): Promise<Tomorrow> => import('./tomorrow').then(module => module.createTomorrowClient(auth).read(signal)) },
+    /** Text shared from another app: a chat of its own and an Inbox note. Loads the client on first use, out of the first bundle. */
+    shared: (): Promise<SharedNotesClient> => import('./shared-notes').then(module => module.createSharedNotesClient(auth)),
     /** Asks per week and how many helped (conker quiet). Read only; loaded with the Inbox, out of the first bundle. */
     quietWeeks: { read: (weeks?: number, signal?: AbortSignal): Promise<QuietWeeks> => import('./quiet-weeks').then(module => module.createQuietWeeksClient(auth).read(weeks, signal)) },
     promptEnhance: createPromptEnhanceClient(auth),

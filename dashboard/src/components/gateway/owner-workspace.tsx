@@ -31,6 +31,7 @@ import type { AccessClient } from '@/lib/gateway/access'
 import { isDrafting, type ChangeRequestsClient } from '@/lib/gateway/change-requests'
 import type { GatewayEditorDrafts } from '@/lib/gateway/editor-drafts'
 import { useAgentNotes, type AgentNotesClient } from '@/components/inbox/agent-notes'
+import { SharedNotes, type SharedNotesInboxClient } from '@/components/inbox/shared-notes'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { Button } from '@/components/ui/button'
 import { OwnerDecisionError, type GatewayOwnerClient, type OwnerDecision, type OwnerRequest } from '@/lib/gateway/owner'
@@ -44,7 +45,7 @@ import type { GatewayHostOpsClient } from '@/lib/gateway/host-ops'
 import { ownerDecisionEligibility, type GatewayOwnerState } from './owner-state'
 
 const label = (value: string) => value.replaceAll('_', ' ')
-export function GatewayOwnerWorkspace({ client, proposals, checks, changes, asks, recall, drafts, access, updates, quiet, state, active }: { client: GatewayOwnerClient; updates?: { client: UpdatesClient; hostOps: GatewayHostOpsClient }; quiet?: QuietMeterReader; proposals?: GatewayProposalClient; checks?: AgentNotesClient; changes?: ChangeRequestsClient; asks?: AsksClient; recall?: RecallNoticesClient; drafts?: GatewayEditorDrafts; access?: AccessClient; state: GatewayOwnerState; active: boolean }) {
+export function GatewayOwnerWorkspace({ client, proposals, checks, changes, asks, recall, drafts, access, updates, quiet, shared, state, active }: { client: GatewayOwnerClient; updates?: { client: UpdatesClient; hostOps: GatewayHostOpsClient }; quiet?: QuietMeterReader; proposals?: GatewayProposalClient; checks?: AgentNotesClient; shared?: SharedNotesInboxClient; changes?: ChangeRequestsClient; asks?: AsksClient; recall?: RecallNoticesClient; drafts?: GatewayEditorDrafts; access?: AccessClient; state: GatewayOwnerState; active: boolean }) {
   const [params] = useSearchParams(), requestId = params.get('request')
   const retained = useStore(state)
   const [rows, setRows] = useState<OwnerRequest[]>([]), [cursor, setCursor] = useState<string | null>(null)
@@ -258,6 +259,8 @@ export function GatewayOwnerWorkspace({ client, proposals, checks, changes, asks
           </EmptyHeader>
         </Empty>}
         </>}
+        {/* The owner's own captures: below what needs the owner, never counted in it. */}
+        {shared && showMemories && summary.state !== 'loading' && <SharedNotes client={shared} active={active} />}
         {summary.state !== 'loading' && laterCount > 0 && <section aria-labelledby="inbox-later" className="flex flex-col gap-2">
           <h2 id="inbox-later" className="text-sm font-medium text-muted-foreground">Later <span className="tabular-nums">{laterCount}</span></h2>
           <ul className="flex flex-col divide-y rounded-xl border">

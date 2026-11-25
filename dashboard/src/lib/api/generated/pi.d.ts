@@ -470,6 +470,51 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/inbox/shared": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Shared
+         * @description Shared text still in the Inbox, newest first, until dismissed.
+         */
+        get: operations["shared_inbox_shared_get"];
+        put?: never;
+        /**
+         * Save Shared
+         * @description Save shared text in a new chat of its own, marked outside, with an Inbox note; no
+         *     model runs. The same request id returns the same chat.
+         */
+        post: operations["save_shared_inbox_shared_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/inbox/shared/{identity}/dismiss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Dismiss Shared
+         * @description Hide the note; the chat keeps the text.
+         */
+        post: operations["dismiss_shared_inbox_shared__identity__dismiss_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/push/claim": {
         parameters: {
             query?: never;
@@ -10262,6 +10307,40 @@ export interface components {
             /** Steps */
             steps: components["schemas"]["Step-Output"][];
         };
+        /** Share */
+        Share: {
+            /** Request Id */
+            request_id: string;
+            /** Text */
+            text: string;
+        };
+        /** Shared */
+        Shared: {
+            /** Noteid */
+            noteId: string;
+            /** Sessionid */
+            sessionId: string;
+            /** Title */
+            title: string;
+            /** Status */
+            status: string;
+        };
+        /** SharedNote */
+        SharedNote: {
+            /** Id */
+            id: string;
+            /** Sessionid */
+            sessionId: string;
+            /** Title */
+            title: string;
+            /** Createdat */
+            createdAt: number;
+        };
+        /** SharedNoteCollection */
+        SharedNoteCollection: {
+            /** Results */
+            results: components["schemas"]["SharedNote"][];
+        };
         /**
          * SkillDetail
          * @description One skill with its SKILL.md text exactly as imported.
@@ -12735,6 +12814,108 @@ export interface operations {
                 "X-Pi-Gateway-Key"?: string | null;
             };
             path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    shared_inbox_shared_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Pi-Owner-Key"?: string | null;
+                "X-Pi-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SharedNoteCollection"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    save_shared_inbox_shared_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Pi-Owner-Key"?: string | null;
+                "X-Pi-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Share"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Shared"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    dismiss_shared_inbox_shared__identity__dismiss_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Pi-Owner-Key"?: string | null;
+                "X-Pi-Key"?: string | null;
+            };
+            path: {
+                identity: string;
+            };
             cookie?: never;
         };
         requestBody?: never;
