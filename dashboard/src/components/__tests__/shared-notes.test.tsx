@@ -13,7 +13,7 @@ async function show(notes: SharedNote[], dismiss = vi.fn(async () => {})) {
   render(
     <MemoryRouter initialEntries={['/inbox']}>
       <Routes>
-        <Route path="/inbox" element={<SharedNotes client={async () => client} active />} />
+        <Route path="/inbox" element={<SharedNotes client={async () => client} active now={Date.now()} />} />
         <Route path="/chat" element={<p>Chat page</p>} />
       </Routes>
     </MemoryRouter>,
@@ -40,7 +40,7 @@ describe('Shared by you', () => {
     const client = { list: vi.fn(async () => Promise.reject(new Error('down'))), dismiss: vi.fn() }
     render(
       <MemoryRouter>
-        <SharedNotes client={async () => client} active />
+        <SharedNotes client={async () => client} active now={Date.now()} />
       </MemoryRouter>,
     )
     await act(async () => {})

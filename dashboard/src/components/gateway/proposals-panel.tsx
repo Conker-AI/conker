@@ -4,15 +4,12 @@ import { Button } from '@/components/ui/button'
 import { InboxCard } from '@/components/inbox/inbox-card'
 import type { Proposal, ProposalDecision } from '@/lib/gateway/proposals'
 import { gatewayConversationLink } from './navigation'
-import { formatDateTime } from '@/lib/date-format'
-
-const age = (seconds: number) => {
-  const minutes = Math.max(0, Math.floor((Date.now() - seconds * 1000) / 60000))
-  return minutes < 60 ? `${Math.max(1, minutes)} min ago` : minutes < 1440 ? `${Math.floor(minutes / 60)} hr ago` : `${Math.floor(minutes / 1440)} days ago`
-}
+import { factTime } from '@/lib/shown-time'
+import { useTimeStyle } from '@/components/use-time-style'
 
 /** An idea from the nightly pass as one Inbox card: what Conker noticed, why, and what accepting means. */
-export function IdeaCard({ item, pending, failure, onDecide, onLater }: { item: Proposal; pending: boolean; failure: string | null; onDecide: (decision: ProposalDecision) => void; onLater?: () => void }) {
+export function IdeaCard({ item, now, pending, failure, onDecide, onLater }: { item: Proposal; now: number; pending: boolean; failure: string | null; onDecide: (decision: ProposalDecision) => void; onLater?: () => void }) {
+  const style = useTimeStyle()
   const accept = (
     <Button type="button" size="sm" disabled={pending} onClick={() => onDecide('accept')}>
       Accept
@@ -23,6 +20,7 @@ export function IdeaCard({ item, pending, failure, onDecide, onLater }: { item: 
       icon={<Lightbulb />}
       title={item.title}
       source="Idea from Conker"
+      came={{ at: item.createdAt * 1000, now }}
       summary={item.suggestion}
       primary={accept}
       actions={
@@ -39,7 +37,7 @@ export function IdeaCard({ item, pending, failure, onDecide, onLater }: { item: 
       onLater={onLater}
       facts={[
         ['From', 'Conker’s nightly pass'],
-        ['Came', `${age(item.createdAt)} · ${formatDateTime(item.createdAt * 1000)}`],
+        ['Came', factTime(item.createdAt * 1000, now, style)],
         ['Not now', 'Hides this idea for 30 days'],
       ]}
       advanced={

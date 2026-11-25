@@ -2,7 +2,7 @@
 // the button's states, that screens read again while the chat panel and unsaved work survive, the
 // quiet re-check after a long absence, and the soft messages when the server cannot check.
 import { expect, test, type Page } from '@playwright/test'
-import { card, open } from './pages'
+import { card, open, showAllWaiting } from './pages'
 
 const CARD = 'Read next week’s calendar'
 type Marked = HTMLElement & { __kept?: boolean }
@@ -50,6 +50,7 @@ const kept = (page: Page, title: string) => card(page, title).evaluate(element =
 
 test('refresh: the click shows work, reads the screen again and finds a release without a reload', async ({ page }) => {
   const errors = await open(page, '/inbox?preview-updates=on-check')
+  await showAllWaiting(page)
   await page.evaluate(() => {
     ;(window as unknown as { __page: boolean }).__page = true
   })
@@ -94,6 +95,7 @@ test('refresh: the chat panel and typed text survive', async ({ page }) => {
 
 test('refresh: unsaved work asks first; Cancel keeps it, Refresh anyway goes on', async ({ page }) => {
   const errors = await open(page, '/inbox')
+  await showAllWaiting(page)
   // Screens with unsaved work tell the browser not to leave; the refresh asks the same question.
   await page.evaluate(() => {
     const view = window as unknown as { __unsaved: boolean }
@@ -112,6 +114,7 @@ test('refresh: unsaved work asks first; Cancel keeps it, Refresh anyway goes on'
   await refreshButton(page).click()
   await page.getByRole('dialog', { name: 'Refresh anyway?' }).getByRole('button', { name: 'Refresh anyway' }).click()
   await expect(status(page, /^Refreshed\./)).toBeVisible()
+  await showAllWaiting(page)
   expect(await kept(page, CARD)).toBe(false)
   expect(errors).toEqual([])
 })
@@ -119,6 +122,7 @@ test('refresh: unsaved work asks first; Cancel keeps it, Refresh anyway goes on'
 test('refresh: coming back after a long absence checks quietly and never remounts', async ({ page }) => {
   await skewableClock(page)
   const errors = await open(page, '/inbox')
+  await showAllWaiting(page)
   await expect.poll(() => checks(page)).toBeGreaterThan(0)
   await page.waitForTimeout(4_500) // the entry check finishes
   await mark(page, CARD)

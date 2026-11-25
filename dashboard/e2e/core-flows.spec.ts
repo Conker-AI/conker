@@ -1,7 +1,7 @@
 // The owner's core flows, clicked through in a browser against the preview gateway: send a chat
 // message and read the answer, approve requests at levels 1 and 2, and forget a memory.
 import { expect, test } from '@playwright/test'
-import { card, open } from './pages'
+import { card, open, showAllWaiting } from './pages'
 
 test('chat: a sent message shows in the chat, then the answer', async ({ page }) => {
   // No saved draft: one that loads after typing is a conflict the app reports, not this flow.
@@ -20,6 +20,7 @@ test('chat: a sent message shows in the chat, then the answer', async ({ page })
 
 test('approval: a one-tap request runs and counts as decided', async ({ page }) => {
   const errors = await open(page, '/inbox')
+  await showAllWaiting(page)
   await expect(page.getByText(/^\d+ need you · 0 decided today$/)).toBeVisible()
   await expect(page.getByText('Read next week’s calendar')).toBeVisible()
 
@@ -32,6 +33,7 @@ test('approval: a one-tap request runs and counts as decided', async ({ page }) 
 
 test('approval: sending asks "are you sure" first, and Cancel sends nothing', async ({ page }) => {
   const errors = await open(page, '/inbox')
+  await showAllWaiting(page)
   const sendButton = card(page, 'Send an email to coach').getByRole('button', { name: 'Send it', exact: true })
 
   await sendButton.click()

@@ -2,12 +2,9 @@ import { useNavigate } from 'react-router-dom'
 import { Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import type { GatewayAgentNote } from '@/lib/gateway/jobs'
+import { factTime } from '@/lib/shown-time'
+import { useTimeStyle } from '@/components/use-time-style'
 import { InboxCard } from './inbox-card'
-
-function age(seconds: number, now: number) {
-  const minutes = Math.max(1, Math.floor((now - seconds * 1000) / 60_000))
-  return minutes < 60 ? `${minutes} min ago` : minutes < 1440 ? `${Math.floor(minutes / 60)} hr ago` : `${Math.floor(minutes / 1440)} days ago`
-}
 
 /**
  * One finding from an AI job: what needs the owner, in one line. Open chat goes to the full reply;
@@ -15,6 +12,7 @@ function age(seconds: number, now: number) {
  */
 export function AgentNoteCard({ note, now, onOpen, onLater }: { note: GatewayAgentNote; now: number; onOpen: () => void; onLater?: () => void }) {
   const navigate = useNavigate()
+  const style = useTimeStyle()
   const open = () => {
     onOpen()
     navigate(`/chat?session=${encodeURIComponent(note.sessionId)}`)
@@ -24,6 +22,7 @@ export function AgentNoteCard({ note, now, onOpen, onLater }: { note: GatewayAge
       icon={<Sparkles />}
       title={note.title}
       source="AI job"
+      came={{ at: note.createdAt * 1000, now }}
       summary={note.detail || undefined}
       primary={
         <Button type="button" size="sm" onClick={open}>
@@ -42,7 +41,7 @@ export function AgentNoteCard({ note, now, onOpen, onLater }: { note: GatewayAge
       }
       facts={[
         ['From', 'An AI job'],
-        ['Came', `${age(note.createdAt, now)} · ${new Date(note.createdAt * 1000).toLocaleString()}`],
+        ['Came', factTime(note.createdAt * 1000, now, style)],
       ]}
       onLater={onLater}
     />

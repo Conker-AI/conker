@@ -37,6 +37,12 @@
     "work work work work quick quick";
 }
 
+/* Focus mode (Settings > Your day): only "Needs you", full width, at every width. */
+.home-bento[data-layout="focus"] {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "needs";
+}
+
 @container (max-width: 1000px) {
   .home-bento {
     grid-template-columns: repeat(2, minmax(0, 1fr));
