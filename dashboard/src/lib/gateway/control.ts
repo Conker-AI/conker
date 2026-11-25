@@ -82,6 +82,8 @@ export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'reques
   const modelListeners = new Set<() => void>()
   const modelsChanged = () => { for (const listener of modelListeners) listener() }
   const pi = createPiClient(auth)
+  // One loader for the MCP client, so the first bundle holds its import once.
+  const mcp = () => import('./mcp').then(module => module.createGatewayMcpClient(auth))
   return {
     subscribeModels(listener: () => void) { modelListeners.add(listener); return () => { modelListeners.delete(listener) } },
     editorDrafts: createGatewayEditorDrafts(auth),
@@ -89,12 +91,12 @@ export function createGatewayControlClient(auth: Pick<GatewayAuthClient, 'reques
     chatgpt: createChatGPTClient(auth),
     skills: createGatewaySkillsClient(auth),
     mcp: {
-      async list(...args: Parameters<GatewayMcpClient['list']>) { return (await import('./mcp')).createGatewayMcpClient(auth).list(...args) },
-      async discover(...args: Parameters<GatewayMcpClient['discover']>) { return (await import('./mcp')).createGatewayMcpClient(auth).discover(...args) },
-      async import(...args: Parameters<GatewayMcpClient['import']>) { return (await import('./mcp')).createGatewayMcpClient(auth).import(...args) },
-      async setEnabled(...args: Parameters<GatewayMcpClient['setEnabled']>) { return (await import('./mcp')).createGatewayMcpClient(auth).setEnabled(...args) },
-      async access(...args: Parameters<GatewayMcpClient['access']>) { return (await import('./mcp')).createGatewayMcpClient(auth).access(...args) },
-      async setAccess(...args: Parameters<GatewayMcpClient['setAccess']>) { return (await import('./mcp')).createGatewayMcpClient(auth).setAccess(...args) },
+      async list(...args: Parameters<GatewayMcpClient['list']>) { return (await mcp()).list(...args) },
+      async discover(...args: Parameters<GatewayMcpClient['discover']>) { return (await mcp()).discover(...args) },
+      async import(...args: Parameters<GatewayMcpClient['import']>) { return (await mcp()).import(...args) },
+      async setEnabled(...args: Parameters<GatewayMcpClient['setEnabled']>) { return (await mcp()).setEnabled(...args) },
+      async access(...args: Parameters<GatewayMcpClient['access']>) { return (await mcp()).access(...args) },
+      async setAccess(...args: Parameters<GatewayMcpClient['setAccess']>) { return (await mcp()).setAccess(...args) },
     },
     claude: createNativeClaudeClient(auth),
     browserSessions: createBrowserSessionsClient(auth, onCurrentSessionRevoked),

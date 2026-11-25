@@ -10,10 +10,8 @@ export const SHARE_LIMIT = 2000
 /** Far past the limit, so a long share is still shown as too long, but never stored without bound. */
 const FIELD_LIMIT = 20_000
 const FIELDS = ['title', 'text', 'url'] as const
-const REQUEST_ID = /^[A-Za-z0-9_-]{16,128}$/
 
-/** `requestId` is kept with the text once a save was tried, so a reload retries the same request. */
-export type SharedItem = { title: string; text: string; url: string; requestId?: string }
+export type SharedItem = { title: string; text: string; url: string }
 export type ShareStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>
 type Address = { pathname: string; search: string; hash: string }
 
@@ -34,22 +32,9 @@ export function loadShared(storage: ShareStorage | null): SharedItem | null {
     if (!value || typeof value !== 'object') return null
     const item = value as Record<string, unknown>
     if (!FIELDS.every(name => typeof item[name] === 'string')) return null
-    const requestId = typeof item.requestId === 'string' && REQUEST_ID.test(item.requestId) ? item.requestId : undefined
-    return { title: clean(item.title), text: clean(item.text), url: clean(item.url), ...(requestId && { requestId }) }
+    return { title: clean(item.title), text: clean(item.text), url: clean(item.url) }
   } catch {
     return null
-  }
-}
-
-/**
- * Before a save is sent: keep the text being saved with its request id, so a reload after an
- * unknown outcome retries the same request instead of saving it a second time.
- */
-export function keepShared(storage: ShareStorage | null, text: string, requestId: string) {
-  try {
-    storage?.setItem(SHARE_KEY, JSON.stringify({ title: '', text, url: '', requestId }))
-  } catch {
-    /* Storage may be blocked; the retry in this tab still uses the same id. */
   }
 }
 

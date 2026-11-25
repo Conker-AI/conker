@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { clearShared, keepShared, loadShared, readShared, SHARE_KEY, SHARE_LIMIT, sharedText, takeShared, type ShareStorage } from '@/lib/share-capture'
+import { clearShared, loadShared, readShared, SHARE_KEY, SHARE_LIMIT, sharedText, takeShared, type ShareStorage } from '@/lib/share-capture'
 
 function memory(initial: Record<string, string> = {}): ShareStorage & { items: Record<string, string> } {
   const items = { ...initial }
@@ -65,17 +65,6 @@ describe('share target', () => {
     expect(storage.items).toEqual({})
     expect(() => clearShared(broken)).not.toThrow()
     expect(() => clearShared(null)).not.toThrow()
-  })
-
-  it('keeps the text being saved with its request id, and drops a malformed id', () => {
-    const storage = memory({ [SHARE_KEY]: JSON.stringify({ title: 'a', text: 'b', url: 'c' }) })
-    const id = `share_${'a'.repeat(32)}`
-    keepShared(storage, 'edited text', id)
-    expect(loadShared(storage)).toEqual({ title: '', text: 'edited text', url: '', requestId: id })
-    keepShared(storage, 'x', 'bad id!')
-    expect(loadShared(storage)).toEqual({ title: '', text: 'x', url: '' })
-    expect(() => keepShared(broken, 'x', id)).not.toThrow()
-    expect(() => keepShared(null, 'x', id)).not.toThrow()
   })
 
   it('joins title, text and link once each', () => {

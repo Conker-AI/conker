@@ -9,7 +9,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { connectionStore } from '@/lib/connection-store'
 import { gatewayError } from '@/lib/gateway/transport'
 import type { SharedSaved } from '@/lib/gateway/shared-notes'
-import { clearShared, keepShared, loadShared, readShared, SHARE_LIMIT, sharedText, type ShareStorage } from '@/lib/share-capture'
+import { clearShared, loadShared, readShared, SHARE_LIMIT, sharedText, type ShareStorage } from '@/lib/share-capture'
+import { keepSent, readSent, type ShareSent } from '@/lib/share-sent'
 import { shareStorage } from '@/pwa/share-target'
 import { gatewayConversationLink } from './navigation'
 import { GatewayPageFrame } from './page-frame'
@@ -32,11 +33,14 @@ export function GatewayShareCapture({ client, storage = shareStorage() }: Props)
   const location = useLocation(),
     navigate = useNavigate()
   const online = useStore(connectionStore, state => state.online)
-  const [start] = useState(() => loadShared(storage) ?? readShared(location.search))
-  const shared = start ? sharedText(start) : ''
+  // A save tried before a reload comes back as sent, exact text and id, so it is never saved twice.
+  const [tried] = useState(() => readSent(storage))
+  const [shared] = useState(() => {
+    const start = tried ? null : (loadShared(storage) ?? readShared(location.search))
+    return tried?.text ?? (start ? sharedText(start) : '')
+  })
   const [text, setText] = useState(shared)
-  // A save tried before a reload keeps its id with the text, so it is never saved twice.
-  const [identity, setIdentity] = useState(() => start?.requestId ?? requestId())
+  const [sent, setSent] = useState<ShareSent | null>(tried)
   const [pending, setPending] = useState(false)
   const [failure, setFailure] = useState<Failure | null>(null)
   const [saved, setSaved] = useState<SharedSaved | null>(null)
@@ -48,10 +52,12 @@ export function GatewayShareCapture({ client, storage = shareStorage() }: Props)
     if (pending || blank || over > 0 || !online) return
     setPending(true)
     setFailure(null)
-    // A retry of the same text keeps its id, so Pi saves it at most once; kept in this tab too.
-    keepShared(storage, text, identity)
+    // Only a retry of exactly the sent text keeps its id, so Pi saves each text at most once.
+    const next = { text, requestId: sent?.text === text ? sent.requestId : requestId() }
+    setSent(next)
+    keepSent(storage, next)
     try {
-      const result = await (await client()).save(identity, text)
+      const result = await (await client()).save(next.requestId, text)
       clearShared(storage)
       setSaved(result)
     } catch (cause) {
@@ -116,7 +122,6 @@ export function GatewayShareCapture({ client, storage = shareStorage() }: Props)
               aria-describedby="share-text-help"
               onChange={event => {
                 setText(event.target.value)
-                if (failure) setIdentity(requestId())
                 setFailure(null)
               }}
             />

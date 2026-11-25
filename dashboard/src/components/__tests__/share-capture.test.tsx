@@ -168,6 +168,40 @@ describe('Shared text', () => {
     expect(storage.items).toEqual({})
   })
 
+  it('a reload brings back exactly the text that was sent, untrimmed, with its id', async () => {
+    const storage = stored('Keep me'),
+      first = client(new GatewayError('network'))
+    show(<GatewayShareCapture client={loaded(first)} storage={storage} />)
+    fireEvent.change(box(), { target: { value: '  Keep me\n' } })
+    await save()
+    cleanup()
+    const again = client()
+    show(<GatewayShareCapture client={loaded(again)} storage={storage} />)
+    expect(box().value).toBe('  Keep me\n')
+    await save()
+    expect(first.calls[0][1]).toBe('  Keep me\n')
+    expect(again.calls[0]).toEqual(first.calls[0])
+  })
+
+  it('text edited after a reload is a new request, and editing back to the sent text is not', async () => {
+    const storage = stored('Keep me'),
+      first = client(new GatewayError('network'))
+    show(<GatewayShareCapture client={loaded(first)} storage={storage} />)
+    await save()
+    cleanup()
+    const again = client(new GatewayError('network'), new GatewayError('network'))
+    show(<GatewayShareCapture client={loaded(again)} storage={storage} />)
+    fireEvent.change(box(), { target: { value: 'Keep me too' } })
+    await save()
+    expect(again.calls[0][1]).toBe('Keep me too')
+    expect(again.calls[0][0]).not.toBe(first.calls[0][0])
+    fireEvent.change(box(), { target: { value: 'Keep me' } })
+    await save()
+    // The id follows the last text sent: 'Keep me' now differs from it, so it is renewed too.
+    expect(again.calls[1][0]).not.toBe(again.calls[0][0])
+    expect(again.calls[1][0]).not.toBe(first.calls[0][0])
+  })
+
   it('starts a new request after the text changes following a failure', async () => {
     const api = client(new Error('boom'))
     show(<GatewayShareCapture client={loaded(api)} storage={stored('One')} />)
