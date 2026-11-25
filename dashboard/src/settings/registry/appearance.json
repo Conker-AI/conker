@@ -126,7 +126,7 @@
           "default": false,
           "tier": "basic",
           "scope": "global",
-          "effect": "stored"
+          "effect": "live"
         },
         {
           "id": "appearance.color_vision",
@@ -136,7 +136,7 @@
           "default": "off",
           "tier": "advanced",
           "scope": "global",
-          "effect": "stored",
+          "effect": "live",
           "options": [
             {
               "value": "off",
@@ -222,10 +222,10 @@
           "title": "Font",
           "description": "The font for screens and messages.",
           "type": "select",
-          "default": "system",
+          "default": "inter",
           "tier": "basic",
           "scope": "global",
-          "effect": "stored",
+          "effect": "live",
           "options": [
             {
               "value": "system",
@@ -248,12 +248,12 @@
         {
           "id": "appearance.code_font",
           "title": "Code font",
-          "description": "The font for code and commands.",
+          "description": "The font for code in answers, files and tools.",
           "type": "select",
           "default": "system",
           "tier": "advanced",
           "scope": "global",
-          "effect": "stored",
+          "effect": "live",
           "options": [
             {
               "value": "system",
@@ -272,12 +272,12 @@
         {
           "id": "appearance.ligatures",
           "title": "Code ligatures",
-          "description": "Joins symbol pairs like => into one sign in code.",
+          "description": "Joins symbol pairs like => into one sign in code, with JetBrains Mono or Fira Code.",
           "type": "toggle",
           "default": false,
           "tier": "advanced",
           "scope": "global",
-          "effect": "stored"
+          "effect": "live"
         },
         {
           "id": "appearance.line_spacing",
@@ -287,7 +287,7 @@
           "default": "normal",
           "tier": "advanced",
           "scope": "global",
-          "effect": "stored",
+          "effect": "live",
           "options": [
             {
               "value": "compact",
@@ -317,7 +317,7 @@
           "default": "comfortable",
           "tier": "basic",
           "scope": "global",
-          "effect": "stored",
+          "effect": "live",
           "options": [
             {
               "value": "comfortable",

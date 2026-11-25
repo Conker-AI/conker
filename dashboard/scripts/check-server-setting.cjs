@@ -144,6 +144,8 @@ async function main() {
     const visit = node => {
       if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && ['useServerSetting', 'serverSetting'].includes(node.expression.text)) {
         const where = `${path.relative(root, file)}: ${node.getText().slice(0, 80)}`
+        // The page marks' one loop reads the ids of its table, checked entry by entry below.
+        if (file.endsWith(path.join('settings', 'appearance.ts')) && node.arguments[0].getText() === 'id') return
         assert.ok(ts.isStringLiteral(node.arguments[0]), `${where}: the id is a literal`)
         const setting = byId.get(node.arguments[0].text)
         assert.ok(setting, `${where}: no such setting in the registry`)
@@ -161,6 +163,19 @@ async function main() {
       ts.forEachChild(node, visit)
     }
     visit(source)
+  }
+
+  // The page marks (src/settings/appearance.ts): [mark, default, on, id = appearance.<mark in snake case>].
+  // Each names a global setting with the registry's default; an "on" mark only for a toggle.
+  const marks = fs.readFileSync(path.join(root, 'src/settings/appearance.ts'), 'utf8').match(/const PAGE_MARKS[^=]*= \[([\s\S]*?)\n\]/)
+  assert.ok(marks, 'appearance.ts keeps its page marks in PAGE_MARKS')
+  for (const row of marks[1].matchAll(/\[([^\]]+)\]/g)) {
+    const [name, standard, on, id = `appearance.${name.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`)}`] = JSON.parse(`[${row[1].replace(/'/g, '"')}]`)
+    const setting = byId.get(id)
+    assert.ok(setting && setting.scope === 'global', `page mark ${name}: ${id} is a global setting`)
+    assert.deepEqual(standard, setting.default, `page mark ${name}: the default must be the registry's`)
+    assert.ok(on === undefined || setting.type === 'toggle', `page mark ${name}: only a toggle has an "on" mark`)
+    used.set(id, (used.get(id) ?? 0) + 1)
   }
 
   // The places, corners and layouts the shell draws cover every option the registry offers.
