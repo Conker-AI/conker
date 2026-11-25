@@ -5,7 +5,11 @@ import { GatewayError } from './transport'
 // Pi's latest reading per plan window: percentages only, never prices, tokens or account details.
 const usageWindow = z.object({
   provider: z.enum(['chatgpt', 'claude']),
-  window: z.string().min(1).max(80).regex(/^[A-Za-z0-9_.:-]+$/),
+  window: z
+    .string()
+    .min(1)
+    .max(80)
+    .regex(/^[A-Za-z0-9_.:-]+$/),
   label: z.string().regex(/^[\w .()+/:-]{1,60}$/),
   usedPercent: z.number().int().min(0).max(100),
   resetsAt: z.string().max(40).nullable(),

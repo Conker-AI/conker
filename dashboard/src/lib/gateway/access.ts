@@ -5,25 +5,49 @@ import { cardTemplates, type CardTemplate } from '../inbox-buttons'
 
 const toolId = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/)
 /** Whether Conker decides by his settings, and the tools that always ask him (the floor). */
-const state = z.object({
-  delegate: z.boolean(), sensitive: z.array(toolId).max(1000), floorExecutions: z.array(z.string().max(80)).max(20),
-  // Inbox buttons that differ from Do it, by tool; an older ToolGate sends none.
-  cards: z.record(toolId, z.enum(cardTemplates)).default({}),
-}).strict()
+const state = z
+  .object({
+    delegate: z.boolean(),
+    sensitive: z.array(toolId).max(1000),
+    floorExecutions: z.array(z.string().max(80)).max(20),
+    // Inbox buttons that differ from Do it, by tool; an older ToolGate sends none.
+    cards: z.record(toolId, z.enum(cardTemplates)).default({}),
+  })
+  .strict()
 const deciders = ['tool_default', 'agent', 'chat', 'ai_reviewer', 'owner_request'] as const
-const handled = z.object({
-  schemaVersion: z.literal(1),
-  results: z.array(z.object({
-    id: z.string().regex(/^hnd_[0-9a-f]{32}$/), sessionId: z.string().max(128).nullable(), turnId: z.string().max(128).nullable(),
-    toolId, decidedBy: z.enum(deciders), reason: z.string().max(500), createdAt: z.number().nonnegative(),
-  }).strict()).max(200),
-}).strict()
+const handled = z
+  .object({
+    schemaVersion: z.literal(1),
+    results: z
+      .array(
+        z
+          .object({
+            id: z.string().regex(/^hnd_[0-9a-f]{32}$/),
+            sessionId: z.string().max(128).nullable(),
+            turnId: z.string().max(128).nullable(),
+            toolId,
+            decidedBy: z.enum(deciders),
+            reason: z.string().max(500),
+            createdAt: z.number().nonnegative(),
+          })
+          .strict(),
+      )
+      .max(200),
+  })
+  .strict()
 
 /** Whether Conker may use one tool at all: the chat's own key in ToolGate, checked by the tool's digest. */
-const toolAccess = z.object({
-  schemaVersion: z.literal(1), toolId, actorId: z.string().max(100), actorName: z.string().max(160),
-  enabled: z.boolean(), requiredScope: z.string().max(140), digest: z.string().regex(/^[a-f0-9]{64}$/),
-}).strict()
+const toolAccess = z
+  .object({
+    schemaVersion: z.literal(1),
+    toolId,
+    actorId: z.string().max(100),
+    actorName: z.string().max(160),
+    enabled: z.boolean(),
+    requiredScope: z.string().max(140),
+    digest: z.string().regex(/^[a-f0-9]{64}$/),
+  })
+  .strict()
 
 export type AccessState = z.infer<typeof state>
 export type ToolAccessState = z.infer<typeof toolAccess>
@@ -56,7 +80,10 @@ export function createAccessClient(auth: Pick<GatewayAuthClient, 'request'>) {
     },
     /** Asks for the password: the buttons his Inbox shows when this tool asks him. */
     async setCard(id: string, template: CardTemplate): Promise<CardTemplate> {
-      const result = parse(z.object({ id: toolId, template: z.enum(cardTemplates) }).strict(), await auth.request(`/api/owner/tools/${parse(toolId, id, true)}/card`, { method: 'POST', body: { template: parse(z.enum(cardTemplates), template, true) } }))
+      const result = parse(
+        z.object({ id: toolId, template: z.enum(cardTemplates) }).strict(),
+        await auth.request(`/api/owner/tools/${parse(toolId, id, true)}/card`, { method: 'POST', body: { template: parse(z.enum(cardTemplates), template, true) } }),
+      )
       if (result.id !== id || result.template !== template) throw new GatewayError('invalid-response')
       return result.template
     },

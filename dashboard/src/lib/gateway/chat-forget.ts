@@ -11,12 +11,20 @@ const session = z.string().regex(/^[A-Za-z0-9_-]{1,128}$/)
 const count = z.number().int().min(0).max(Number.MAX_SAFE_INTEGER)
 const confirmation = z.string().regex(/^[0-9a-f]{64}$/)
 const plan = z.object({
-  sessionId: session, sessionIds: z.array(session).min(1).max(1000), messages: count, turns: count,
-  approvalRequests: count, confirmation, alreadyForgotten: z.boolean(),
+  sessionId: session,
+  sessionIds: z.array(session).min(1).max(1000),
+  messages: count,
+  turns: count,
+  approvalRequests: count,
+  confirmation,
+  alreadyForgotten: z.boolean(),
 })
 const result = z.object({
-  sessionId: session, state: z.enum(['done', 'refused', 'retrying']), receiptId: z.string().max(200).nullable(),
-  finishedAt: z.number().finite(), detail: z.string().max(300).nullable(),
+  sessionId: session,
+  state: z.enum(['done', 'refused', 'retrying']),
+  receiptId: z.string().max(200).nullable(),
+  finishedAt: z.number().finite(),
+  detail: z.string().max(300).nullable(),
 })
 const overview = z.object({ supervised: z.boolean(), pending: z.array(session).max(1000), results: z.array(result).max(50), chats: z.array(plan).max(50) })
 const queued = z.object({ state: z.enum(['done', 'restarting']), sessions: z.array(session).min(1).max(50) })
@@ -38,11 +46,16 @@ const path = '/api/control/pi/forgetting/chats'
 export function chatForgetMessage(error: unknown): string {
   const failure = gatewayError(error)
   switch (failure.code) {
-    case 'not_supervised': return 'This Conker cannot restart itself, so it cannot delete chats from here. The server guide shows the offline command.'
-    case 'scope_changed': return 'A chat changed since you reviewed it, so nothing was deleted. Review it again.'
-    case 'not_found': return 'One of these chats is no longer there.'
-    case 'forgetting_unavailable': return 'Conker could not check what deleting would reach. Nothing was deleted; try again.'
-    default: return failure.message
+    case 'not_supervised':
+      return 'This Conker cannot restart itself, so it cannot delete chats from here. The server guide shows the offline command.'
+    case 'scope_changed':
+      return 'A chat changed since you reviewed it, so nothing was deleted. Review it again.'
+    case 'not_found':
+      return 'One of these chats is no longer there.'
+    case 'forgetting_unavailable':
+      return 'Conker could not check what deleting would reach. Nothing was deleted; try again.'
+    default:
+      return failure.message
   }
 }
 

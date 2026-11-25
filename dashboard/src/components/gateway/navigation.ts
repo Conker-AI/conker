@@ -1,20 +1,4 @@
-export type GatewayRoute =
-  | 'today'
-  | 'setup'
-  | 'chat'
-  | 'chats'
-  | 'inbox'
-  | 'projects'
-  | 'artifacts'
-  | 'jobs'
-  | 'memory'
-  | 'loops'
-  | 'activity'
-  | 'agents'
-  | 'tools'
-  | 'system'
-  | 'settings'
-  | 'companion-settings'
+export type GatewayRoute = 'today' | 'setup' | 'chat' | 'chats' | 'inbox' | 'projects' | 'artifacts' | 'jobs' | 'memory' | 'loops' | 'activity' | 'agents' | 'tools' | 'system' | 'settings' | 'companion-settings' | 'share'
 
 /**
  * The connected product's labels and destinations have one source of truth. Sidebar groups follow
@@ -48,7 +32,7 @@ export const gatewayDestinations = [
   { id: 'native-sessions', route: 'system', title: 'Native sessions', path: '/system?tab=native-sessions', group: 'more' },
   { id: 'setup', route: 'setup', title: 'Setup', path: '/setup', group: 'more' },
 ] as const satisfies readonly { id: string; route: GatewayRoute; title: string; path: string; group: 'overview' | 'workspace' | 'system' | 'more' }[]
-export type GatewayDestination = typeof gatewayDestinations[number]
+export type GatewayDestination = (typeof gatewayDestinations)[number]
 export const gatewaySidebarGroups = [
   { id: 'overview', label: 'Overview' },
   { id: 'workspace', label: 'Workspace' },
@@ -60,31 +44,68 @@ export const gatewayCommandDestinations = gatewayDestinations
 // A third entry names the section a page opens from: it stays out of the section list and lights
 // up that section instead (Containers opens from Services, which replaced it in the list).
 const routeSections: Partial<Record<GatewayRoute, readonly (readonly [string, string, string?])[]>> = {
-  activity: [['tasks', 'Tasks'], ['runs', 'Runs'], ['events', 'Activity log']],
-  agents: [['agents', 'Agents'], ['teams', 'Teams'], ['skills', 'Skills'], ['templates', 'Prompt templates']],
-  system: [['overview', 'Overview'], ['services', 'Services'], ['backups', 'Backups'], ['processes', 'Processes'], ['ports', 'Ports'], ['terminal', 'Terminal'], ['native-sessions', 'Native sessions'], ['files', 'Files'], ['containers', 'Containers', 'services']],
-  'companion-settings': [['identity', 'Identity & soul'], ['speaking', 'Speaking style'], ['appearance', 'Appearance'], ['voice', 'Voice'], ['modes', 'Expression & modes'], ['harness', 'Harness']],
+  activity: [
+    ['tasks', 'Tasks'],
+    ['runs', 'Runs'],
+    ['events', 'Activity log'],
+  ],
+  agents: [
+    ['agents', 'Agents'],
+    ['teams', 'Teams'],
+    ['skills', 'Skills'],
+    ['templates', 'Prompt templates'],
+  ],
+  system: [
+    ['overview', 'Overview'],
+    ['services', 'Services'],
+    ['backups', 'Backups'],
+    ['processes', 'Processes'],
+    ['ports', 'Ports'],
+    ['terminal', 'Terminal'],
+    ['native-sessions', 'Native sessions'],
+    ['files', 'Files'],
+    ['containers', 'Containers', 'services'],
+  ],
+  'companion-settings': [
+    ['identity', 'Identity & soul'],
+    ['speaking', 'Speaking style'],
+    ['appearance', 'Appearance'],
+    ['voice', 'Voice'],
+    ['modes', 'Expression & modes'],
+    ['harness', 'Harness'],
+  ],
 }
 
 export function gatewayPageNavigation(pathname: string, search: string) {
   const route = resolveGatewayRoute(pathname)
   const params = new URLSearchParams(search)
-  const definitions = route ? routeSections[route] ?? [] : []
+  const definitions = route ? (routeSections[route] ?? []) : []
   const requested = definitions.find(([value]) => value === params.get('tab'))
   const shown = requested?.[0] ?? definitions[0]?.[0]
   const activeSection = requested?.[2] ?? shown
-  const destination = gatewayDestinations.find(item => item.route === route && new URLSearchParams(item.path.split('?')[1]).get('tab') === shown)
-    ?? gatewayDestinations.find(item => item.route === route)
-  const title = route === 'chat' ? params.has('session') ? 'Chat' : 'New chat'
-    : route === 'agents' && normalizedPath(pathname) !== '/agents' ? 'Edit agent'
-      : route === 'tools' && params.has('draft') ? 'Workflow'
-        : route === 'tools' && params.get('view') === 'mcp' ? 'MCP servers'
-          : destination?.title ?? 'Conker'
-  const sections = definitions.filter(entry => !entry[2]).map(([value, label], index) => {
-    const next = new URLSearchParams(search)
-    if (index === 0) next.delete('tab'); else next.set('tab', value)
-    return { value, label, to: `${gatewayDestinations.find(item => item.route === route)!.path.split('?')[0]}${next.size ? `?${next}` : ''}`, badge: undefined }
-  })
+  const destination = gatewayDestinations.find(item => item.route === route && new URLSearchParams(item.path.split('?')[1]).get('tab') === shown) ?? gatewayDestinations.find(item => item.route === route)
+  const title =
+    route === 'chat'
+      ? params.has('session')
+        ? 'Chat'
+        : 'New chat'
+      : route === 'share'
+        ? 'Shared text'
+        : route === 'agents' && normalizedPath(pathname) !== '/agents'
+          ? 'Edit agent'
+          : route === 'tools' && params.has('draft')
+            ? 'Workflow'
+            : route === 'tools' && params.get('view') === 'mcp'
+              ? 'MCP servers'
+              : (destination?.title ?? 'Conker')
+  const sections = definitions
+    .filter(entry => !entry[2])
+    .map(([value, label], index) => {
+      const next = new URLSearchParams(search)
+      if (index === 0) next.delete('tab')
+      else next.set('tab', value)
+      return { value, label, to: `${gatewayDestinations.find(item => item.route === route)!.path.split('?')[0]}${next.size ? `?${next}` : ''}`, badge: undefined }
+    })
   return { route, destination, title, activeSection, sections }
 }
 
@@ -113,6 +134,7 @@ const exactRoutes: Readonly<Record<string, GatewayRoute>> = {
   '/system': 'system',
   '/settings': 'settings',
   '/settings/companion': 'companion-settings',
+  '/share': 'share',
 }
 
 const detailRoutes: readonly [RegExp, GatewayRoute][] = [
@@ -137,7 +159,7 @@ export function gatewayConversationLink(sessionId: string, messageId?: string): 
 }
 
 export const gatewaySystemSections = ['overview', 'services', 'backups', 'processes', 'ports', 'containers', 'terminal', 'native-sessions', 'files'] as const
-export type GatewaySystemSection = typeof gatewaySystemSections[number]
+export type GatewaySystemSection = (typeof gatewaySystemSections)[number]
 
 export function gatewaySystemSection(search: string): GatewaySystemSection {
   const requested = new URLSearchParams(search).get('tab')

@@ -26,19 +26,46 @@ export const isImportSave = (path: string) => importUpload.test(path) && !path.e
 
 /** Pi's refusal codes for exports and imports; anything else reads as a plain gateway error. */
 export const gatewayRefusalCodes = [
-  'export_too_long', 'export_too_deep', 'export_too_many_blocks', 'export_table_too_big', 'export_page_cells', 'export_no_table',
-  'export_pages', 'export_slides', 'export_too_big', 'export_layout', 'export_control', 'export_invalid', 'export_busy', 'export_unavailable',
-  'unsupported_format', 'source_unavailable', 'not_found', 'not_an_answer', 'privacy_unknown', 'source_changed', 'invalid_version',
-  'too_large', 'not_json', 'not_a_list', 'too_many_chats', 'too_many_messages', 'wrong_format', 'unknown_source', 'file_changed',
+  'export_too_long',
+  'export_too_deep',
+  'export_too_many_blocks',
+  'export_table_too_big',
+  'export_page_cells',
+  'export_no_table',
+  'export_pages',
+  'export_slides',
+  'export_too_big',
+  'export_layout',
+  'export_control',
+  'export_invalid',
+  'export_busy',
+  'export_unavailable',
+  'unsupported_format',
+  'source_unavailable',
+  'not_found',
+  'not_an_answer',
+  'privacy_unknown',
+  'source_changed',
+  'invalid_version',
+  'too_large',
+  'not_json',
+  'not_a_list',
+  'too_many_chats',
+  'too_many_messages',
+  'wrong_format',
+  'unknown_source',
+  'file_changed',
 ] as const
-export type GatewayRefusalCode = typeof gatewayRefusalCodes[number]
+export type GatewayRefusalCode = (typeof gatewayRefusalCodes)[number]
 export class GatewayRefusal extends GatewayError {
   readonly refusal: GatewayRefusalCode
   /** For `wrong_format`: the other export the file looks like, when Pi says so. */
   readonly looksLike?: 'chatgpt' | 'claude'
   constructor(refusal: GatewayRefusalCode, status: number, looksLike?: 'chatgpt' | 'claude') {
     super(status >= 500 ? 'dependency' : 'http', status)
-    this.name = 'GatewayRefusal'; this.refusal = refusal; this.looksLike = looksLike
+    this.name = 'GatewayRefusal'
+    this.refusal = refusal
+    this.looksLike = looksLike
   }
 }
 
@@ -50,7 +77,9 @@ async function failure(response: Response): Promise<GatewayError> {
     // Only Pi's fixed hint is read, never shown as text.
     const hint = refusal === 'wrong_format' && typeof detail?.message === 'string' ? detail.message.match(/It looks like a (ChatGPT|Claude) export\.$/) : null
     if (hint) looksLike = hint[1] === 'Claude' ? 'claude' : 'chatgpt'
-  } catch { await response.body?.cancel().catch(() => undefined) }
+  } catch {
+    await response.body?.cancel().catch(() => undefined)
+  }
   if (!refusal && response.status === 413) refusal = 'too_large'
   if (refusal) return new GatewayRefusal(refusal, response.status, looksLike)
   return new GatewayError(response.status === 428 ? 'verification-required' : response.status === 429 ? 'rate-limited' : response.status >= 500 ? 'dependency' : 'http', response.status)
@@ -59,31 +88,53 @@ async function failure(response: Response): Promise<GatewayError> {
 /** The readable name from Content-Disposition, stripped of anything a file system would misread. */
 export function downloadFilename(header: string | null, format: GatewayFileFormat): string {
   let name = ''
-  const encoded = header?.match(/filename\*=UTF-8''([^;]+)/i)?.[1], plain = header?.match(/filename="([^"]*)"/i)?.[1]
-  try { name = encoded ? decodeURIComponent(encoded) : plain ?? '' } catch { name = plain ?? '' }
+  const encoded = header?.match(/filename\*=UTF-8''([^;]+)/i)?.[1],
+    plain = header?.match(/filename="([^"]*)"/i)?.[1]
+  try {
+    name = encoded ? decodeURIComponent(encoded) : (plain ?? '')
+  } catch {
+    name = plain ?? ''
+  }
   // No control or direction-changing characters: the name shows as it is stored.
-  name = [...name].filter(character => character.charCodeAt(0) >= 32 && character.charCodeAt(0) !== 127 && !/[‎‏‪-‮⁦-⁩]/.test(character) && !'/\\:*?"<>|'.includes(character)).join('').trim().replace(/^\.+/, '').slice(-120)
+  name = [...name]
+    .filter(character => character.charCodeAt(0) >= 32 && character.charCodeAt(0) !== 127 && !/[‎‏‪-‮⁦-⁩]/.test(character) && !'/\\:*?"<>|'.includes(character))
+    .join('')
+    .trim()
+    .replace(/^\.+/, '')
+    .slice(-120)
   return name.toLowerCase().endsWith(`.${format}`) && name.length > format.length + 1 ? name : `conker-export.${format}`
 }
 
 async function bytes(response: Response, limit: number): Promise<Uint8Array<ArrayBuffer>> {
   const length = response.headers.get('content-length')
-  if (length && Number(length) > limit) { await response.body?.cancel().catch(() => undefined); throw new GatewayRefusal('export_too_big', 413) }
+  if (length && Number(length) > limit) {
+    await response.body?.cancel().catch(() => undefined)
+    throw new GatewayRefusal('export_too_big', 413)
+  }
   if (!response.body) throw new GatewayError('invalid-response')
-  const reader = response.body.getReader(), chunks: Uint8Array[] = []
+  const reader = response.body.getReader(),
+    chunks: Uint8Array[] = []
   let size = 0
   try {
     for (;;) {
       const { done, value } = await reader.read()
       if (done) break
       size += value.byteLength
-      if (size > limit) { await reader.cancel().catch(() => undefined); throw new GatewayRefusal('export_too_big', 413) }
+      if (size > limit) {
+        await reader.cancel().catch(() => undefined)
+        throw new GatewayRefusal('export_too_big', 413)
+      }
       chunks.push(value)
     }
-  } finally { reader.releaseLock() }
+  } finally {
+    reader.releaseLock()
+  }
   const result = new Uint8Array(size)
   let offset = 0
-  for (const chunk of chunks) { result.set(chunk, offset); offset += chunk.byteLength }
+  for (const chunk of chunks) {
+    result.set(chunk, offset)
+    offset += chunk.byteLength
+  }
   return result
 }
 
@@ -110,7 +161,10 @@ export function createGatewayFileTransfer(origin: string, fetcher: typeof fetch)
       try {
         const response = await send(`${origin}${path}?${search}`, { method: 'GET', headers: { Accept: `${gatewayFileTypes[query.format]}, application/json` } }, signal)
         const type = (response.headers.get('content-type') ?? '').split(';')[0].trim().toLowerCase()
-        if (type !== gatewayFileTypes[query.format]) { await response.body?.cancel().catch(() => undefined); throw new GatewayError('invalid-response') }
+        if (type !== gatewayFileTypes[query.format]) {
+          await response.body?.cancel().catch(() => undefined)
+          throw new GatewayError('invalid-response')
+        }
         const content = await bytes(response, GATEWAY_DOWNLOAD_LIMIT)
         return { blob: new Blob([content], { type: gatewayFileTypes[query.format] }), filename: downloadFilename(response.headers.get('content-disposition'), query.format) }
       } catch (error) {
@@ -120,8 +174,16 @@ export function createGatewayFileTransfer(origin: string, fetcher: typeof fetch)
     },
     /** POST a chat export's conversations.json as the raw body (preview, or import; a password proof only if the server asks). */
     async upload(path: string, body: Blob, csrfToken: string, verificationToken?: string, signal?: AbortSignal): Promise<Record<string, unknown>> {
-      if (!importUpload.test(path) || !(body instanceof Blob) || !body.size || body.size > GATEWAY_IMPORT_LIMIT || !/^[A-Za-z0-9_-]{32,128}$/.test(csrfToken) ||
-        (verificationToken === undefined) === isImportSave(path) || verificationToken !== undefined && !/^[A-Za-z0-9_-]{43}$/.test(verificationToken)) throw new GatewayError('validation')
+      if (
+        !importUpload.test(path) ||
+        !(body instanceof Blob) ||
+        !body.size ||
+        body.size > GATEWAY_IMPORT_LIMIT ||
+        !/^[A-Za-z0-9_-]{32,128}$/.test(csrfToken) ||
+        (verificationToken === undefined) === isImportSave(path) ||
+        (verificationToken !== undefined && !/^[A-Za-z0-9_-]{43}$/.test(verificationToken))
+      )
+        throw new GatewayError('validation')
       const headers: Record<string, string> = { Accept: 'application/json', 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken }
       if (verificationToken) headers['X-Conker-Verification'] = verificationToken
       try {

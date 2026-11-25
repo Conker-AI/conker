@@ -14,11 +14,32 @@ const publicationHistory = z.object({ items: z.array(publication.extend({ author
 const published = publication.extend({ toolId: z.string().min(1).max(200).optional(), conkerMayUse: z.boolean().optional() })
 const checkIssue = z.object({ message: z.string().min(1).max(2000), node_id: z.string().max(64).nullable().optional(), nodeId: z.string().max(64).nullable().optional() })
 const validation = z.object({ id: identity, revision, issues: z.array(checkIssue).max(200) })
-const capability = z.object({ id: z.string().regex(/^[a-z0-9][a-z0-9.-]{1,79}$/), name: z.string().max(160), description: z.string().max(800), version: revision, authorization: z.string().max(40), inputs: z.array(z.object({ name: z.string().max(200), type: z.string().max(40), required: z.boolean(), description: z.string().max(500) })).max(100) })
+const capability = z.object({
+  id: z.string().regex(/^[a-z0-9][a-z0-9.-]{1,79}$/),
+  name: z.string().max(160),
+  description: z.string().max(800),
+  version: revision,
+  authorization: z.string().max(40),
+  inputs: z.array(z.object({ name: z.string().max(200), type: z.string().max(40), required: z.boolean(), description: z.string().max(500) })).max(100),
+})
 const catalogue = z.object({ items: z.array(capability).max(100), next_after: z.string().max(80).nullable() })
 const access = z.object({ actor_id: z.string().max(100), actor_name: z.string().max(160), automation_id: z.string().max(80), enabled: z.boolean(), required_scopes: z.array(z.string().max(100)).max(500) })
-const outcome = z.object({ code: z.string().max(80), action_id: z.string().regex(/^editor_[a-f0-9]{32}$/), message: z.string().max(2000).optional(), request_id: z.string().max(100).optional(), result: z.unknown().optional(), steps: z.array(z.object({ nodeId: z.string().max(64), label: z.string().max(100), type: z.string().max(40), status: z.enum(['completed', 'failed', 'skipped']), output: z.unknown().optional(), error: z.string().max(2000).optional() })).max(60).optional() })
-const runHistory = z.object({ items: z.array(z.object({ action_id: z.string().max(100), version: revision, digest: z.string().regex(/^[a-f0-9]{64}$/), created_at: z.string().datetime({ offset: true }), args: z.record(z.string(), z.unknown()), response: outcome })).max(30) })
+const outcome = z.object({
+  code: z.string().max(80),
+  action_id: z.string().regex(/^editor_[a-f0-9]{32}$/),
+  message: z.string().max(2000).optional(),
+  request_id: z.string().max(100).optional(),
+  result: z.unknown().optional(),
+  steps: z
+    .array(z.object({ nodeId: z.string().max(64), label: z.string().max(100), type: z.string().max(40), status: z.enum(['completed', 'failed', 'skipped']), output: z.unknown().optional(), error: z.string().max(2000).optional() }))
+    .max(60)
+    .optional(),
+})
+const runHistory = z.object({
+  items: z
+    .array(z.object({ action_id: z.string().max(100), version: revision, digest: z.string().regex(/^[a-f0-9]{64}$/), created_at: z.string().datetime({ offset: true }), args: z.record(z.string(), z.unknown()), response: outcome }))
+    .max(30),
+})
 export type EditorRun = z.infer<typeof runHistory>['items'][number]
 export type EditorCapability = z.infer<typeof capability>
 export type EditorDraft = { id: string; revision: number; updated_at: string; document: ToolDefinition }
@@ -36,8 +57,11 @@ function path(id: string) {
 function record(value: unknown, expectedId: string): EditorDraft {
   const result = parse(saved, value)
   let document: ToolDefinition
-  try { document = parseToolDraft(JSON.stringify(result.document)) }
-  catch { throw new GatewayError('invalid-response') }
+  try {
+    document = parseToolDraft(JSON.stringify(result.document))
+  } catch {
+    throw new GatewayError('invalid-response')
+  }
   if (result.id !== expectedId || document.id !== expectedId) throw new GatewayError('invalid-response')
   return { ...result, document }
 }
@@ -76,7 +100,7 @@ export function createGatewayEditorDrafts(auth: Pick<GatewayAuthClient, 'request
     async validation(id: string, signal?: AbortSignal): Promise<EditorValidation> {
       const result = parse(validation, await auth.request(`${path(id)}/validation`, { signal }))
       if (result.id !== id) throw new GatewayError('invalid-response')
-      return { revision: result.revision, issues: result.issues.map(({ message, nodeId = null, node_id = null }) => ({ path: 'toolgate', message, ...(nodeId ?? node_id ? { nodeId: (nodeId ?? node_id) as string } : {}) })) }
+      return { revision: result.revision, issues: result.issues.map(({ message, nodeId = null, node_id = null }) => ({ path: 'toolgate', message, ...((nodeId ?? node_id) ? { nodeId: (nodeId ?? node_id) as string } : {}) })) }
     },
     /** `conkerMayUse` also shows the published tool to Conker and gives its key access, in the same step. */
     async publish(id: string, expectedRevision: number, previousVersion: number, authorization: 'auto' | 'owner_confirmation', conkerMayUse: boolean, signal?: AbortSignal) {
@@ -88,8 +112,11 @@ export function createGatewayEditorDrafts(auth: Pick<GatewayAuthClient, 'request
     async save(document: ToolDefinition, expectedRevision: number, signal?: AbortSignal) {
       if (!Number.isSafeInteger(expectedRevision) || expectedRevision < 0) throw new GatewayError('validation')
       let checked: ToolDefinition
-      try { checked = parseToolDraft(JSON.stringify(document)) }
-      catch { throw new GatewayError('validation') }
+      try {
+        checked = parseToolDraft(JSON.stringify(document))
+      } catch {
+        throw new GatewayError('validation')
+      }
       const value = record(await auth.request(path(checked.id), { method: 'POST', body: { expected_revision: expectedRevision, document: checked }, signal }), checked.id)
       if (value.revision !== expectedRevision + 1) throw new GatewayError('invalid-response')
       return value

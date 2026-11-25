@@ -9,15 +9,26 @@ import { RELEASE } from './host-ops'
  * what the host reported; the update itself is the host action `update.run` (host-ops.ts).
  */
 const version = z.string().regex(RELEASE)
-const offer = z.object({
-  version, title: z.string().max(200), notes: z.string().max(20000),
-  url: z.string().regex(/^https:\/\/github\.com\/Conker-AI\/conker\/releases\/tag\/v\d{1,4}\.\d{1,4}\.\d{1,4}$/),
-  publishedAt: z.string().max(40).nullable(), foundAt: z.number().finite().nonnegative(),
-}).strict()
-const result = z.object({
-  id: z.string().regex(/^[0-9a-f]{32}$/), version, outcome: z.enum(['applied', 'rolled_back', 'held', 'failed']),
-  title: z.string().max(200), reason: z.string().max(300).nullable(), finishedAt: z.number().finite().nonnegative(),
-}).strict()
+const offer = z
+  .object({
+    version,
+    title: z.string().max(200),
+    notes: z.string().max(20000),
+    url: z.string().regex(/^https:\/\/github\.com\/Conker-AI\/conker\/releases\/tag\/v\d{1,4}\.\d{1,4}\.\d{1,4}$/),
+    publishedAt: z.string().max(40).nullable(),
+    foundAt: z.number().finite().nonnegative(),
+  })
+  .strict()
+const result = z
+  .object({
+    id: z.string().regex(/^[0-9a-f]{32}$/),
+    version,
+    outcome: z.enum(['applied', 'rolled_back', 'held', 'failed']),
+    title: z.string().max(200),
+    reason: z.string().max(300).nullable(),
+    finishedAt: z.number().finite().nonnegative(),
+  })
+  .strict()
 const overview = z.object({ offer: offer.nullable(), results: z.array(result).max(200) }).strict()
 
 export type UpdateOffer = z.infer<typeof offer>

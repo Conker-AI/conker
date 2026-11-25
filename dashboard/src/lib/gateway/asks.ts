@@ -4,12 +4,20 @@ import { GatewayError } from './transport'
 
 const askId = z.string().regex(/^ask_[0-9a-f]{32}$/)
 /** One of Conker's questions; the options are the AI's words, the answer goes to that chat. */
-const ask = z.object({
-  id: askId, sessionId: z.string().min(1).max(128), chatTitle: z.string().max(500), question: z.string().min(1).max(500),
-  options: z.array(z.string().min(1).max(60)).min(2).max(4), state: z.enum(['open', 'answered', 'dismissed']),
-  answer: z.string().max(4000).nullable(), chosen: z.boolean().nullable(),
-  createdAt: z.number().nonnegative(), answeredAt: z.number().nonnegative().nullable(),
-}).strict()
+const ask = z
+  .object({
+    id: askId,
+    sessionId: z.string().min(1).max(128),
+    chatTitle: z.string().max(500),
+    question: z.string().min(1).max(500),
+    options: z.array(z.string().min(1).max(60)).min(2).max(4),
+    state: z.enum(['open', 'answered', 'dismissed']),
+    answer: z.string().max(4000).nullable(),
+    chosen: z.boolean().nullable(),
+    createdAt: z.number().nonnegative(),
+    answeredAt: z.number().nonnegative().nullable(),
+  })
+  .strict()
 const collection = z.object({ schemaVersion: z.literal(1), results: z.array(ask).max(50) }).strict()
 
 export type ConkerAsk = z.infer<typeof ask>
