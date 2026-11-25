@@ -112,7 +112,11 @@ again. Canceling password verification does not restore a submitted key draft.
 
 Paid requests require separate explicit authorization. Settings and
 `conker providers spending status|on|off|recover` use the same fixed host policy
-operation. It revision-checks the current flag, restarts Pi and the sidecars that share its
+operation, and both ask for the owner's password to change it (`on`, `off` and `recover`;
+`status` does not). The CLI asks with echo off and has the gateway's `check-password` host
+command check it (five wrong ones in five minutes and it waits) before it writes anything; the
+password goes only to that command's stdin. No service sits between the command and the host's
+files, so this makes the sanctioned command ask, not a wall against the host. It revision-checks the current flag, restarts Pi and the sidecars that share its
 network (Laya on Ubuntu, and the Claude plan runtime where it runs), and confirms the runtime flag.
 A hosted API key (any of the providers above) answers nothing until spending is on: Pi reports the
 provider as not configured, "paid models are disabled". Failed rollback holds a redacted recovery marker.
