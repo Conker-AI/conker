@@ -24,7 +24,7 @@ const errorMessages: Record<string, string> = {
   'audio-capture': 'No microphone is available. Connect one and try again.',
   network: 'Transcription lost its connection. Your captured words are kept; check your connection and try again.',
   'no-speech': 'No speech was detected. Try again when you’re ready.',
-  'language-not-supported': 'This speech service does not support that language. Choose another language in Tools.',
+  'language-not-supported': 'This speech service does not support that language. Choose another speech language in Settings, Voice and calls.',
 }
 
 function recognitionConstructor() {

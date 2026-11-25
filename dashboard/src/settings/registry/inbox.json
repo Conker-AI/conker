@@ -100,12 +100,12 @@
         {
           "id": "inbox.details_open",
           "title": "Exact details open",
-          "description": "Shows a request's exact details without tapping Details.",
+          "description": "Opens each card with its exact details and every answer, without tapping it.",
           "type": "toggle",
           "default": false,
           "tier": "basic",
           "scope": "global",
-          "effect": "stored"
+          "effect": "live"
         },
         {
           "id": "inbox.asks_per_chat",
@@ -169,7 +169,7 @@
           "default": "urgent",
           "tier": "basic",
           "scope": "global",
-          "effect": "stored",
+          "effect": "live",
           "options": [
             {
               "value": "urgent",
@@ -212,12 +212,12 @@
         {
           "id": "inbox.badge",
           "title": "Badge count",
-          "description": "What the Inbox count includes.",
+          "description": "What the Inbox count in the menu includes; urgent is only what waits for your answer.",
           "type": "select",
           "default": "all",
           "tier": "basic",
           "scope": "global",
-          "effect": "stored",
+          "effect": "live",
           "options": [
             {
               "value": "all",

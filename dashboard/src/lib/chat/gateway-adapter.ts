@@ -60,7 +60,7 @@ export function gatewayChatContract(state: GatewayChatState, read: () => Gateway
     memory: !isForgotten(state) && message.role === 'user' && message.content.kind === 'text' && state.memoryRead !== undefined
       ? memoryFeedback(message.id, state.memoryRead, action(value => !isForgotten(value) && value.memoryRead?.phase !== 'checking' && value.current?.messages.some(row => row.id === message.id && row.role === 'user' && row.content.kind === 'text') === true, handler => handler.refreshMemory?.(message.id), 'A memory status check is already in progress.'), undoMemory(message.id)) : undefined,
     ...(message.agentId && state.agentNames[message.agentId] ? { agentName: state.agentNames[message.agentId] } : {}),
-    ...(message.role === 'assistant' && message.turnId && !isForgotten(state) ? turnDetails(state.current?.turns.find(turn => turn.id === message.turnId)) : {}),
+    ...(message.role === 'assistant' && message.turnId && !isForgotten(state) ? turnDetails(state.current?.turns.find(turn => turn.id === message.turnId), state.current?.messages.filter(row => row.role === 'tool' && row.turnId === message.turnId).length) : {}),
     content: isForgotten(state) ? { kind: 'unavailable', reason: 'forgotten' } : message.content,
     actions: {
       copy: messageAction(message, 'copy'), link: messageAction(message, 'link'),

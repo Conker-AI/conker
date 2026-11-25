@@ -3,7 +3,7 @@ import { Menu, MoreHorizontal } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { SidebarTrigger, useSidebar } from '@/components/ui/sidebar'
-import { WorkspaceChromeContext, useInboxAttention, useWorkspaceChrome } from '@/lib/workspace-chrome'
+import { WorkspaceChromeContext, useInboxBadge, useWorkspaceChrome } from '@/lib/workspace-chrome'
 import { splitActionLabel } from '@/lib/route-actions'
 import { cn } from '@/lib/utils'
 
@@ -132,7 +132,7 @@ export function WorkspaceAppbar({ context, search, actions, sections, toolbar }:
   // Keep the mobile opener mounted behind the modal so dismissal can restore its focus.
   const showSidebarTrigger = isMobile || state === 'collapsed'
   // The phone's menu button carries the Inbox count so nothing that needs the owner hides in the drawer.
-  const menuCount = useInboxAttention()
+  const menuCount = useInboxBadge()
   const chrome = useWorkspaceChrome()
   const header = useRef<HTMLElement>(null)
   const setCompactSearch = chrome?.setCompactSearch

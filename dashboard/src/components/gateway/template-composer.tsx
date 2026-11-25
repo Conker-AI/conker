@@ -9,6 +9,7 @@ import type { PromptTemplatesClient } from '@/lib/gateway/prompt-templates'
 import { chooseTemplate, changeTemplateValues, loadTemplates, templateText, useTemplateCatalogue, useTemplateEntry, useTemplateActive } from './template-store'
 import { composerItem, useComposerValue } from '@/components/chat/composer-items'
 import { cn } from '@/lib/utils'
+import { useServerSetting } from '@/settings/server-setting'
 
 export function TemplatePicker({ draftKey, disabled, client }: { draftKey: string; disabled?: boolean; client?: Pick<PromptTemplatesClient, 'list'> }) {
   const active = useTemplateActive(draftKey)
@@ -85,6 +86,8 @@ composerItem(TemplatePicker, 'template')
 
 export function TemplateInput({ draftKey, disabled, onText, onSubmit }: { draftKey: string; disabled?: boolean; onText: (text: string) => void; onSubmit: () => void }) {
   const entry = useTemplateEntry(draftKey)
+  // Settings > Prompts > Required fields must be filled: on, the message waits for them; off, they are a reminder.
+  const required = useServerSetting('prompts.required_fields', true)
   if (!entry) return null
   const template = entry.template
   const missing = missingRequired(template, entry.values)
@@ -106,19 +109,32 @@ export function TemplateInput({ draftKey, disabled, onText, onSubmit }: { draftK
         onSubmit={onSubmit}
         onChange={values => {
           changeTemplateValues(draftKey, values)
-          onText(templateText(template, values))
+          onText(templateText(template, values, required))
         }}
       />
-      {missing.length > 0 && <p className="pb-1 text-xs text-muted-foreground">Fill in: {missing.join(', ')}</p>}
-      <TemplateInitEffect templateId={template.id} template={template} values={entry.values} onText={onText} />
+      {missing.length > 0 && <p className="pb-1 text-xs text-muted-foreground">{required ? `Fill in: ${missing.join(', ')}` : `Still empty: ${missing.join(', ')}. You can send without them.`}</p>}
+      <TemplateInitEffect templateId={template.id} template={template} values={entry.values} required={required} onText={onText} />
     </div>
   )
 }
 
-function TemplateInitEffect({ templateId, template, values, onText }: { templateId: string; template: Parameters<typeof templateText>[0]; values: Parameters<typeof templateText>[1]; onText: (text: string) => void }) {
+function TemplateInitEffect({
+  templateId,
+  template,
+  values,
+  required,
+  onText,
+}: {
+  templateId: string
+  template: Parameters<typeof templateText>[0]
+  values: Parameters<typeof templateText>[1]
+  required: boolean
+  onText: (text: string) => void
+}) {
+  // A new template, or the setting changing while the form is open, writes the draft again.
   useEffect(() => {
-    onText(templateText(template, values))
+    onText(templateText(template, values, required))
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [templateId])
+  }, [templateId, required])
   return null
 }

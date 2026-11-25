@@ -33,7 +33,7 @@ Who you are, where you are and how your days run.
 | **Answer language**<br>`you.answer_language` | The language Conker answers in. Choices: Same as your message, English, Hebrew, Russian. (applies from the next message) | Same as your message | owner settings |
 | **Time format**<br>`you.time_format` | How times are written on Conker's screens. Choices: Follow this device, 24-hour, 12-hour. (applies right away) | Follow this device | owner settings |
 | **Date format**<br>`you.date_format` | How dates are written on Conker's screens. Choices: Follow this device, 28 Oct 2026, Oct 28, 2026, 2026-10-28. (applies right away) | Follow this device | owner settings |
-| **First day of the week**<br>`you.week_start` | Where weeks start in calendars and weekly plans. Choices: Sunday, Monday. (saved, not used yet) | Sunday | owner settings |
+| **First day of the week**<br>`you.week_start` | Where weeks start in the day lists of weekly jobs. Choices: Sunday, Monday. (applies right away) | Sunday | owner settings |
 | **Units**<br>`you.units` | Units for distance, weight and temperature. Choices: Not set, Metric, Imperial. (applies from the next message) | Not set | owner settings |
 
 ### Your rhythm
@@ -82,7 +82,7 @@ How Conker looks on your screens.
 | **Portraits in chat**<br>`appearance.portraits` | Shows the agent's portrait next to its messages. (applies right away) | on | owner settings |
 | **Sidebar**<br>`appearance.sidebar` | How the sidebar starts on large screens. Choices: Open, Collapsed, Collapse on small screens. (applies right away) | Open | owner settings |
 | **Sidebar places**<br>`appearance.sidebar_places` | Which places show in the sidebar. Choices: Projects, Memory, Agents, Tools, Jobs, Server. (applies right away) | Projects, Memory, Agents, Tools, Jobs, Server | owner settings |
-| **Chat views**<br>`appearance.chat_views` | Which views a chat's title bar offers. Choices: Context, Thinking, Files, Browser, Terminal, Logs. (saved, not used yet) | Context, Thinking, Files, Browser, Terminal, Logs | owner settings |
+| **Chat views**<br>`appearance.chat_views` | Which views a chat's title bar offers: context, thinking and logs. Choices: Context, Thinking, Logs. (applies right away) | Context, Thinking, Logs | owner settings |
 
 ### Motion and sound
 
@@ -97,7 +97,7 @@ How Conker looks on your screens.
 
 | Setting | What it does | Default | Home |
 |---|---|---|---|
-| **Under each answer**<br>`appearance.answer_details` | What shows under Conker's answers. Choices: Model, Time, Cost, Tokens, Why this model, Tools used. (saved, not used yet) | Model, Time | owner settings |
+| **Under each answer**<br>`appearance.answer_details` | What shows under Conker's answers. Choices: Model, Time, Cost, Tokens, Why this model, Tools used. (applies right away) | Model, Time | owner settings |
 | **Times**<br>`appearance.timestamps` | How times are shown in lists and chats. Choices: 5 min ago, Exact time, Hidden. (applies right away) | 5 min ago | owner settings |
 | **Rich text in answers**<br>`appearance.rich_text` | Shows headings, lists and tables instead of plain text. (applies right away) | on | owner settings |
 | **Technical IDs**<br>`appearance.technical_ids` | Shows ids and revisions next to things, for fixing problems. (saved, not used yet) | off | owner settings |
@@ -178,13 +178,13 @@ How requests, questions and the daily ritual work.
 | Setting | What it does | Default | Home |
 |---|---|---|---|
 | **Buttons per tool**<br>`inbox.tool_buttons` | The buttons a tool's card shows when it asks you. (applies right away) | its own screen | Settings screen |
-| **Exact details open**<br>`inbox.details_open` | Shows a request's exact details without tapping Details. (saved, not used yet) | off | owner settings |
+| **Exact details open**<br>`inbox.details_open` | Opens each card with its exact details and every answer, without tapping it. (applies right away) | off | owner settings |
 | **Questions per chat**<br>`inbox.asks_per_chat` | How many of Conker's questions can wait from one chat. 1 to 10. (applies right away) | `3` | owner settings |
 | **Questions in all**<br>`inbox.asks_total` | How many of Conker's questions can wait at once. 5 to 100. (applies right away) | `20` | owner settings |
 | **Group cards by**<br>`inbox.group_by` | How the Inbox groups what waits for you. Choices: Kind, Chat, Agent, Urgency. (saved, not used yet) | Kind | owner settings |
-| **Order**<br>`inbox.sort` | Which cards come first. Choices: Urgent first, Oldest first, Newest first. (saved, not used yet) | Urgent first | owner settings |
+| **Order**<br>`inbox.sort` | Which cards come first. Choices: Urgent first, Oldest first, Newest first. (applies right away) | Urgent first | owner settings |
 | **Later means**<br>`inbox.later` | When a card you moved to Later comes back. Choices: Next ritual, Tonight, Tomorrow morning. (saved, not used yet) | Next ritual | owner settings |
-| **Badge count**<br>`inbox.badge` | What the Inbox count includes. Choices: Everything, Urgent only, Off. (saved, not used yet) | Everything | owner settings |
+| **Badge count**<br>`inbox.badge` | What the Inbox count in the menu includes; urgent is only what waits for your answer. Choices: Everything, Urgent only, Off. (applies right away) | Everything | owner settings |
 | **Keep Handled**<br>`inbox.handled_days` | How long the list of what Conker did stays. 1 to 90 days. (saved, not used yet) | `7` days | owner settings |
 | **Keep AI-job notes**<br>`inbox.notes_days` | How long findings from jobs stay in the Inbox. 1 to 90 days. (applies right away) | `14` days | owner settings |
 | **Approve similar together**<br>`inbox.batch` | Lets you approve many of one kind at once; never for messages, money or deleting. (saved, not used yet) | off | owner settings |
@@ -313,7 +313,7 @@ Templates, commands and snippets for writing requests.
 |---|---|---|---|
 | **Built-in templates**<br>`prompts.builtin` | Which ready-made templates are offered. Choices: Research, Writing, Code, Analysis, Summary. (saved, not used yet) | Research, Writing, Code, Analysis, Summary | owner settings |
 | **Default template**<br>`prompts.default_template` | The template a new message starts with. Choices: None, Research, Writing, Code, Analysis, Summary. (saved, not used yet) | None | owner settings |
-| **Required fields must be filled**<br>`prompts.required_fields` | Blocks sending until a template's required fields are filled. (saved, not used yet) | on | owner settings |
+| **Required fields must be filled**<br>`prompts.required_fields` | Blocks sending until a template's required fields are filled. (applies right away) | on | owner settings |
 
 ### Commands and mentions
 
@@ -403,7 +403,7 @@ Talking to Conker and hearing it.
 
 | Setting | What it does | Default | Home |
 |---|---|---|---|
-| **Speech language**<br>`voice.input_language` | The language Conker listens for. Choices: Same as the app, English, Hebrew, Russian. (saved, not used yet) | Same as the app | owner settings |
+| **Speech language**<br>`voice.input_language` | The language voice typing listens for; calls listen in English. Choices: Same as the app, English, Hebrew, Russian. (applies right away) | Same as the app | owner settings |
 | **How you talk**<br>`voice.input_mode` | Hold to talk, or let Conker hear when you start and stop. Choices: Hold to talk, Automatic. (saved, not used yet) | Hold to talk | owner settings |
 | **Listening models**<br>`voice.listen_models` | Which models turn speech into text, first choice first. (saved, not used yet) | none | owner settings |
 

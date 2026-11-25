@@ -7,28 +7,32 @@ import { TurnUsageDisclosure } from './turn-usage-disclosure'
 import { conversationViews, type ConversationView } from './conversation-view-list'
 import { formatTime } from '@/lib/date-format'
 
-export function ConversationViewStrip({ open, onToggle }: { open: ConversationView | null; onToggle: (view: ConversationView) => void }) {
+export function ConversationViewStrip({ open, views, onToggle }: { open: ConversationView | null; views: readonly ConversationView[]; onToggle: (view: ConversationView) => void }) {
   return (
     <div className="conker-view-strip" role="group" aria-label="Conversation views">
-      {conversationViews.map(({ id, label, icon: Icon }) => (
-        <button key={id} type="button" data-conversation-view={id} aria-label={label} title={label} aria-pressed={open === id} aria-controls={open === id ? 'conker-conversation-view' : undefined} onClick={() => onToggle(id)}>
-          <Icon aria-hidden="true" />
-        </button>
-      ))}
+      {conversationViews
+        .filter(item => views.includes(item.id))
+        .map(({ id, label, icon: Icon }) => (
+          <button key={id} type="button" data-conversation-view={id} aria-label={label} title={label} aria-pressed={open === id} aria-controls={open === id ? 'conker-conversation-view' : undefined} onClick={() => onToggle(id)}>
+            <Icon aria-hidden="true" />
+          </button>
+        ))}
     </div>
   )
 }
 
 /** Phones fold the views strip into the chat's "..." menu so the conversation title keeps its room. */
-export function ConversationViewMenuItems({ onToggle }: { onToggle: (view: ConversationView) => void }) {
+export function ConversationViewMenuItems({ views, onToggle }: { views: readonly ConversationView[]; onToggle: (view: ConversationView) => void }) {
   return (
     <>
-      {conversationViews.map(({ id, label, icon: Icon }) => (
-        <DropdownMenuItem key={id} data-conversation-view={id} onClick={() => onToggle(id)}>
-          <Icon aria-hidden="true" />
-          {label}
-        </DropdownMenuItem>
-      ))}
+      {conversationViews
+        .filter(item => views.includes(item.id))
+        .map(({ id, label, icon: Icon }) => (
+          <DropdownMenuItem key={id} data-conversation-view={id} onClick={() => onToggle(id)}>
+            <Icon aria-hidden="true" />
+            {label}
+          </DropdownMenuItem>
+        ))}
     </>
   )
 }

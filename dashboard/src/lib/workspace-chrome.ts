@@ -23,3 +23,8 @@ export const InboxAttentionContext = createContext<number | null>(null)
 export function useInboxAttention() {
   return useContext(InboxAttentionContext)
 }
+/** The count the sidebar and the phone's menu button show, as Settings > Inbox > Badge count says (null: no badge). */
+export const InboxBadgeContext = createContext<number | null>(null)
+export function useInboxBadge() {
+  return useContext(InboxBadgeContext)
+}

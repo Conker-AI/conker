@@ -489,19 +489,16 @@
         {
           "id": "appearance.chat_views",
           "title": "Chat views",
-          "description": "Which views a chat's title bar offers.",
+          "description": "Which views a chat's title bar offers: context, thinking and logs.",
           "type": "list",
           "default": [
             "context",
             "thinking",
-            "files",
-            "browser",
-            "terminal",
             "logs"
           ],
           "tier": "advanced",
           "scope": "global",
-          "effect": "stored",
+          "effect": "live",
           "options": [
             {
               "value": "context",
@@ -510,18 +507,6 @@
             {
               "value": "thinking",
               "label": "Thinking"
-            },
-            {
-              "value": "files",
-              "label": "Files"
-            },
-            {
-              "value": "browser",
-              "label": "Browser"
-            },
-            {
-              "value": "terminal",
-              "label": "Terminal"
             },
             {
               "value": "logs",
@@ -631,7 +616,7 @@
           ],
           "tier": "basic",
           "scope": "global",
-          "effect": "stored",
+          "effect": "live",
           "options": [
             {
               "value": "model",

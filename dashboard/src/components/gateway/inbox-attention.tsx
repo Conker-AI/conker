@@ -8,14 +8,16 @@ import type { ChangeRequestsClient } from '@/lib/gateway/change-requests'
 import { isDrafting } from '@/lib/gateway/change-request-status'
 import type { AsksClient } from '@/lib/gateway/asks'
 import type { RecallNoticesClient } from '@/lib/gateway/recall-notices'
-import { InboxAttentionContext } from '@/lib/workspace-chrome'
+import { InboxAttentionContext, InboxBadgeContext } from '@/lib/workspace-chrome'
+import { useServerSetting } from '@/settings/server-setting'
 import type { GatewayRuntimeWorkspaceState } from './runtime-state'
 import { useRefreshState } from './use-refresh'
 
 /**
  * One read of the Inbox count for the whole shell: decisions waiting for the owner, Conker's
  * questions, open ideas and what AI jobs found (a tool still being drafted does not count yet).
- * Refreshed on navigation and after chat work.
+ * Refreshed on navigation and after chat work. The badge counts the same items, or only what waits
+ * for an answer (decisions, Conker's requests and questions: Inbox's Decisions), or nothing.
  */
 export function InboxAttentionProvider({
   owner,
@@ -40,7 +42,8 @@ export function InboxAttentionProvider({
   const selected = useStore(conversationState, value => value.selected)
   const operation = useStore(conversationState, value => value.operation)
   const reads = useRefreshState(state => state.reads)
-  const [count, setCount] = useState<number | null>(null)
+  const [count, setCount] = useState<{ all: number; urgent: number | null } | null>(null)
+  const badge = useServerSetting<'all' | 'urgent' | 'off'>('inbox.badge', 'all')
   const request = useRef<AbortController | null>(null)
   const refresh = useCallback(() => {
     request.current?.abort()
@@ -59,14 +62,14 @@ export function InboxAttentionProvider({
         setCount(null)
         return
       }
-      setCount(
+      const urgent =
         (decisions.status === 'fulfilled' ? decisions.value.results.filter(row => row.status === 'pending' && row.reviewable).length : 0) +
-          (ideas.status === 'fulfilled' ? ideas.value.filter(item => item.state === 'open').length : 0) +
-          (notes.status === 'fulfilled' ? notes.value.length : 0) +
-          (requests.status === 'fulfilled' ? requests.value.filter(item => !isDrafting(item)).length : 0) +
-          (questions.status === 'fulfilled' ? questions.value.length : 0) +
-          (memories.status === 'fulfilled' ? memories.value.length : 0),
-      )
+        (requests.status === 'fulfilled' ? requests.value.filter(item => !isDrafting(item)).length : 0) +
+        (questions.status === 'fulfilled' ? questions.value.length : 0)
+      setCount({
+        urgent: decisions.status === 'fulfilled' ? urgent : null,
+        all: urgent + (ideas.status === 'fulfilled' ? ideas.value.filter(item => item.state === 'open').length : 0) + (notes.status === 'fulfilled' ? notes.value.length : 0) + (memories.status === 'fulfilled' ? memories.value.length : 0),
+      })
     })
   }, [owner, proposals, checks, changes, asks, recall])
   useEffect(() => {
@@ -80,5 +83,11 @@ export function InboxAttentionProvider({
       request.current?.abort()
     }
   }, [operation, selected, location.pathname, reads, refresh])
-  return <InboxAttentionContext.Provider value={count}>{children}</InboxAttentionContext.Provider>
+  // Urgent only: unknown while decisions did not load, never a guess from the other sources.
+  const shown = badge === 'off' || count === null ? null : badge === 'urgent' ? count.urgent : count.all
+  return (
+    <InboxAttentionContext.Provider value={count?.all ?? null}>
+      <InboxBadgeContext.Provider value={shown}>{children}</InboxBadgeContext.Provider>
+    </InboxAttentionContext.Provider>
+  )
 }

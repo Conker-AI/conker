@@ -11,6 +11,8 @@ import type { AgentProfile, ToolInventory } from '@/lib/gateway/control'
 import { GatewayJobMutationError, type GatewayJob, type GatewayJobsClient, type GatewayJobTiming } from '@/lib/gateway/jobs'
 import { gatewayError } from '@/lib/gateway/transport'
 import { jobIntervalHours, type JobStarter } from '@/lib/job-starters'
+import { useServerSetting } from '@/settings/server-setting'
+import { weekOrder } from '@/lib/week-start'
 
 type Repeat = 'hours' | 'daily' | 'weekly' | 'tool' | 'webhook'
 const repeats: { value: Repeat; label: string }[] = [
@@ -59,7 +61,11 @@ export function NewAgentJobDialog({
   starter?: JobStarter | null
   onCreated: (job: GatewayJob) => void
 }) {
-  const [value, setValue] = useState(() => (starter ? fromStarter(starter) : blank)),
+  // Settings > You > First day of the week: the day list starts there, and a new weekly job starts on it.
+  const weekStart = useServerSetting<'sunday' | 'monday'>('you.week_start', 'sunday')
+  const fresh = weekStart === 'monday' ? { ...blank, day: '1' } : blank
+  const week = weekOrder(weekStart)
+  const [value, setValue] = useState(() => (starter ? fromStarter(starter) : fresh)),
     [pending, setPending] = useState(false),
     [error, setError] = useState<string | null>(null)
   const [tools, setTools] = useState<ToolInventory['results'] | null>(null),
@@ -99,10 +105,10 @@ export function NewAgentJobDialog({
   }, [open, agents, loadAgents])
   const chosen = tools?.find(tool => tool.id === value.tool)
   const [discarding, setDiscarding] = useState(false)
-  const initial = starter ? fromStarter(starter) : blank
+  const initial = starter ? fromStarter(starter) : fresh
   const edited = value.name !== initial.name || value.instructions !== initial.instructions
   const leave = () => {
-    setValue(blank)
+    setValue(fresh)
     setError(null)
     onOpenChange(false)
   }
@@ -127,7 +133,7 @@ export function NewAgentJobDialog({
           ...(value.repeat === 'webhook' ? { clock: false } : {}),
         }),
       )
-      setValue(blank)
+      setValue(fresh)
     } catch (cause) {
       setError(cause instanceof GatewayJobMutationError ? cause.message : gatewayError(cause).message)
     } finally {
@@ -208,7 +214,7 @@ export function NewAgentJobDialog({
                         {select(
                           'agent-job-day',
                           value.day,
-                          days.map((day, index) => ({ value: String(index), label: day })),
+                          week.map(index => ({ value: String(index), label: days[index] })),
                           day => setValue({ ...value, day }),
                         )}
                       </div>

@@ -7,7 +7,13 @@ import { keepPrefix, nextReveal } from '../chat/smooth-text'
 import { templateFill } from '../chat/template-fill'
 import { readToolRecord } from '../chat/tool-record'
 import { foldToolRequests, readToolRequest } from '../chat/tool-requests'
-import { turnDetails } from '../chat/turn-details'
+import { shownDetails, turnDetails as turnFacts } from '../chat/turn-details'
+
+/** Every saved fact as one line, the way the transcript joins them when all are chosen. */
+const turnDetails = (...args: Parameters<typeof turnFacts>) => {
+  const text = shownDetails(turnFacts(...args).details, ['model', 'time', 'tokens', 'cost', 'route', 'tools'])
+  return text ? { details: text } : {}
+}
 
 describe('smooth text', () => {
   const text = 'one two three four five six seven eight nine ten'

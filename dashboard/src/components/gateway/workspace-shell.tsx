@@ -5,12 +5,13 @@ import { LayoutFrame } from '@/components/layouts/layout-frame'
 import { InlineDetails } from '@/components/design-system/overlays'
 import type { GatewayRuntimeClient, RuntimeSessionDetail } from '@/lib/gateway/runtime'
 import { ConversationViewContent } from './conversation-views'
-import { conversationViewLabel, type ConversationView } from './conversation-view-list'
+import { conversationViewLabel, conversationViews, type ConversationView } from './conversation-view-list'
 import type { GatewayRuntimeWorkspaceState } from './runtime-state'
 import type { GatewaySourcePrivacyState } from './source-privacy'
 import { gatewayError } from '@/lib/gateway/transport'
 import { ConnectedShellContext } from './workspace-shell-context'
 import { resolveGatewayRoute } from './navigation'
+import { useServerSetting } from '@/settings/server-setting'
 import '@/styles/connected-workspace.css'
 
 export function ConnectedWorkspaceShell({ children, header, sidebar, runtime, conversationState, sourcePrivacy }: {
@@ -26,7 +27,10 @@ export function ConnectedWorkspaceShell({ children, header, sidebar, runtime, co
   const operation = useStore(conversationState, state => state.operation)
   const forgotten = useStore(sourcePrivacy, state => state.sessionIds)
   const onChat = resolveGatewayRoute(location.pathname) === 'chat'
-  const view = onChat ? openView : null
+  // Settings > Appearance > Chat views: the title bar offers only the views he chose; none hides the strip.
+  const chosen = useServerSetting('appearance.chat_views', ['context', 'thinking', 'logs'])
+  const views = conversationViews.map(item => item.id).filter(id => chosen.includes(id))
+  const view = onChat && openView && views.includes(openView) ? openView : null
   const contextOpen = view !== null
   const requested = onChat ? new URLSearchParams(location.search).get('session') : null
   const referenceSession = requested && /^[A-Za-z0-9_-]{1,128}$/.test(requested) && !forgotten.includes(requested) ? requested : null
@@ -48,7 +52,7 @@ export function ConnectedWorkspaceShell({ children, header, sidebar, runtime, co
   const panel = <InlineDetails open={contextOpen} onOpenChange={open => { if (!open) closeReference() }} title={viewLabel} description="Saved records for this chat.">
     <div className="max-h-[45dvh] min-h-0 overflow-y-auto">{reference}</div>
   </InlineDetails>
-  return <ConnectedShellContext.Provider value={{ view, toggleView: (next: ConversationView) => setOpenView(value => value === next ? null : next), showViews: onChat, panel }}>
+  return <ConnectedShellContext.Provider value={{ view, toggleView: (next: ConversationView) => setOpenView(value => value === next ? null : next), views, showViews: onChat && views.length > 0, panel }}>
   <LayoutFrame variant="canvas" className="conker-workspace" sidebar={sidebar} header={header}>
     <div id="conker-workspace-document" tabIndex={-1} className="flex min-h-0 flex-1 flex-col outline-none">{children}</div>
   </LayoutFrame>

@@ -148,10 +148,12 @@ describe('ChatMessageRecord: the action bar', () => {
 
 describe('ChatMessageRecord: Conker’s answer', () => {
   it('shows who answered, when, and the saved turn details, above the formatted text', async () => {
-    record(message({ id: 'msg_2', sequence: 2, role: 'assistant', agentId: 'companion', content: { kind: 'text', text: 'Here is **bold** advice.' }, details: 'Claude · 2.1 s' }))
+    record(message({ id: 'msg_2', sequence: 2, role: 'assistant', agentId: 'companion', content: { kind: 'text', text: 'Here is **bold** advice.' }, details: { model: 'Claude', time: '2.1 s', cost: '$0.50' } }))
     const article = screen.getByRole('article', { name: 'assistant message 2' })
     expect(within(article).getByText('Conker')).not.toBeNull()
     expect(within(article).getByText(/Claude · 2\.1 s/)).not.toBeNull()
+    // Under each answer starts with the model and the time; the cost waits until he picks it.
+    expect(within(article).queryByText(/\$0\.50/)).toBeNull()
     expect(await within(article).findByText('bold', {}, LAZY)).not.toBeNull()
     expect(screen.queryByText('Formatting response…')).toBeNull()
   })

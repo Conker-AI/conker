@@ -72,7 +72,7 @@ export function OpenChatView({ visible, knownForgotten, current, safeSessions, s
         <DropdownMenuItem render={<Link to="/tools" />}><Wrench />Open tools</DropdownMenuItem>
         {phone && control && current && !knownForgotten && <DropdownMenuItem disabled={pending || historyLoading || Boolean(attempt)} onClick={() => void nameChat(control, current.id, refreshChat)}><Sparkles />Name this chat</DropdownMenuItem>}
         {phone && control && current && !knownForgotten && <DropdownMenuItem onClick={() => setContextOpen(true)}><Layers />Edit context</DropdownMenuItem>}
-        {phone && shell?.showViews && <ConversationViewMenuItems onToggle={shell.toggleView} />}
+        {phone && shell?.showViews && <ConversationViewMenuItems views={shell.views} onToggle={shell.toggleView} />}
       </DropdownMenuContent></DropdownMenu>
     </GatewayHeader>}
     {observation.error && current && <div className={`${conversationColumn} shrink-0 py-2`}><p role="status" className="text-sm text-muted-foreground">{'Chat updates are delayed. Showing the last saved history while checking again.'} <Button variant="link" size="sm" className="h-auto p-0" onClick={observation.refresh}>Check now</Button></p></div>}

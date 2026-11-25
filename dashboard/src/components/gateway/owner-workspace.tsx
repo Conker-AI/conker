@@ -46,6 +46,10 @@ import { ownerDecisionEligibility, type GatewayOwnerState } from './owner-state'
 import type { GatewayControlClient } from '@/lib/gateway/control'
 import { useServerSetting } from '@/settings/server-setting'
 import { useCardLimit } from '@/components/inbox/card-limit'
+import { orderCards } from '@/components/inbox/card-order'
+
+/** A waiting card before ordering: key, card, when it came (ms), outcome unknown. */
+type Row = [string, ReactNode, number, boolean]
 import { FocusBar } from './focus-bar'
 
 const label = (value: string) => value.replaceAll('_', ' ')
@@ -74,6 +78,7 @@ export function GatewayOwnerWorkspace({ client, proposals, checks, changes, asks
   const { isLater, later, restore } = useLater()
   // Settings > Your day: Focus mode shows only decisions; Cards at once (Easy mode: one) caps the waiting cards.
   const focus = useServerSetting('day.focus_mode', false), easy = useServerSetting('day.easy_mode', false), maxCards = useServerSetting('day.max_cards', 5)
+  const inboxOrder = useServerSetting<'urgent' | 'oldest' | 'newest'>('inbox.sort', 'urgent')
   const [now, setNow] = useState(Date.now)
   const mounted = useRef(false), generation = useRef(0), controllers = useRef(new Set<AbortController>())
   const selectedId = useRef(requestId)
@@ -206,19 +211,19 @@ export function GatewayOwnerWorkspace({ client, proposals, checks, changes, asks
     onDecide={(status, retry, note) => void decide(row, status, retry, note)} onCheck={() => void load(false, undefined, row.id)}
     onRelease={() => { state.setState(value => { const attempts = { ...value.attempts }; delete attempts[row.id]; return { attempts } }); setError(null); setNotice('The approval attempt was declined and this request has expired. Nothing was done.') }}
     onLater={() => moveLater(decisionKey(row.id), row.title || 'Review this action')} />
-  // Every waiting card in order (decisions whose outcome is unknown first), capped by Cards at once with a count and Show all.
-  const attemptFirst = (a: OwnerRequest, b: OwnerRequest) => Number(!!retained.attempts[b.id]) - Number(!!retained.attempts[a.id])
-  const waiting: [string, ReactNode][] = [
-    ...(showDecisions ? [...nowDecisions].sort(attemptFirst).map(row => [decisionKey(row.id), card(row)] as [string, ReactNode]) : []),
+  // Every waiting card in the order Settings > Inbox > Order names (decisions whose outcome is unknown
+  // always first), capped by Cards at once with a count and Show all.
+  const waiting = orderCards<ReactNode>([
+    ...(showDecisions ? nowDecisions.map(row => [decisionKey(row.id), card(row), Date.parse(row.createdAt), !!retained.attempts[row.id]] as Row) : []),
     ...(showDecisions ? nowChanges.map(request => [changeKey(request.id), <ChangeRequestCard key={request.id} request={request} now={now} busy={requests.pending === request.id} error={requests.failure?.id === request.id ? requests.failure.message : null}
-      onApprove={() => void requests.approve(request)} onDecline={reply => void requests.decline(request, reply)} onRetry={request.kind === 'tool_draft' ? description => void requests.retry(request, description) : undefined} onAnswer={request.kind === 'tool_draft' ? text => requests.answer(request, text) : undefined} onLater={() => moveLater(changeKey(request.id), request.title)} />] as [string, ReactNode]) : []),
+      onApprove={() => void requests.approve(request)} onDecline={reply => void requests.decline(request, reply)} onRetry={request.kind === 'tool_draft' ? description => void requests.retry(request, description) : undefined} onAnswer={request.kind === 'tool_draft' ? text => requests.answer(request, text) : undefined} onLater={() => moveLater(changeKey(request.id), request.title)} />, request.createdAt * 1000, false] as Row) : []),
     ...(showDecisions ? nowAsks.map(ask => [askKey(ask.id), <AskCard key={ask.id} ask={ask} now={now} busy={questions.pending === ask.id} error={questions.failure?.id === ask.id ? questions.failure.message : null}
-      onAnswer={(text, chosen) => questions.answer(ask, text, chosen)} onDismiss={() => questions.dismiss(ask)} onLater={() => moveLater(askKey(ask.id), ask.question)} />] as [string, ReactNode]) : []),
-    ...(showNotes ? nowNotes.map(note => [checkKey(note.id), <AgentNoteCard key={note.id} note={note} now={now} onOpen={() => notes.open(note)} onLater={() => moveLater(checkKey(note.id), note.title)} />] as [string, ReactNode]) : []),
-    ...(showMemories ? memories.items.map(notice => [`memory:${notice.id}`, <RecallNoticeCard key={notice.id} notice={notice} now={now} busy={memories.pending === notice.id} error={memories.failure?.id === notice.id ? memories.failure.message : null} onDismiss={() => void memories.dismiss(notice)} />] as [string, ReactNode]) : []),
+      onAnswer={(text, chosen) => questions.answer(ask, text, chosen)} onDismiss={() => questions.dismiss(ask)} onLater={() => moveLater(askKey(ask.id), ask.question)} />, ask.createdAt * 1000, false] as Row) : []),
+    ...(showNotes ? nowNotes.map(note => [checkKey(note.id), <AgentNoteCard key={note.id} note={note} now={now} onOpen={() => notes.open(note)} onLater={() => moveLater(checkKey(note.id), note.title)} />, note.createdAt * 1000, false] as Row) : []),
+    ...(showMemories ? memories.items.map(notice => [`memory:${notice.id}`, <RecallNoticeCard key={notice.id} notice={notice} now={now} busy={memories.pending === notice.id} error={memories.failure?.id === notice.id ? memories.failure.message : null} onDismiss={() => void memories.dismiss(notice)} />, notice.since * 1000, false] as Row) : []),
     ...(showIdeas ? nowIdeas.map(item => [ideaKey(item.id), <IdeaCard key={item.id} item={item} now={now} pending={ideas.pending !== null} failure={ideas.failure?.id === item.id ? ideas.failure.message : null}
-      onDecide={decision => void ideas.decide(item, decision)} onLater={() => moveLater(ideaKey(item.id), item.title)} />] as [string, ReactNode]) : []),
-  ]
+      onDecide={decision => void ideas.decide(item, decision)} onLater={() => moveLater(ideaKey(item.id), item.title)} />, item.createdAt * 1000, false] as Row) : []),
+  ].map(([key, node, at, unknown]) => ({ key, node, at, unknown })), inboxOrder).map(item => [item.key, item.node] as const)
   const limited = useCardLimit(waiting.map(([key]) => key), easy ? 1 : maxCards)
   // What Focus mode hides here, counted only once those sources answered; a source that failed is said, never counted as none.
   const otherCount = nowIdeas.length + nowNotes.length + memories.items.length

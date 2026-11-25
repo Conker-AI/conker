@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import { shownTime } from '@/lib/shown-time'
 import { useTimeStyle } from '@/components/use-time-style'
+import { useServerSetting } from '@/settings/server-setting'
 
 /** One line under "Advanced": a label and its value (when it came, from whom, which chat). */
 export type InboxFact = readonly [label: string, value: ReactNode]
@@ -52,7 +53,11 @@ export function InboxCard({
   footer?: ReactNode
   className?: string
 }) {
-  const [expanded, setExpanded] = useState(defaultExpanded),
+  // Settings > Inbox > Exact details open: every card starts open, its details and every answer in view.
+  // Until he opens or folds a card himself, it follows the setting, also when the setting arrives late.
+  const detailsOpen = useServerSetting('inbox.details_open', false)
+  const [chosen, setExpanded] = useState<boolean | null>(null),
+    expanded = chosen ?? (defaultExpanded || detailsOpen),
     [more, setMore] = useState(false)
   const body = useId(),
     record = useId()
@@ -74,7 +79,7 @@ export function InboxCard({
           className="flex min-h-11 min-w-0 flex-1 basis-48 items-center gap-3 rounded-md text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
           aria-expanded={expanded}
           aria-controls={body}
-          onClick={() => setExpanded(value => !value)}
+          onClick={() => setExpanded(!expanded)}
         >
           <span aria-hidden="true" className="flex size-9 shrink-0 items-center justify-center rounded-full border bg-background text-muted-foreground [&_svg]:size-4">
             {icon}

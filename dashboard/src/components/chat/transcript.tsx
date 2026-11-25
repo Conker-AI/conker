@@ -22,6 +22,7 @@ import { formatDateTime } from '@/lib/date-format'
 import { ShownTime } from '@/components/shown-time'
 import { useTimeStyle } from '@/components/use-time-style'
 import { useServerSetting } from '@/settings/server-setting'
+import { shownDetails } from '@/lib/chat/turn-details'
 
 const labels: Record<MessageAction, string> = { copy: 'Copy message', link: 'Copy message link', edit: 'Edit', retry: 'Retry', fork: 'Fork', pin: 'Pin', rateUp: 'Good response', rateDown: 'Poor response', redact: 'Redact', saveArtifact: 'Save artifact' }
 const RichAnswer = lazy(() => import('@/components/rich-answer').then(module => ({ default: module.RichAnswer })))
@@ -47,6 +48,8 @@ export function ChatMessageRecord({ message }: { message: ChatMessage }) {
   const portraits = useServerSetting('appearance.portraits', true)
   const moreActions = (Object.keys(labels) as MessageAction[]).filter(kind => kind !== 'copy' && kind !== 'link' && message.actions[kind].availability !== 'unsupported')
   const times = useTimeStyle()
+  // Settings > Appearance > Under each answer: which saved turn facts follow the time.
+  const facts = shownDetails(message.details, useServerSetting('appearance.answer_details', ['model', 'time']))
   async function invoke(action: Action, kind: MessageAction) {
     if (action.availability !== 'enabled') return
     try { await action.run(); setNotice(kind === 'copy' ? 'Message copied.' : kind === 'link' ? 'Local message link copied. Sign-in is required to open it.' : '') }
@@ -58,7 +61,7 @@ export function ChatMessageRecord({ message }: { message: ChatMessage }) {
   if (message.role === 'tool' && message.content.kind === 'text') return <ToolRecord text={message.content.text} sequence={message.sequence} />
   if (message.role === 'system' || message.role === 'tool') return <details className="min-w-0 rounded-lg border p-3"><summary className="cursor-pointer rounded-sm text-xs font-medium focus-visible:outline-2 focus-visible:outline-ring">{message.role === 'tool' ? 'Tool' : 'System'} record · {message.sequence}</summary><div className="mt-3 min-w-0">{body}</div></details>
   return <article aria-label={`${message.role} message ${message.sequence}`} className={cn('group/message relative min-w-0', message.role === 'user' ? 'ml-auto flex max-w-[92%] flex-col items-end sm:max-w-[85%]' : 'w-full')}>
-    {message.role === 'assistant' && <div className="mb-3 flex items-center gap-2 min-w-0">{portraits && <CompanionPortrait portrait={message.agentId === 'companion' || !message.agentId ? "/conker.png" : undefined} name={message.agentName ?? 'Conker'} tone="graphite" className="size-7 rounded-md" />}<span className="shrink-0 text-sm font-medium">{message.agentName ?? 'Conker'}</span><span className="truncate text-xs text-muted-foreground"><ShownTime at={message.createdAt} />{message.details && `${times === 'hidden' ? '' : ' · '}${message.details}`}</span></div>}
+    {message.role === 'assistant' && <div className="mb-3 flex items-center gap-2 min-w-0">{portraits && <CompanionPortrait portrait={message.agentId === 'companion' || !message.agentId ? "/conker.png" : undefined} name={message.agentName ?? 'Conker'} tone="graphite" className="size-7 rounded-md" />}<span className="shrink-0 text-sm font-medium">{message.agentName ?? 'Conker'}</span><span className="truncate text-xs text-muted-foreground"><ShownTime at={message.createdAt} />{facts && `${times === 'hidden' ? '' : ' · '}${facts}`}</span></div>}
     <div className={cn('min-w-0 max-w-full', message.role === 'user' && 'rounded-2xl bg-muted px-4 py-2.5')}>{body}</div>
     {message.memory && isMemoryNote(message.memory) && <MemoryNote memory={message.memory} />}
     {message.memory && !isMemoryNote(message.memory) && <details className="mt-1.5 max-w-full text-xs text-muted-foreground"><summary className="cursor-pointer rounded-sm text-right focus-visible:outline-2 focus-visible:outline-ring">{message.memory.label}</summary><div className="mt-2 max-w-sm space-y-2 text-left"><p className="leading-5">{message.memory.description}</p><Button type="button" variant="ghost" size="sm" disabled={message.memory.checking || message.memory.refresh.availability !== 'enabled'} onClick={() => { if (message.memory?.refresh.availability === 'enabled') void message.memory.refresh.run() }}>{message.memory.checking ? 'Checking…' : 'Check memory status'}</Button></div></details>}

@@ -14,12 +14,12 @@
         {
           "id": "voice.input_language",
           "title": "Speech language",
-          "description": "The language Conker listens for.",
+          "description": "The language voice typing listens for; calls listen in English.",
           "type": "select",
           "default": "same",
           "tier": "basic",
           "scope": "global",
-          "effect": "stored",
+          "effect": "live",
           "options": [
             {
               "value": "same",

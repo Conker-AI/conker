@@ -31,8 +31,12 @@ export function replaceTemplates(items: readonly PromptTemplate[]) {
 }
 export const useTemplateCatalogue = () => useStore(catalogue, state => state)
 
-/** The draft text for a template: empty until every required field is filled, so it cannot be sent early. */
-export const templateText = (template: PromptTemplate, values: TemplateValues) => (missingRequired(template, values).length ? '' : compilePrompt(template, values))
+/**
+ * The draft text for a template: empty until every required field is filled, so it cannot be sent early.
+ * With Settings > Prompts > Required fields must be filled off (`required` false), it is the text of
+ * whatever is filled in, and an empty required field no longer holds the message back.
+ */
+export const templateText = (template: PromptTemplate, values: TemplateValues, required = true) => (required && missingRequired(template, values).length ? '' : compilePrompt(template, values))
 export function chooseTemplate(key: string, template: PromptTemplate | null) {
   store.setState(state => {
     if (template === null) {
