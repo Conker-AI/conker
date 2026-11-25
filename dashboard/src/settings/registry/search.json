@@ -84,7 +84,7 @@
           "default": false,
           "tier": "basic",
           "scope": "global",
-          "effect": "stored"
+          "effect": "live"
         }
       ]
     },

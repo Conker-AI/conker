@@ -178,6 +178,12 @@ async function main() {
     used.set(id, (used.get(id) ?? 0) + 1)
   }
 
+  // Chat display settings only the dashboard applies (rounds four and nine): each is live and read outside Settings.
+  for (const id of ['chats.autoscroll', 'chats.code_wrap', 'chats.code_numbers', 'chats.fold_after', 'chats.citations', 'chats.start', 'chats.tool_calls', 'chats.thinking']) {
+    assert.equal(entry(id).effect, 'live', `${id} takes effect`)
+    assert.ok(used.has(id), `${id} is read outside Settings`)
+  }
+
   // The places, corners and layouts the shell draws cover every option the registry offers.
   const sidebar = fs.readFileSync(path.join(root, 'src/components/gateway/gateway-sidebar.tsx'), 'utf8')
   for (const option of entry('appearance.sidebar_places').options) assert.ok(sidebar.includes(`'${option.value}'`), `the sidebar knows the place ${option.value}`)

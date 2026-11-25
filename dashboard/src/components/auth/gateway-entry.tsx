@@ -1,7 +1,7 @@
 import { createGatewayOwnerClient } from '@/lib/gateway/owner'
 import { createGatewayProposalClient } from '@/lib/gateway/proposals'
 import { createGatewayOwnerState } from '@/components/gateway/owner-state'
-import { createGatewayControlClient } from '@/lib/gateway/control'
+import { createLazyGatewayControlClient } from '@/lib/gateway/control-lazy'
 import { GatewayBoundary } from './gateway-boundary'
 import { GatewayOperationVerification } from './gateway-verification'
 import { createGatewayServices } from '@/lib/gateway/services'
@@ -14,6 +14,7 @@ import { createGatewayActivityWorkspaceState } from '@/components/gateway/activi
 import { bindGatewayWorkspaceReset } from '@/components/gateway/auth-workspace-reset'
 import { createGatewayActivityClient } from '@/lib/gateway/activity'
 import { createGatewaySourcePrivacyState } from '@/components/gateway/source-privacy'
+import { preloadAfterSignIn } from './preload-after-sign-in'
 
 // Create once per document, including React StrictMode mounts. Configuration failures stay visible.
 const services = (() => {
@@ -24,13 +25,17 @@ const services = (() => {
     const ownerState = createGatewayOwnerState()
     const sourcePrivacy = createGatewaySourcePrivacyState()
     bindGatewayWorkspaceReset(value.store, [workspace, activityState, sourcePrivacy, ownerState])
+    const control = createLazyGatewayControlClient(value.auth, () => value.store.getState().confirmSessionRevoked())
+    // The shell and most screens read it soon after the first screen shows: fetch it while idle once
+    // he is signed in, with the Inbox's wrong-password alerts (a failed fetch would reload sign-in).
+    preloadAfterSignIn(value.store, [control.preload, () => void import('@/lib/gateway/password-alerts').catch(() => undefined)])
     return {
       value: {
         ...value,
         ownerState,
         owner: createGatewayOwnerClient(value.auth, () => value.store.getState().confirmSessionRevoked()),
         proposals: createGatewayProposalClient(value.auth),
-        control: createGatewayControlClient(value.auth, () => value.store.getState().confirmSessionRevoked()),
+        control: control.control,
         workspace,
         activityState,
         sourcePrivacy,
