@@ -38,12 +38,13 @@ import { gatewayError } from '@/lib/gateway/transport'
 import type { PasswordAlerts } from '@/lib/gateway/password-alerts'
 import { PasswordAlertCard } from '@/components/inbox/password-alert-card'
 import { UpdateCards } from '@/components/inbox/update-cards'
+import { QuietMeter, type QuietMeterReader } from '@/components/inbox/quiet-meter'
 import type { UpdatesClient } from '@/lib/gateway/updates'
 import type { GatewayHostOpsClient } from '@/lib/gateway/host-ops'
 import { ownerDecisionEligibility, type GatewayOwnerState } from './owner-state'
 
 const label = (value: string) => value.replaceAll('_', ' ')
-export function GatewayOwnerWorkspace({ client, proposals, checks, changes, asks, recall, drafts, access, updates, state, active }: { client: GatewayOwnerClient; updates?: { client: UpdatesClient; hostOps: GatewayHostOpsClient }; proposals?: GatewayProposalClient; checks?: AgentNotesClient; changes?: ChangeRequestsClient; asks?: AsksClient; recall?: RecallNoticesClient; drafts?: GatewayEditorDrafts; access?: AccessClient; state: GatewayOwnerState; active: boolean }) {
+export function GatewayOwnerWorkspace({ client, proposals, checks, changes, asks, recall, drafts, access, updates, quiet, state, active }: { client: GatewayOwnerClient; updates?: { client: UpdatesClient; hostOps: GatewayHostOpsClient }; quiet?: QuietMeterReader; proposals?: GatewayProposalClient; checks?: AgentNotesClient; changes?: ChangeRequestsClient; asks?: AsksClient; recall?: RecallNoticesClient; drafts?: GatewayEditorDrafts; access?: AccessClient; state: GatewayOwnerState; active: boolean }) {
   const [params] = useSearchParams(), requestId = params.get('request')
   const retained = useStore(state)
   const [rows, setRows] = useState<OwnerRequest[]>([]), [cursor, setCursor] = useState<string | null>(null)
@@ -271,6 +272,8 @@ export function GatewayOwnerWorkspace({ client, proposals, checks, changes, asks
           </ul>
           <p className="text-xs text-muted-foreground">Later only reorders your Inbox. Nothing is decided, and Conker keeps waiting.</p>
         </section>}
+        {/* Is Conker getting quieter? One line, the weeks underneath (conker quiet). */}
+        {quiet && <QuietMeter client={quiet} active={active} />}
         <Accordion>{access && <AccordionItem value="handled"><AccordionTrigger>Handled</AccordionTrigger><AccordionContent><HandledList client={access} now={now} /></AccordionContent></AccordionItem>}<AccordionItem value="earlier"><AccordionTrigger>Earlier</AccordionTrigger><AccordionContent>
           <CollectionSection title="Past requests">{earlierRows.map(row => <CollectionRow key={row.id} to={`/inbox?request=${encodeURIComponent(row.id)}`} title={row.title || 'Review this action'} description={row.status === 'pending' ? 'This request expired. Nothing was done.' : label(row.status)} />)}</CollectionSection>
           {!earlierRows.length && <p className="text-sm text-muted-foreground">{loadError !== null ? 'Earlier requests didn’t load.' : listed ? 'No earlier requests.' : 'Loading…'}</p>}
