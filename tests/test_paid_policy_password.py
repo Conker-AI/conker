@@ -1,9 +1,10 @@
-"""`conker providers spending on|off|recover` asks for the owner's password, as Settings does.
+"""`conker providers spending on|recover` asks for the owner's password, as Settings does.
 
 The browser's `paid-policy` and `recover-paid-policy` need a password proof at the gateway. The host
 command used to write the policy and restart Pi with no password. It now asks for it (echo off) and
 changes nothing until the gateway's `check-password` host command accepts it; the password goes
-only to that command's stdin, never into argv or anything else the command runs.
+only to that command's stdin, never into argv or anything else the command runs. `off` only takes
+the power away and asks nothing, so spending can be stopped while the gateway is down.
 """
 
 import json
@@ -63,7 +64,7 @@ def checks(seen):
     return [entry for entry in seen if entry[0][-1] == "check-password"]
 
 
-@pytest.mark.parametrize("action", ["on", "off", "recover"])
+@pytest.mark.parametrize("action", ["on", "recover"])
 @pytest.mark.parametrize("typed", ["", EOFError], ids=["empty", "no-terminal"])
 def test_without_a_password_nothing_runs_and_nothing_changes(host, monkeypatch, action, typed):
     root, environment, seen, _, typing = host
@@ -153,3 +154,66 @@ def test_settings_path_is_unchanged_and_asks_nothing_here(tmp_path):
     policy = module.PaidPolicy(tmp_path, "ubuntu", runner=runner)
     assert policy.apply(True, False)["paidAllowed"] is True
     assert not [command for command in seen if command[-1] == "check-password"]
+
+
+def interrupted(root, previous):
+    """An on/off transition that stopped half way; `recover` restores `previous`."""
+    marker = root / "state/provider-control/paid-transition.json"
+    marker.parent.mkdir(parents=True)
+    saved = {"schemaVersion": 1, "previousAllowed": previous, "requestedAllowed": not previous}
+    marker.write_text(json.dumps(saved))
+    return marker
+
+
+@pytest.mark.parametrize(
+    "gateway",
+    [
+        OSError("docker is missing"),
+        subprocess.CompletedProcess([], 1, b"", b"Gateway did not complete: Too many tries.\n"),
+    ],
+    ids=["gateway-down", "out-of-tries"],
+)
+def test_off_needs_no_password_so_spending_stops_with_the_gateway_down(
+    host, monkeypatch, capsys, gateway
+):
+    root, environment, seen, answer, typing = host
+    environment.write_text("PI_ALLOW_PAID_MODELS=true\nUNCHANGED=kept\n")
+    typing["password"] = EOFError  # no terminal: it is never asked
+
+    def check():
+        if isinstance(gateway, Exception):
+            raise gateway
+        return gateway
+
+    answer["check"] = check
+    run(monkeypatch, root, "off")
+    assert json.loads(capsys.readouterr().out)["paidAllowed"] is False
+    assert "PI_ALLOW_PAID_MODELS=false" in environment.read_text()
+    assert "UNCHANGED=kept" in environment.read_text()
+    assert checks(seen) == []
+
+
+@pytest.mark.parametrize("action", ["on", "recover"])
+def test_on_and_recover_still_refuse_with_the_gateway_down(host, monkeypatch, action):
+    """`recover` of an interrupted on-to-off turns spending back on: it is refused unchecked."""
+    root, environment, seen, answer, _ = host
+    marker = interrupted(root, previous=True)
+
+    def down():
+        raise OSError("docker is missing")
+
+    answer["check"] = down
+    with pytest.raises(SystemExit, match=r"could not check the password. Nothing was changed."):
+        run(monkeypatch, root, action)
+    assert "PI_ALLOW_PAID_MODELS=false" in environment.read_text()
+    assert marker.is_file() and len(seen) == 1
+
+
+def test_recover_with_the_right_password_restores_the_previous_policy(host, monkeypatch, capsys):
+    root, environment, seen, _, _ = host
+    marker = interrupted(root, previous=True)
+    run(monkeypatch, root, "recover")
+    assert json.loads(capsys.readouterr().out)["paidAllowed"] is True
+    assert "PI_ALLOW_PAID_MODELS=true" in environment.read_text()
+    assert not marker.exists()
+    assert seen[0] == checks(seen)[0] and len(checks(seen)) == 1

@@ -112,8 +112,9 @@ again. Canceling password verification does not restore a submitted key draft.
 
 Paid requests require separate explicit authorization. Settings and
 `conker providers spending status|on|off|recover` use the same fixed host policy
-operation, and both ask for the owner's password to change it (`on`, `off` and `recover`;
-`status` does not). The CLI asks with echo off and has the gateway's `check-password` host
+operation. Settings asks for the owner's password for every change; the CLI asks for `on` and
+`recover` (which can turn spending back on), and not for `off`, which only takes the power away, so
+spending can be stopped while the gateway is down or out of tries (`status` asks nothing). The CLI asks with echo off and has the gateway's `check-password` host
 command check it (five wrong ones in five minutes and it waits) before it writes anything; the
 password goes only to that command's stdin. No service sits between the command and the host's
 files, so this makes the sanctioned command ask, not a wall against the host. It revision-checks the current flag, restarts Pi and the sidecars that share its

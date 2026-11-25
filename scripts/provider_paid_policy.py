@@ -2,10 +2,12 @@
 
 Settings asks for the owner's password to change the paid-model policy (Pi's gateway,
 `/api/host/providers`, `paid-policy` and `recover-paid-policy`), so `conker providers spending
-on|off|recover` asks for it too: typed with echo off, sent once on stdin to the gateway's
+on|recover` asks for it too: typed with echo off, sent once on stdin to the gateway's
 `check-password` host command (five wrong per five minutes), never in argv, the environment or an
-error, and nothing changes unless the gateway accepted it. No service sits between this command and
-the files it writes, so it guards the command, not the host.
+error, and nothing changes unless the gateway accepted it. `off` asks for none: it only takes the
+power away, as turning lockdown on does, so spending can be stopped while the gateway is down or out
+of tries. No service sits between this command and the files it writes, so it guards the command,
+not the host.
 """
 
 from __future__ import annotations
@@ -22,6 +24,8 @@ from scripts.provider_secrets import ProviderSecretError, SecretStore
 CHECK = ("exec", "-T", "gateway", "python", "-m", "gateway", "check-password")
 PROMPT = "Your Conker password (the paid-model policy asks for it, as Settings does): "
 NOTHING = " Nothing was changed."
+# `recover` may turn spending back on (an interrupted on-to-off restores "on"), so it asks too.
+PASSWORD_ACTIONS = frozenset({"on", "recover"})
 
 
 class PasswordNotChecked(Exception):
@@ -260,7 +264,7 @@ def main():
     args = parser.parse_args()
     policy = PaidPolicy(args.root, args.layout)
     try:
-        if args.action != "status":
+        if args.action in PASSWORD_ACTIONS:
             policy.check_password(ask())
         result = (
             policy.status()
