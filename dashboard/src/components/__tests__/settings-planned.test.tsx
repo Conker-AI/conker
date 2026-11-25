@@ -10,7 +10,7 @@ import { SettingsScreen } from '@/settings/settings-screen'
 
 const KEY = 'conker.settings-view.planned'
 /** A planned basic setting in Appearance, and a live one beside it. */
-const PLANNED = SETTINGS_BY_ID.get('appearance.contrast')!
+const PLANNED = SETTINGS_BY_ID.get('appearance.sounds')!
 const LIVE = SETTINGS_BY_ID.get('appearance.accent')!
 
 /** The documents each Settings home answers with; anything else the blocks ask for stays pending. */

@@ -57,8 +57,8 @@ How Conker looks on your screens.
 | **Accent color**<br>`appearance.accent` | The color of main buttons and of things that need you. Choices: Neutral, Blue, Indigo, Purple, Magenta. (applies right away) | Neutral | owner settings |
 | **Switch theme automatically**<br>`appearance.theme_switch` | Changes between light and dark during the day. Choices: Off, At sunrise and sunset, At set times. (saved, not used yet) | Off | owner settings |
 | **Background tint**<br>`appearance.tint` | A light tint behind the content. Choices: None, Warm, Cool. (saved, not used yet) | None | owner settings |
-| **High contrast**<br>`appearance.contrast` | Darker text and stronger lines everywhere. (saved, not used yet) | off | owner settings |
-| **Color-blind friendly colors**<br>`appearance.color_vision` | Status colors that stay apart for your kind of color vision. Choices: Off, Red and green, Blue and yellow. (saved, not used yet) | Off | owner settings |
+| **High contrast**<br>`appearance.contrast` | Darker text and stronger lines everywhere. (applies right away) | off | owner settings |
+| **Color-blind friendly colors**<br>`appearance.color_vision` | Status colors that stay apart for your kind of color vision. Choices: Off, Red and green, Blue and yellow. (applies right away) | Off | owner settings |
 
 ### Text
 
@@ -66,16 +66,16 @@ How Conker looks on your screens.
 |---|---|---|---|
 | **Text size** (this device)<br>`appearance.text_size` | The size of all text on this device. Choices: Small, Default, Large, Larger. (applies right away) | Default | this browser |
 | **Chat text size**<br>`appearance.chat_text_size` | The size of messages, apart from the rest of the screen. Choices: Small, Default, Large, Larger. (applies right away) | Default | owner settings |
-| **Font**<br>`appearance.font` | The font for screens and messages. Choices: System, Inter, Atkinson Hyperlegible, OpenDyslexic. (saved, not used yet) | System | owner settings |
-| **Code font**<br>`appearance.code_font` | The font for code and commands. Choices: System monospace, JetBrains Mono, Fira Code. (saved, not used yet) | System monospace | owner settings |
-| **Code ligatures**<br>`appearance.ligatures` | Joins symbol pairs like => into one sign in code. (saved, not used yet) | off | owner settings |
-| **Line spacing**<br>`appearance.line_spacing` | Space between lines of text. Choices: Compact, Normal, Relaxed. (saved, not used yet) | Normal | owner settings |
+| **Font**<br>`appearance.font` | The font for screens and messages. Choices: System, Inter, Atkinson Hyperlegible, OpenDyslexic. (applies right away) | Inter | owner settings |
+| **Code font**<br>`appearance.code_font` | The font for code in answers, files and tools. Choices: System monospace, JetBrains Mono, Fira Code. (applies right away) | System monospace | owner settings |
+| **Code ligatures**<br>`appearance.ligatures` | Joins symbol pairs like => into one sign in code, with JetBrains Mono or Fira Code. (applies right away) | off | owner settings |
+| **Line spacing**<br>`appearance.line_spacing` | Space between lines of text. Choices: Compact, Normal, Relaxed. (applies right away) | Normal | owner settings |
 
 ### Layout
 
 | Setting | What it does | Default | Home |
 |---|---|---|---|
-| **Density**<br>`appearance.density` | How much fits on the screen. Choices: Comfortable, Compact, Spacious. (saved, not used yet) | Comfortable | owner settings |
+| **Density**<br>`appearance.density` | How much fits on the screen. Choices: Comfortable, Compact, Spacious. (applies right away) | Comfortable | owner settings |
 | **Corners**<br>`appearance.corners` | How round cards and buttons are. Choices: Sharp, Soft, Round. (applies right away) | Soft | owner settings |
 | **Chat width**<br>`appearance.chat_width` | How wide messages can grow on large screens. Choices: Narrow, Medium, Wide, Full width. (applies right away) | Medium | owner settings |
 | **Message style**<br>`appearance.message_style` | How messages are drawn in chats. Choices: Flat, Bubbles, Cards. (saved, not used yet) | Flat | owner settings |
@@ -158,7 +158,7 @@ Shortcuts for working fast.
 | Setting | What it does | Default | Home |
 |---|---|---|---|
 | **Keyboard shortcuts**<br>`keyboard.shortcuts` | Turns Conker's keyboard shortcuts on or off. (applies right away) | on | owner settings |
-| **Shortcut list on ?**<br>`keyboard.cheat_sheet` | Pressing ? shows every shortcut. (saved, not used yet) | on | owner settings |
+| **Shortcut list on ?**<br>`keyboard.cheat_sheet` | Pressing ? shows every shortcut. (applies right away) | on | owner settings |
 | **Approve with Enter**<br>`keyboard.approve_enter` | Lets you approve the open Inbox card with Enter; never for messages, money or deleting. (saved, not used yet) | off | owner settings |
 
 ## Inbox
