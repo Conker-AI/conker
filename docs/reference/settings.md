@@ -360,7 +360,7 @@ How Conker searches the web and checks its answers.
 
 | Setting | What it does | Default | Home |
 |---|---|---|---|
-| **Research by default**<br>`research.default` | Whether new chats search the web. Choices: Off, Web, Deep. (saved, not used yet) | Off | owner settings |
+| **Research by default**<br>`research.default` | Whether a new chat starts with web search on. Choices: Off, Web, Deep. (applies right away) | Off | owner settings |
 | **Searches in deep research**<br>`research.deep_searches` | The most searches one deep research makes. 1 to 4. (applies from the next message) | `4` | owner settings |
 | **Sources per answer**<br>`research.sources` | The most sources one answer cites. 1 to 20. (applies from the next message) | `5` | owner settings |
 | **Prefer recent**<br>`research.recent` | How new sources should be. Choices: Any age, Last year, Last month. (applies from the next message) | Any age | owner settings |
@@ -384,7 +384,7 @@ What Conker's search looks through.
 | Setting | What it does | Default | Home |
 |---|---|---|---|
 | **Included sources**<br>`search.sources` | Which kinds of records search looks through. Choices: Chats, Memory, Projects, Artifacts, Tasks, Jobs, Agents, Tools, Activity. (applies right away) | Chats, Memory, Projects, Artifacts, Tasks, Jobs, Agents, Tools, Activity | pi `/search/settings` `sources` |
-| **Archived chats**<br>`search.archived` | Includes archived chats in search results. (saved, not used yet) | off | owner settings |
+| **Archived chats**<br>`search.archived` | Includes archived chats in search results. (applies right away) | off | owner settings |
 
 ### Search levels
 
@@ -441,7 +441,7 @@ Uploads, answer shape and exports.
 | **Largest upload**<br>`files.upload_limit` | The largest file you can attach. Choices: No limit, 10 MB, 25 MB, 50 MB, 100 MB, 250 MB, 500 MB. (applies right away) | No limit | owner settings |
 | **Allowed files**<br>`files.types` | Which kinds of files you can attach. Choices: Images, Documents, Code, Audio, Video, Archives. (saved, not used yet) | Images, Documents, Code, Audio | owner settings |
 | **Keep uploads**<br>`files.keep_days` | Deletes uploads after this long; 0 keeps them. 0 to 3650 days. (saved, not used yet) | `0` days | owner settings |
-| **Add uploads to the project**<br>`files.to_project` | Files attached in a project chat join the project. (saved, not used yet) | on | owner settings |
+| **Add uploads to the project**<br>`files.to_project` | Files you send in a project chat join the project. (applies right away) | on | owner settings |
 
 ### Answers
 

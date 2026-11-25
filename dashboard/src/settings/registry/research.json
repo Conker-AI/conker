@@ -14,12 +14,12 @@
         {
           "id": "research.default",
           "title": "Research by default",
-          "description": "Whether new chats search the web.",
+          "description": "Whether a new chat starts with web search on.",
           "type": "select",
           "default": "off",
           "tier": "basic",
           "scope": "global",
-          "effect": "stored",
+          "effect": "live",
           "options": [
             {
               "value": "off",
