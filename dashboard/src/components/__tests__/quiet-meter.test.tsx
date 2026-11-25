@@ -118,7 +118,11 @@ describe('QuietMeter', () => {
     show(vi.fn().mockResolvedValue(page([week(0), week(1)])))
     await screen.findByText('Asks per week: not enough weeks yet')
     expand()
-    expect(within(screen.getByRole('list', { name: 'Asks per week' })).getAllByRole('listitem').map(row => row.textContent)).toEqual(['This week, so far0 asks', expect.stringMatching(/0 asks$/)])
+    expect(
+      within(screen.getByRole('list', { name: 'Asks per week' }))
+        .getAllByRole('listitem')
+        .map(row => row.textContent),
+    ).toEqual(['This week, so far0 asks', expect.stringMatching(/0 asks$/)])
   })
 
   it('says an older server needs the next update, plainly, with no error and no retry', async () => {
