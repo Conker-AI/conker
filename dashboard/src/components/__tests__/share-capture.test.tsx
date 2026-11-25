@@ -8,6 +8,7 @@ import { connectionStore } from '@/lib/connection-store'
 import type { GatewayAuthClient, GatewaySession } from '@/lib/gateway/auth'
 import { createGatewayAuthStore } from '@/lib/gateway/auth-store'
 import { GatewayError } from '@/lib/gateway/transport'
+import type { SharedSaved } from '@/lib/gateway/shared-notes'
 import { SHARE_KEY, takeShared, type ShareStorage } from '@/lib/share-capture'
 
 vi.mock('@/components/mode-toggle', () => ({ ModeToggle: () => null }))
@@ -17,7 +18,8 @@ afterEach(() => {
   connectionStore.setState({ online: true })
 })
 
-type Saved = { memoryId: string; status: 'remembered' | 'already_remembered' }
+type Saved = SharedSaved
+const done: Saved = { noteId: `note_${'1'.repeat(32)}`, sessionId: `ses_${'1'.repeat(16)}`, title: 'Shared: Article Read this', status: 'saved' }
 function memory(initial: Record<string, string> = {}): ShareStorage & { items: Record<string, string> } {
   const items = { ...initial }
   return {
@@ -32,9 +34,9 @@ function client(...results: (Saved | Error)[]) {
   const calls: [string, string][] = []
   return {
     calls,
-    rememberMemory: vi.fn(async (id: string, text: string) => {
+    save: vi.fn(async (id: string, text: string) => {
       calls.push([id, text])
-      const next = results.shift() ?? { memoryId: 'mem_1', status: 'remembered' as const }
+      const next = results.shift() ?? done
       if (next instanceof Error) throw next
       return next
     }),
@@ -46,13 +48,13 @@ function show(element: ReactNode, entry = '/share') {
       <Routes>
         <Route path="/share" element={element} />
         <Route path="/overview" element={<p>Home page</p>} />
-        <Route path="/memory" element={<p>Memory page</p>} />
+        <Route path="/chat" element={<p>Chat page</p>} />
       </Routes>
     </MemoryRouter>,
   )
 }
 const box = () => screen.getByLabelText<HTMLTextAreaElement>('What you shared')
-const saveButton = () => screen.getByRole<HTMLButtonElement>('button', { name: /Save to memory|Try again/ })
+const saveButton = () => screen.getByRole<HTMLButtonElement>('button', { name: /Save to Inbox|Try again/ })
 const save = () =>
   act(async () => {
     fireEvent.click(saveButton())
@@ -69,16 +71,18 @@ describe('Shared text', () => {
     await save()
     expect(api.calls[0][1]).toBe('Article\nRead this\nhttps://example.com/a')
     expect(api.calls[0][0]).toMatch(/^share_[0-9a-f]{32}$/)
-    expect(screen.getByRole('status').textContent).toBe('Saved to your memory.')
+    expect(screen.getByRole('status').textContent).toBe('Saved to your Inbox.')
+    expect(screen.getByText(/It has a chat of its own, “Shared: Article Read this”/)).toBeTruthy()
     expect(storage.items).toEqual({})
-    fireEvent.click(screen.getByRole('link', { name: 'Open Memory' }))
-    expect(screen.getByText('Memory page')).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Open' }).getAttribute('href')).toBe(`/chat?session=ses_${'1'.repeat(16)}`)
+    fireEvent.click(screen.getByRole('link', { name: 'Open' }))
+    expect(screen.getByText('Chat page')).toBeTruthy()
   })
 
-  it('says when it was already in memory, and Done goes Home', async () => {
-    show(<GatewayShareCapture client={client({ memoryId: 'mem_1', status: 'already_remembered' })} storage={stored('Same')} />)
+  it('says when it was already in the Inbox, and Done goes Home', async () => {
+    show(<GatewayShareCapture client={client({ ...done, status: 'already_saved' })} storage={stored('Same')} />)
     await save()
-    expect(screen.getByRole('status').textContent).toBe('That was already in your memory.')
+    expect(screen.getByRole('status').textContent).toBe('That was already in your Inbox.')
     fireEvent.click(screen.getByRole('button', { name: 'Done' }))
     expect(screen.getByText('Home page')).toBeTruthy()
   })
@@ -105,7 +109,7 @@ describe('Shared text', () => {
 
   it('blocks a share that is too long or blank, with a clear reason', () => {
     show(<GatewayShareCapture client={client()} storage={stored('a'.repeat(2340))} />)
-    expect(screen.getByText('Too long to save: memory keeps up to 2,000 characters. Shorten it by 340.')).toBeTruthy()
+    expect(screen.getByText('Too long to save: the Inbox keeps up to 2,000 characters. Shorten it by 340.')).toBeTruthy()
     expect(saveButton().disabled).toBe(true)
     fireEvent.change(box(), { target: { value: '   ' } })
     expect(screen.getByText('Write something to save.')).toBeTruthy()
@@ -114,20 +118,20 @@ describe('Shared text', () => {
 
   it('shows Saving while the request is open and sends it only once', async () => {
     let finish: (value: Saved) => void = () => {}
-    const api = { rememberMemory: vi.fn(() => new Promise<Saved>(resolve => (finish = resolve))) }
+    const api = { save: vi.fn(() => new Promise<Saved>(resolve => (finish = resolve))) }
     show(<GatewayShareCapture client={api} storage={stored('Note')} />)
     fireEvent.click(saveButton())
     expect(screen.getByRole<HTMLButtonElement>('button', { name: 'Saving…' }).disabled).toBe(true)
     expect(box().readOnly).toBe(true)
     fireEvent.submit(box().closest('form')!)
-    expect(api.rememberMemory).toHaveBeenCalledTimes(1)
-    await act(async () => finish({ memoryId: 'mem_1', status: 'remembered' }))
-    expect(screen.getByRole('status').textContent).toBe('Saved to your memory.')
+    expect(api.save).toHaveBeenCalledTimes(1)
+    await act(async () => finish(done))
+    expect(screen.getByRole('status').textContent).toBe('Saved to your Inbox.')
   })
 
   it('keeps the text after a refusal, and an unknown outcome retries with the same id', async () => {
     const storage = stored('Keep me'),
-      api = client(new GatewayError('dependency', 503), new GatewayError('network'), { memoryId: 'mem_1', status: 'remembered' })
+      api = client(new GatewayError('dependency', 503), new GatewayError('network'), done)
     show(<GatewayShareCapture client={api} storage={storage} />)
     await save()
     expect(screen.getByRole('alert').textContent).toBe('Part of Conker isn’t running right now. Nothing was retried; check Server. Nothing was saved.')
@@ -139,7 +143,7 @@ describe('Shared text', () => {
     expect(api.calls[1][0]).toBe(api.calls[0][0])
     await save()
     expect(api.calls[2][0]).toBe(api.calls[1][0])
-    expect(screen.getByRole('status').textContent).toBe('Saved to your memory.')
+    expect(screen.getByRole('status').textContent).toBe('Saved to your Inbox.')
   })
 
   it('starts a new request after the text changes following a failure', async () => {
@@ -162,7 +166,7 @@ describe('Shared text', () => {
     expect(screen.getByRole('status').textContent).toBe('You’re offline. Your text stays here; save it when you’re back online.')
     expect(saveButton().disabled).toBe(true)
     fireEvent.submit(box().closest('form')!)
-    expect(api.rememberMemory).not.toHaveBeenCalled()
+    expect(api.save).not.toHaveBeenCalled()
   })
 
   it('Cancel drops the share and goes Home', () => {

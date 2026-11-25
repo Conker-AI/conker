@@ -47,6 +47,7 @@ export function fakePlanUsage(method: string, fail: (status: number) => never): 
 export function createFakeAgentJobs(jobs: () => Json[]) {
   const session = `ses_${'1'.repeat(16)}`, now = () => Date.now() / 1000
   let seeded = false
+  const shared: { id: string; requestId: string; sessionId: string; title: string; createdAt: number }[] = []
   const notes: Json[] = [{ id: `note_${'7'.repeat(32)}`, jobId: `job_${'8'.repeat(32)}`, sessionId: session, messageId: null, title: 'Physics exam on Thursday', detail: 'Your study chat mentions the worksheet due Friday too. I can make notes and practice questions for both.', createdAt: now() - 1800 }]
   const job = (id: string, name: string, timing: Json, timeZone: string): Json => ({
     schemaVersion: 1, id, revision: 1, createdAt: now() - 86400, nextAt: now() + 3600,
@@ -74,6 +75,24 @@ export function createFakeAgentJobs(jobs: () => Json[]) {
     seed()
     if (path.startsWith('/api/control/pi/change-requests') || path === '/api/control/pi/tool-drafts' || path.startsWith('/api/owner/editor-drafts') || path === '/api/pi/tools') return requests(path, method, body, fail)
     if (path === '/api/control/pi/memory/remember' && method === 'POST') return { memoryId: `mem_${crypto.randomUUID().slice(0, 8)}`, status: 'remembered' }
+    // Shared from another app: one note per request id, opening the sample chat.
+    if (path === '/api/control/pi/inbox/shared' && method === 'POST') {
+      const requestId = String(body?.request_id), text = String(body?.text ?? '')
+      const found = shared.find(item => item.requestId === requestId)
+      if (found) return { noteId: found.id, sessionId: session, title: found.title, status: 'already_saved' }
+      const words = text.trim().split(/\s+/)
+      const item = { id: `note_${crypto.randomUUID().replaceAll('-', '')}`, requestId, sessionId: session, title: `Shared: ${words.slice(0, 6).join(' ')}${words.length > 6 ? '…' : ''}`, createdAt: now() }
+      shared.unshift(item)
+      return { noteId: item.id, sessionId: session, title: item.title, status: 'saved' }
+    }
+    if (path === '/api/control/pi/inbox/shared' && method === 'GET') return { results: shared.map(({ id, sessionId, title, createdAt }) => ({ id, sessionId, title, createdAt })) }
+    const sharedDismiss = path.match(/^\/api\/control\/pi\/inbox\/shared\/(note_[0-9a-f]{32})\/dismiss$/)
+    if (sharedDismiss && method === 'POST') {
+      const index = shared.findIndex(item => item.id === sharedDismiss[1])
+      if (index < 0) return fail(404)
+      shared.splice(index, 1)
+      return { id: sharedDismiss[1], dismissed: true, changed: true }
+    }
     if (path.startsWith('/api/control/pi/asks')) return asks(path, method, body, fail)
     if (path.startsWith('/api/control/pi/owner/') || path === '/api/owner/tool-settings' || path === '/api/owner/lockdown') return ownerSettings(path, method, body, fail)
     if (path.startsWith('/api/owner/access') || /^\/api\/owner\/tools\/[^/]+\/(?:sensitive|card|access)$/.test(path) || path === '/api/control/pi/access/handled' || path === '/api/owner/editor-capabilities') return access(path, method, body, fail)
