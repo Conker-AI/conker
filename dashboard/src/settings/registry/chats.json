@@ -92,7 +92,7 @@
           "default": "empty",
           "tier": "basic",
           "scope": "global",
-          "effect": "stored",
+          "effect": "live",
           "options": [
             {
               "value": "empty",
@@ -450,7 +450,7 @@
           "default": "inline",
           "tier": "basic",
           "scope": "global",
-          "effect": "stored",
+          "effect": "live",
           "options": [
             {
               "value": "inline",
@@ -494,7 +494,7 @@
           "default": false,
           "tier": "advanced",
           "scope": "global",
-          "effect": "stored"
+          "effect": "live"
         },
         {
           "id": "chats.fold_after",
@@ -504,7 +504,7 @@
           "default": 0,
           "tier": "advanced",
           "scope": "global",
-          "effect": "stored",
+          "effect": "live",
           "min": 0,
           "max": 500,
           "step": 10,

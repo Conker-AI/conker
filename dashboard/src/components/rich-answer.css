@@ -187,3 +187,36 @@
 .rich-answer .task-list-item input {
   margin-inline-end: 0.5rem;
 }
+/* Line numbers in code (Settings > Chats). The gutter is as wide as the last number; a wrapped line
+   starts under its text, not under the number. Numbers are secondary text (ledger: Text contrast)
+   and drawn by the stylesheet, so selecting or copying the code never takes them. */
+.answer-block pre[data-numbers] code {
+  counter-reset: answer-line;
+}
+.answer-code-line {
+  display: block;
+  padding-inline-start: calc(var(--code-gutter, 2ch) + 1rem);
+  text-indent: calc(-1 * (var(--code-gutter, 2ch) + 1rem));
+}
+.answer-code-line::before {
+  counter-increment: answer-line;
+  content: counter(answer-line);
+  display: inline-block;
+  width: var(--code-gutter, 2ch);
+  margin-inline-end: 1rem;
+  text-indent: 0;
+  text-align: end;
+  color: var(--muted-foreground);
+  user-select: none;
+}
+/* Sources at the end of an answer (Settings > Chats > Sources), in the order the answer cites them. */
+.answer-sources {
+  margin-top: 1rem;
+  border-top: 1px solid var(--border);
+  padding-top: 0.75rem;
+}
+.answer-sources ol {
+  list-style: decimal;
+  padding-inline-start: 1.5rem;
+  margin-top: 0.25rem;
+}

@@ -17,7 +17,7 @@ import type { GatewayControlClient } from '@/lib/gateway/control'
 import { useOwnerProfile } from '@/lib/owner-profile'
 import { cn } from '@/lib/utils'
 import { useServerSetting } from '@/settings/server-setting'
-import { buildHome, earnedLine, HOME_CHART_DAYS, HOME_NEEDS_LIMIT, type HomeNeed, type PlanRow } from './home-model'
+import { buildHome, earnedLine, greeting, HOME_CHART_DAYS, HOME_NEEDS_LIMIT, type HomeNeed, type PlanRow } from './home-model'
 import { usePlanUsage } from './home-plan'
 import { HomeJumpBackIn } from './home-resume'
 import { summarizeSetup } from './setup-presentation'
@@ -36,10 +36,6 @@ const sources: Source[] = ['requests', 'proposals', 'tasks', 'runs', 'jobs']
 const time = (value: number) => formatDateTime(value, { hour: 'numeric', minute: '2-digit' })
 const day = (value: number) => formatDateTime(value, { weekday: 'short', day: 'numeric', month: 'short' })
 const when = (value: number) => new Date(value).toDateString() === new Date().toDateString() ? time(value) : day(value)
-function greeting(now = new Date()) {
-  const hour = now.getHours()
-  return hour < 5 ? 'Good night' : hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'
-}
 
 /** A bento tile: a labelled card whose size follows its priority. */
 function Tile({ area, label, icon, count, link, children, className }: {

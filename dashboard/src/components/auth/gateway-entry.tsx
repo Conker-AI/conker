@@ -14,11 +14,7 @@ import { createGatewayActivityWorkspaceState } from '@/components/gateway/activi
 import { bindGatewayWorkspaceReset } from '@/components/gateway/auth-workspace-reset'
 import { createGatewayActivityClient } from '@/lib/gateway/activity'
 import { createGatewaySourcePrivacyState } from '@/components/gateway/source-privacy'
-
-function preloadWhenIdle(preload: () => void) {
-  if (typeof window.requestIdleCallback === 'function') window.requestIdleCallback(preload, { timeout: 2000 })
-  else window.setTimeout(preload, 200)
-}
+import { preloadAfterSignIn } from './preload-after-sign-in'
 
 // Create once per document, including React StrictMode mounts. Configuration failures stay visible.
 const services = (() => {
@@ -30,8 +26,9 @@ const services = (() => {
     const sourcePrivacy = createGatewaySourcePrivacyState()
     bindGatewayWorkspaceReset(value.store, [workspace, activityState, sourcePrivacy, ownerState])
     const control = createLazyGatewayControlClient(value.auth, () => value.store.getState().confirmSessionRevoked())
-    // The shell and most screens read it soon after the first screen shows: fetch it while idle.
-    preloadWhenIdle(control.preload)
+    // The shell and most screens read it soon after the first screen shows: fetch it while idle once
+    // he is signed in, with the Inbox's wrong-password alerts (a failed fetch would reload sign-in).
+    preloadAfterSignIn(value.store, [control.preload, () => void import('@/lib/gateway/password-alerts').catch(() => undefined)])
     return {
       value: {
         ...value,

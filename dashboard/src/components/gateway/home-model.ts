@@ -4,6 +4,12 @@ import type { OwnerRequest } from '@/lib/gateway/owner'
 import type { PlanUsage } from '@/lib/gateway/plans'
 import type { Proposal } from '@/lib/gateway/proposals'
 
+/** Good morning, afternoon, evening or night by this device's clock (Home and a new chat say it the same way). */
+export function greeting(now = new Date()) {
+  const hour = now.getHours()
+  return hour < 5 ? 'Good night' : hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'
+}
+
 /** Days shown in the work chart. */
 export const HOME_CHART_DAYS = 14
 /** At most this many items needing him (rationale ledger: Items per glance); Settings > Home can set 1 to 5. */
