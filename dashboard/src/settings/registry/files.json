@@ -109,12 +109,12 @@
         {
           "id": "files.to_project",
           "title": "Add uploads to the project",
-          "description": "Files attached in a project chat join the project.",
+          "description": "Files you send in a project chat join the project.",
           "type": "toggle",
           "default": true,
           "tier": "basic",
           "scope": "global",
-          "effect": "stored"
+          "effect": "live"
         }
       ]
     },
