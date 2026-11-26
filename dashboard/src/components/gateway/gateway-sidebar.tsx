@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/sidebar'
 import { Tooltip, TooltipPopup, TooltipTrigger } from '@/components/ui/tooltip'
 import { ModeToggle } from '@/components/mode-toggle'
-import { useInboxAttention } from '@/lib/workspace-chrome'
+import { useInboxBadge } from '@/lib/workspace-chrome'
 import { useServerSetting } from '@/settings/server-setting'
 import type { GatewayRuntimeWorkspaceState } from './runtime-state'
 import { gatewayPageNavigation, gatewaySidebarDestinations, gatewaySidebarGroups, type GatewayDestination } from './navigation'
@@ -33,7 +33,7 @@ const activeMark = "relative [&>svg]:text-muted-foreground data-[active=true]:[&
 export function GatewaySidebar({ conversationState, badge }: { conversationState: GatewayRuntimeWorkspaceState; badge?: ReactNode }) {
   const navigate = useNavigate(), location = useLocation(), { isMobile, setOpenMobile } = useSidebar()
   const page = gatewayPageNavigation(location.pathname, location.search)
-  const attention = useInboxAttention()
+  const attention = useInboxBadge()
   const places = useServerSetting('appearance.sidebar_places', ALL_PLACES), shortcuts = useServerSetting('keyboard.shortcuts', true)
   const shown = (item: GatewayDestination) => !optional[item.id] || places.includes(optional[item.id]!)
   const afterNavigate = useCallback(() => { if (isMobile) setOpenMobile(false, 'content') }, [isMobile, setOpenMobile])

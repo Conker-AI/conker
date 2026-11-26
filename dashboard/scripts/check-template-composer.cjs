@@ -27,7 +27,8 @@ assert.match(partsSource, /export { chooseTemplate/, "composer-parts.ts exports 
 
 // template-store.ts checks
 const storeSource = fs.readFileSync(path.join(root, "src/components/gateway/template-store.ts"), "utf8")
-assert.match(storeSource, /missingRequired\(template, values\)\.length \? '' : compilePrompt/, "templateText returns empty while required fields are missing")
+assert.match(storeSource, /required && missingRequired\(template, values\)\.length \? '' : compilePrompt/, "templateText returns empty while required fields are missing, unless the owner turned that off")
+assert.match(storeSource, /required = true\)/, "required fields hold the message back by default")
 
 // template-composer.tsx checks
 const composerTsx = fs.readFileSync(path.join(root, "src/components/gateway/template-composer.tsx"), "utf8")

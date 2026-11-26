@@ -1,6 +1,7 @@
 import type { AnswerExportFormat } from '@/lib/gateway/exports'
 import type { GatewayDownload } from '@/lib/gateway/file-transfer'
 import type { MemoryUndoState } from './memory-undo'
+import type { TurnFacts } from './turn-details'
 
 /** Presentation of one selected conversation. Adapters own persistence and eligibility. */
 export type Content = { kind: 'text'; text: string } | { kind: 'unavailable'; reason: 'forgotten' | 'unsupported' }
@@ -21,8 +22,8 @@ export type ChatMessage = {
   agentName?: string
   actions: Record<MessageAction, Action>
   memory?: MessageMemoryFeedback
-  /** Saved turn facts for a reply: model, duration and cost. */
-  details?: string
+  /** Saved turn facts for a reply (model, duration, tokens, cost, route, tools); Settings > Appearance > Under each answer picks which show. */
+  details?: TurnFacts
   /** Download this completed answer as a file; absent where it can't be exported. */
   export?: { run: (format: AnswerExportFormat) => Promise<GatewayDownload> }
   /** An answer with retried versions: the shown version is `selectedId`; `versions` are every version's message id, oldest first. */

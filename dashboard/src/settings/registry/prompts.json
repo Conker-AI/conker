@@ -93,7 +93,7 @@
           "default": true,
           "tier": "advanced",
           "scope": "global",
-          "effect": "stored"
+          "effect": "live"
         }
       ]
     },

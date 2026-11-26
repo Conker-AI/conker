@@ -5,6 +5,10 @@ import { insertTranscript, type DraftAnchor } from '@/lib/voice/draft'
 import type { VoiceInputSession, VoiceTranscript } from '@/lib/voice/types'
 import { AnimatedIconButton } from '@/components/icons/animated/animated-icon'
 import { MicIcon } from '@/components/icons/animated/icons'
+import { useServerSetting } from '@/settings/server-setting'
+
+/** Settings > Voice and calls > Speech language, as the browser names it. Conker's screens are in English, so "same" listens for English. */
+const SPEECH = { same: 'en-US', en: 'en-US', he: 'he-IL', ru: 'ru-RU' } as const
 
 type Recording = { controller: AbortController; session?: VoiceInputSession; anchor: DraftAnchor; transcript: VoiceTranscript }
 
@@ -21,6 +25,7 @@ export function NewChatVoiceControl({
   disabled: boolean
   onRecordingChange?: (active: boolean) => void
 }) {
+  const speech = SPEECH[useServerSetting<'same' | 'en' | 'he' | 'ru'>('voice.input_language', 'same')]
   const [listening, setListening] = useState(false)
   const [error, setError] = useState('')
   const recording = useRef<Recording | null>(null)
@@ -55,7 +60,7 @@ export function NewChatVoiceControl({
     notify.current?.(true)
     try {
       const session = await browserVoiceInput.start({
-        language: 'en-US',
+        language: speech,
         signal: run.controller.signal,
         onStart: () => {
           if (recording.current === run) setListening(true)

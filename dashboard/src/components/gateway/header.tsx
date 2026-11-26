@@ -27,7 +27,7 @@ export function GatewayHeader({ children, toolbar, context, sections }: { childr
   </div>}
     search={<UniversalSearchTrigger />}
     actions={<>{children}{shell?.showViews && !isMobile && <div className="conker-shell-actions">
-      <ConversationViewStrip open={shell.view} onToggle={shell.toggleView} />
+      <ConversationViewStrip open={shell.view} views={shell.views} onToggle={shell.toggleView} />
     </div>}{isMobile && page.route !== 'chat' && <WorkspaceAction iconOnly data-ask-conker aria-label="Ask Conker" title="Ask Conker" onClick={() => navigate('/chat')}><Plus /></WorkspaceAction>}</>}
     toolbar={toolbar} sections={<>{sections}{!sectionsInSidebar && <AppbarSections activeSection={page.activeSection} sections={page.sections} />}</>} />{shell?.panel}</>
 }

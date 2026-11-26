@@ -178,12 +178,22 @@ async function main() {
     used.set(id, (used.get(id) ?? 0) + 1)
   }
 
-  // Chat display settings (rounds four and nine) and Your day and Times (round ten), applied by the
-  // dashboard alone: each is live and read outside Settings.
-  for (const id of ['chats.autoscroll', 'chats.code_wrap', 'chats.code_numbers', 'chats.fold_after', 'chats.citations', 'chats.start', 'chats.tool_calls', 'chats.thinking', 'day.max_cards', 'day.focus_mode', 'day.easy_mode', 'appearance.timestamps']) {
+  // Chat display settings (rounds four and nine), Your day and Times (round ten), and the Inbox,
+  // chat, template, week and speech settings of round eleven, applied by the dashboard alone: each
+  // is live and read outside Settings.
+  for (const id of ['chats.autoscroll', 'chats.code_wrap', 'chats.code_numbers', 'chats.fold_after', 'chats.citations', 'chats.start', 'chats.tool_calls', 'chats.thinking', 'day.max_cards', 'day.focus_mode', 'day.easy_mode', 'appearance.timestamps',
+    'appearance.answer_details', 'appearance.chat_views', 'inbox.details_open', 'inbox.sort', 'inbox.badge', 'prompts.required_fields', 'you.week_start', 'voice.input_language']) {
     assert.equal(entry(id).effect, 'live', `${id} takes effect`)
     assert.ok(used.has(id), `${id} is read outside Settings`)
   }
+
+  // Round eleven: every option has something that reads it, so no choice on Settings does nothing.
+  const views = fs.readFileSync(path.join(root, 'src/components/gateway/conversation-view-list.ts'), 'utf8')
+  for (const option of entry('appearance.chat_views').options) assert.ok(views.includes(`id: '${option.value}'`), `a chat has the view ${option.value}`)
+  const facts = fs.readFileSync(path.join(root, 'src/lib/chat/turn-details.ts'), 'utf8')
+  for (const option of entry('appearance.answer_details').options) assert.ok(new RegExp(`^    ${option.value}(: |,$)`, 'm').test(facts), `turn details write ${option.value}`)
+  const voice = fs.readFileSync(path.join(root, 'src/components/gateway/new-chat-voice-control.tsx'), 'utf8')
+  for (const option of entry('voice.input_language').options) assert.ok(new RegExp(`\\b${option.value}: '[a-z]{2}-[A-Z]{2}'`).test(voice), `voice typing knows the language ${option.value}`)
 
   // The places, corners and layouts the shell draws cover every option the registry offers.
   const sidebar = fs.readFileSync(path.join(root, 'src/components/gateway/gateway-sidebar.tsx'), 'utf8')

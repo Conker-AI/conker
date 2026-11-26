@@ -103,6 +103,8 @@ function seed(): Session[] {
     ]),
   })
   const week = session(previewSessions.week, 'Plan my week', [['Help me plan this week around school and judo.', replies[0]]], 60000)
+  // Saved usage for the first answer, so Settings > Appearance > Under each answer can show tokens and cost.
+  week.turns[0] = { ...week.turns[0], input_tokens: 1240, output_tokens: 310, cost_usd: 0 }
   // A tool step as Pi records it: the model's request, the tool record, then the answer.
   const step = (seq: number, role: Message['role'], content: string): Message => ({ id: `msg_${(60100 + seq).toString(16).padStart(16, '0')}`, session_id: week.id, seq, role, content, created_at: start + 60300 + seq, ...(role === 'user' ? {} : { turn_id: 'trn_60000_1' }) })
   week.turns.push({ ...week.turns[0], id: 'trn_60000_1', started_at: start + 60303, ended_at: start + 60306 })

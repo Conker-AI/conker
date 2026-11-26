@@ -234,12 +234,12 @@
         {
           "id": "you.week_start",
           "title": "First day of the week",
-          "description": "Where weeks start in calendars and weekly plans.",
+          "description": "Where weeks start in the day lists of weekly jobs.",
           "type": "select",
           "default": "sunday",
           "tier": "basic",
           "scope": "global",
-          "effect": "stored",
+          "effect": "live",
           "options": [
             {
               "value": "sunday",

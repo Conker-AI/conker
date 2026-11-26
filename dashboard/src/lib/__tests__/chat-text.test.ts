@@ -7,7 +7,13 @@ import { keepPrefix, nextReveal } from '../chat/smooth-text'
 import { templateFill } from '../chat/template-fill'
 import { readToolRecord } from '../chat/tool-record'
 import { foldToolRequests, readToolRequest } from '../chat/tool-requests'
-import { turnDetails } from '../chat/turn-details'
+import { shownDetails, turnDetails as turnFacts } from '../chat/turn-details'
+
+/** Every saved fact as one line, the way the transcript joins them when all are chosen. */
+const turnDetails = (...args: Parameters<typeof turnFacts>) => {
+  const text = shownDetails(turnFacts(...args).details, ['model', 'time', 'tokens', 'cost', 'route', 'tools'])
+  return text ? { details: text } : {}
+}
 
 describe('smooth text', () => {
   const text = 'one two three four five six seven eight nine ten'
@@ -220,6 +226,26 @@ describe('turn details', () => {
     expect(turnDetails(turn({ endedAt: '2025-01-01T00:00:00Z' })).details).toContain('0 s')
     expect(turnDetails(turn({ endedAt: 'garbage' })).details).not.toContain(' s')
     expect(turnDetails(turn({ model: null, inputTokens: null, outputTokens: null, costUsd: null, endedAt: 'garbage' }))).toEqual({})
+  })
+
+  it('says how Auto chose only when the saved routing receipt says so', () => {
+    const receipt = (attempts: unknown) => turnFacts(turn({ detail: JSON.stringify({ attempts }) })).details?.route
+    expect(receipt([{ role: 'routing', status: 'completed' }])).toBe('picked by Auto')
+    expect(receipt([null, { role: 'routing', status: 'reused' }])).toBe('picked by Auto')
+    expect(receipt([{ role: 'answer', selectionReason: 'single_eligible_model' }])).toBe('only model ready')
+    expect(receipt([{ role: 'routing', status: 'failed' }])).toBeUndefined()
+    expect(receipt('not a list')).toBeUndefined()
+    expect(turnFacts(turn({ detail: '{broken' })).details?.route).toBeUndefined()
+    expect(turnFacts(turn({ detail: 'plain words' })).details?.route).toBeUndefined()
+    expect(turnFacts(turn({ detail: `{${' '.repeat(16_001)}}` })).details?.route).toBeUndefined()
+  })
+
+  it('counts saved tools and shows only the chosen facts, in their fixed order', () => {
+    expect(turnFacts(turn(), 1).details?.tools).toBe('1 tool')
+    expect(turnFacts(turn(), 3).details?.tools).toBe('3 tools')
+    expect(shownDetails(turnFacts(turn(), 2).details, ['tools', 'model'])).toBe('claude-x · 2 tools')
+    expect(shownDetails(turnFacts(turn()).details, ['route'])).toBe('')
+    expect(shownDetails(undefined, ['model'])).toBe('')
   })
 })
 
