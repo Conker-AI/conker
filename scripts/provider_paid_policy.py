@@ -1,14 +1,35 @@
-"""Transactional paid-model opt-in shared by the host CLI and provider UI."""
+"""Transactional paid-model opt-in shared by the host CLI and provider UI.
+
+Settings asks for the owner's password to change the paid-model policy (Pi's gateway,
+`/api/host/providers`, `paid-policy` and `recover-paid-policy`), so `conker providers spending
+on|recover` asks for it too: typed with echo off, sent once on stdin to the gateway's
+`check-password` host command (five wrong per five minutes), never in argv, the environment or an
+error, and nothing changes unless the gateway accepted it. `off` asks for none: it only takes the
+power away, as turning lockdown on does, so spending can be stopped while the gateway is down or out
+of tries. No service sits between this command and the files it writes, so it guards the command,
+not the host.
+"""
 
 from __future__ import annotations
 
 import argparse
+import getpass
 import json
 import subprocess
 from pathlib import Path
 
 from scripts.compose_overlays import overlay_files
 from scripts.provider_secrets import ProviderSecretError, SecretStore
+
+CHECK = ("exec", "-T", "gateway", "python", "-m", "gateway", "check-password")
+PROMPT = "Your Conker password (the paid-model policy asks for it, as Settings does): "
+NOTHING = " Nothing was changed."
+# `recover` may turn spending back on (an interrupted on-to-off restores "on"), so it asks too.
+PASSWORD_ACTIONS = frozenset({"on", "recover"})
+
+
+class PasswordNotChecked(Exception):
+    """The owner's password was missing, refused or could not be checked: nothing was changed."""
 
 
 class PaidPolicy:
@@ -56,7 +77,7 @@ class PaidPolicy:
             ).encode(),
         )
 
-    def _compose(self, *arguments):
+    def _command(self) -> list[str]:
         if self.layout == "ubuntu":
             command = [
                 "docker",
@@ -80,8 +101,11 @@ class PaidPolicy:
             # As the launcher runs it: Pi keeps the Claude plan runtime's address when recreated.
             for overlay in overlay_files(self.root, self.environment):
                 command.extend(["-f", str(overlay)])
+        return command
+
+    def _compose(self, *arguments):
         return self.runner(
-            [*command, *arguments],
+            [*self._command(), *arguments],
             cwd=self.root,
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
@@ -113,6 +137,37 @@ class PaidPolicy:
         )
         if check.returncode or check.stdout.strip() != (b"on" if expected else b"off"):
             raise ProviderSecretError("Runtime spending policy was not confirmed.")
+
+    def check_password(self, password: str) -> None:
+        """The gateway checks the owner's password (`python -m gateway check-password`) before
+        the CLI changes the policy; only its `{"checked": true}` lets the change go on."""
+        try:
+            result = self.runner(
+                [*self._command(), *CHECK],
+                cwd=self.root,
+                input=json.dumps({"password": password}).encode(),
+                capture_output=True,
+                timeout=120,
+                check=False,
+            )
+        except (OSError, subprocess.SubprocessError):
+            raise PasswordNotChecked(
+                "The gateway could not check the password." + NOTHING
+            ) from None
+        if result.returncode == 2:  # an older gateway: no such command
+            raise PasswordNotChecked(
+                "This server's gateway cannot check the password yet; update Conker first."
+                + NOTHING
+            )
+        try:
+            if result.returncode == 0 and json.loads(result.stdout) == {"checked": True}:
+                return
+        except ValueError:
+            pass
+        # The gateway's own words (it never repeats the password), on one line.
+        said = (result.stderr or b"").decode("utf-8", "replace").strip().splitlines()
+        line = "".join(c for c in (said[-1] if said else "") if c.isprintable())[:300]
+        raise PasswordNotChecked(line or "The gateway did not accept the password." + NOTHING)
 
     def apply(self, enabled: bool, expected: bool):
         if type(enabled) is not bool or type(expected) is not bool:
@@ -190,6 +245,17 @@ class PaidPolicy:
             return self.status()
 
 
+def ask() -> str:
+    """The owner's password, typed with echo off; none (no terminal, or empty) changes nothing."""
+    try:
+        password = getpass.getpass(PROMPT)
+    except EOFError:
+        password = ""
+    if not password:
+        raise PasswordNotChecked("This change needs your password." + NOTHING)
+    return password
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", required=True, type=Path)
@@ -198,6 +264,8 @@ def main():
     args = parser.parse_args()
     policy = PaidPolicy(args.root, args.layout)
     try:
+        if args.action in PASSWORD_ACTIONS:
+            policy.check_password(ask())
         result = (
             policy.status()
             if args.action == "status"
@@ -205,6 +273,8 @@ def main():
             if args.action == "recover"
             else policy.apply(args.action == "on", policy.status()["paidAllowed"])
         )
+    except PasswordNotChecked as error:
+        raise SystemExit(str(error)) from None
     except (ProviderSecretError, OSError, subprocess.SubprocessError):
         raise SystemExit(
             "Provider spending policy not confirmed. Inspect provider status and recover if required."
