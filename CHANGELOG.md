@@ -6,6 +6,12 @@ which module versions a release pins.
 
 ## Unreleased
 
+## 0.6.53
+
+Beta build from main. Changes since the last tag:
+
+- feat: settings round 11 - Inbox, answer, template, week and speech settings take effect (#466)
+
 ## 0.6.0
 
 - **The folded update card says "Updating to X.Y.Z...".** While an update runs, the card in the Inbox no longer loses its button in silence. (#391)
